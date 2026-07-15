@@ -1,0 +1,102 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ff-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-family_finance}
+      POSTGRES_USER: ${POSTGRES_USER:-ff_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    command: >
+      postgres
+        -c shared_buffers=128MB
+        -c effective_cache_size=512MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=64MB
+        -c max_connections=20
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ff_user} -d ${POSTGRES_DB:-family_finance}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  api:
+    build: ./backend
+    container_name: ff-api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ff_user}:${DB_PASSWORD}@db:5432/${POSTGRES_DB:-family_finance}
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      UPLOAD_DIR: /app/uploads
+      BACKUP_DIR: /app/backups
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - uploads:/app/uploads
+      - backups:/app/backups
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks:
+      - internal
+      - frontend
+
+  web:
+    build:
+      context: ./frontend
+      target: dev
+    container_name: ff-web
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - frontend
+
+  nginx:
+    image: nginx:alpine
+    container_name: ff-nginx
+    restart: always
+    depends_on:
+      - api
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - frontend
+
+volumes:
+  pgdata:
+  uploads:
+  backups:
+
+networks:
+  internal:
+    driver: bridge
+  frontend:
+    driver: bridge

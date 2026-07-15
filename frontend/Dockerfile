@@ -1,0 +1,29 @@
+# --- dev target: hot-reload for development ---
+FROM node:20-alpine AS dev
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+CMD ["npm", "run", "dev"]
+
+# --- build stage ---
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# --- prod target: serve with nginx ---
+FROM nginx:alpine AS prod
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY <<'EOF' /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
