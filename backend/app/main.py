@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.api.auth import router as auth_router
+from app.api.users import router as users_router
 from app.database import async_session
 
 structlog.configure(
@@ -24,6 +26,9 @@ structlog.configure(
 logger = structlog.get_logger()
 
 app = FastAPI(title="Family Finance API", version="0.1.0")
+
+app.include_router(auth_router)
+app.include_router(users_router)
 
 app.add_middleware(
     CORSMiddleware,
