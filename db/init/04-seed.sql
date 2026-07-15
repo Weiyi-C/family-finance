@@ -22,6 +22,9 @@ INSERT INTO categories (id, family_id, parent_id, level, name, icon, color, type
 (14, NULL, NULL, 1, '工作办公', '💼', '#78909C', 'expense', 14),
 (15, NULL, NULL, 1, '其他',     '❓', '#BDBDBD', 'expense', 99);
 
+-- Sync sequence past explicit IDs
+SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories) + 1);
+
 -- 餐饮 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
 (NULL, 1, 2, '早饭',     '☀️', 'expense', 1),
@@ -275,32 +278,35 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 
 -- 一级分类（收入）
 INSERT INTO categories (id, family_id, parent_id, level, name, icon, color, type, sort_order) VALUES
-(100, NULL, NULL, 1, '工资薪酬', '💰', '#4CAF50', 'income', 1),
-(101, NULL, NULL, 1, '副业收入', '💵', '#66BB6A', 'income', 2),
-(102, NULL, NULL, 1, '红包收入', '🎁', '#FF7043', 'income', 3),
-(103, NULL, NULL, 1, '转账收入', '💸', '#42A5F5', 'income', 4),
-(104, NULL, NULL, 1, '投资收益', '📈', '#FFD700', 'income', 5),
-(105, NULL, NULL, 1, '租金收入', '🏠', '#78909C', 'income', 6),
-(106, NULL, NULL, 1, '退款收入', '💝', '#AB47BC', 'income', 7),
-(107, NULL, NULL, 1, '奖金中奖', '🎊', '#FF6B6B', 'income', 8),
-(108, NULL, NULL, 1, '其他收入', '🔄', '#BDBDBD', 'income', 99);
+(10000, NULL, NULL, 1, '工资薪酬', '💰', '#4CAF50', 'income', 1),
+(10001, NULL, NULL, 1, '副业收入', '💵', '#66BB6A', 'income', 2),
+(10002, NULL, NULL, 1, '红包收入', '🎁', '#FF7043', 'income', 3),
+(10003, NULL, NULL, 1, '转账收入', '💸', '#42A5F5', 'income', 4),
+(10004, NULL, NULL, 1, '投资收益', '📈', '#FFD700', 'income', 5),
+(10005, NULL, NULL, 1, '租金收入', '🏠', '#78909C', 'income', 6),
+(10006, NULL, NULL, 1, '退款收入', '💝', '#AB47BC', 'income', 7),
+(10007, NULL, NULL, 1, '奖金中奖', '🎊', '#FF6B6B', 'income', 8),
+(10008, NULL, NULL, 1, '其他收入', '🔄', '#BDBDBD', 'income', 99);
+
+-- Sync sequence past income explicit IDs
+SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories) + 1);
 
 -- 收入二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
-(NULL, 100, 2, '月薪',      '💵', 'income', 1),
-(NULL, 100, 2, '年终奖',    '🎊', 'income', 2),
-(NULL, 100, 2, '绩效奖金',  '🏆', 'income', 3),
-(NULL, 100, 2, '加班费',    '⏰', 'income', 4),
-(NULL, 100, 2, '补贴津贴',  '📋', 'income', 5),
-(NULL, 101, 2, '兼职',      '💼', 'income', 1),
-(NULL, 101, 2, 'freelance', '💻', 'income', 2),
-(NULL, 101, 2, '稿费',      '📝', 'income', 3),
-(NULL, 101, 2, '咨询费',    '🗣️', 'income', 4);
+(NULL, 10000, 2, '月薪',      '💵', 'income', 1),
+(NULL, 10000, 2, '年终奖',    '🎊', 'income', 2),
+(NULL, 10000, 2, '绩效奖金',  '🏆', 'income', 3),
+(NULL, 10000, 2, '加班费',    '⏰', 'income', 4),
+(NULL, 10000, 2, '补贴津贴',  '📋', 'income', 5),
+(NULL, 10001, 2, '兼职',      '💼', 'income', 1),
+(NULL, 10001, 2, 'freelance', '💻', 'income', 2),
+(NULL, 10001, 2, '稿费',      '📝', 'income', 3),
+(NULL, 10001, 2, '咨询费',    '🗣️', 'income', 4);
 
 -- Reset sequence to avoid conflicts with explicit IDs
 SELECT setval('categories_id_seq', GREATEST(
     (SELECT MAX(id) FROM categories),
-    200
+    10100
 ));
 
 -- ===================== 支付渠道 =====================

@@ -732,7 +732,7 @@ SELECT
     MAX(CASE WHEN entry_side='debit' THEN original_currency END) AS original_currency,
     MAX(CASE WHEN entry_side='debit' THEN exchange_rate END) AS exchange_rate,
     MAX(CASE WHEN entry_side='debit' THEN book_id END) AS book_id,
-    MAX(CASE WHEN entry_side='debit' THEN is_quick_entry END) AS is_quick_entry,
+    BOOL_OR(CASE WHEN entry_side='debit' THEN is_quick_entry ELSE FALSE END) AS is_quick_entry,
     MAX(CASE WHEN entry_side='debit' THEN completion_status END) AS completion_status
 FROM transactions
 WHERE is_deleted = FALSE AND entry_id IS NOT NULL
