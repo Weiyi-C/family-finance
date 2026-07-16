@@ -11,6 +11,7 @@ from app.api.auth import router as auth_router
 from app.api.books import router as books_router
 from app.api.budgets import router as budgets_router
 from app.api.categories import router as categories_router
+from app.api.channels import router as channels_router
 from app.api.debts import router as debts_router
 from app.api.recurring import router as recurring_router
 from app.api.reimbursements import router as reimbursements_router
@@ -43,6 +44,7 @@ app.include_router(auth_router)
 app.include_router(books_router)
 app.include_router(budgets_router)
 app.include_router(categories_router)
+app.include_router(channels_router)
 app.include_router(debts_router)
 app.include_router(recurring_router)
 app.include_router(reimbursements_router)
