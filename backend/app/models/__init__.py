@@ -3,6 +3,7 @@ from app.models.base import Base
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.channel import PaymentChannel
+from app.models.debt import Debt, DebtRepayment
 from app.models.platform import Platform
 from app.models.tag import Tag
 from app.models.template import AccountTypeTemplate
@@ -26,4 +27,6 @@ __all__ = [
     "Transaction",
     "TransactionTag",
     "Tag",
+    "Debt",
+    "DebtRepayment",
 ]
