@@ -16,6 +16,7 @@ from app.api.debts import router as debts_router
 from app.api.recurring import router as recurring_router
 from app.api.reimbursements import router as reimbursements_router
 from app.api.savings import router as savings_router
+from app.api.settings import router as settings_router
 from app.api.stats import router as stats_router
 from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
@@ -50,6 +51,7 @@ app.include_router(debts_router)
 app.include_router(recurring_router)
 app.include_router(reimbursements_router)
 app.include_router(savings_router)
+app.include_router(settings_router)
 app.include_router(stats_router)
 app.include_router(tags_router)
 app.include_router(transactions_router)
