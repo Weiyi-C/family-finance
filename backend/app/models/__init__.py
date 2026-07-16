@@ -1,5 +1,6 @@
 from app.models.account import PaymentAccount
 from app.models.base import Base
+from app.models.budget import Budget
 from app.models.category import Category
 from app.models.channel import PaymentChannel
 from app.models.platform import Platform
@@ -21,6 +22,7 @@ __all__ = [
     "PaymentAccount",
     "PaymentChannel",
     "Platform",
+    "Budget",
     "Transaction",
     "TransactionTag",
     "Tag",

@@ -9,6 +9,7 @@ from sqlalchemy import text
 from app.api.accounts import router as accounts_router
 from app.api.auth import router as auth_router
 from app.api.books import router as books_router
+from app.api.budgets import router as budgets_router
 from app.api.categories import router as categories_router
 from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
@@ -36,6 +37,7 @@ app = FastAPI(title="Family Finance API", version="0.1.0")
 app.include_router(accounts_router)
 app.include_router(auth_router)
 app.include_router(books_router)
+app.include_router(budgets_router)
 app.include_router(categories_router)
 app.include_router(tags_router)
 app.include_router(transactions_router)
