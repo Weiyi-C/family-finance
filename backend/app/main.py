@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from app.api.auth import router as auth_router
 from app.api.books import router as books_router
+from app.api.categories import router as categories_router
 from app.api.users import router as users_router
 from app.database import async_session
 
@@ -30,6 +31,7 @@ app = FastAPI(title="Family Finance API", version="0.1.0")
 
 app.include_router(auth_router)
 app.include_router(books_router)
+app.include_router(categories_router)
 app.include_router(users_router)
 
 app.add_middleware(
