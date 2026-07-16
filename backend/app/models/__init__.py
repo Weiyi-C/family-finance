@@ -1,7 +1,12 @@
 from app.models.account import PaymentAccount
 from app.models.base import Base
 from app.models.category import Category
+from app.models.channel import PaymentChannel
+from app.models.platform import Platform
+from app.models.tag import Tag
 from app.models.template import AccountTypeTemplate
+from app.models.transaction import Transaction
+from app.models.transaction_tag import TransactionTag
 from app.models.user import AccountBook, Family, FamilySyncSeq, RefreshToken, User
 
 __all__ = [
@@ -14,4 +19,9 @@ __all__ = [
     "Category",
     "AccountTypeTemplate",
     "PaymentAccount",
+    "PaymentChannel",
+    "Platform",
+    "Transaction",
+    "TransactionTag",
+    "Tag",
 ]

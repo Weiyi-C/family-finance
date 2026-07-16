@@ -173,7 +173,7 @@ CREATE TABLE transactions (
     family_id           BIGINT NOT NULL REFERENCES families(id),
     book_id             BIGINT NOT NULL REFERENCES account_books(id),
     entry_id            BIGINT,
-    entry_side          VARCHAR(4) NOT NULL,
+    entry_side          VARCHAR(10) NOT NULL,
     type                VARCHAR(20) NOT NULL,
     amount              BIGINT NOT NULL,
     currency            VARCHAR(3) DEFAULT 'CNY',

@@ -10,6 +10,7 @@ from app.api.accounts import router as accounts_router
 from app.api.auth import router as auth_router
 from app.api.books import router as books_router
 from app.api.categories import router as categories_router
+from app.api.transactions import router as transactions_router
 from app.api.users import router as users_router
 from app.database import async_session
 import app.models  # noqa: F401 — register all ORM models
@@ -35,6 +36,7 @@ app.include_router(accounts_router)
 app.include_router(auth_router)
 app.include_router(books_router)
 app.include_router(categories_router)
+app.include_router(transactions_router)
 app.include_router(users_router)
 
 app.add_middleware(
