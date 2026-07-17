@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.bill_import import BillImport, BillImportItem
+from app.models.channel import PaymentChannel
 from app.models.transaction import Transaction
 from app.models.user import User
 
@@ -26,6 +27,53 @@ def detect_and_decode(content_bytes: bytes) -> str:
         except (UnicodeDecodeError, LookupError):
             continue
     return content_bytes.decode("utf-8", errors="ignore")
+
+
+# 已知平台列表（用于识别"交易对方"中的平台）
+KNOWN_PLATFORMS = {
+    "淘宝", "淘宝闪购", "天猫", "京东", "拼多多", "美团", "饿了么",
+    "抖音", "小红书", "得物", "唯品会", "闲鱼", "亚马逊",
+    "苏宁易购", "当当", "网易严选", "小米商城", "华为商城",
+}
+
+
+def identify_platform_and_merchant(counterparty: str, description: str, source: str) -> tuple[str, str]:
+    """识别平台和商户
+
+    返回: (platform, merchant)
+    """
+    # 检查"交易对方"是否是已知平台
+    for platform in KNOWN_PLATFORMS:
+        if platform in counterparty:
+            # 如果是平台，尝试从"商品名称"中提取真实商户
+            # 格式通常是: "商户名-商品描述" 或 "商户名(分店)"
+            merchant = counterparty  # 默认用平台名
+
+            # 尝试从描述中提取商户
+            if description:
+                # 模式1: "商户名(分店)外卖订单"
+                if "外卖订单" in description:
+                    merchant = description.replace("外卖订单", "").strip()
+                # 模式2: "商户名-商品描述"
+                elif "-" in description:
+                    parts = description.split("-", 1)
+                    if len(parts[0]) > 2 and len(parts[0]) < 20:  # 合理的商户名长度
+                        merchant = parts[0].strip()
+                # 模式3: "商户名(分店)"
+                elif "(" in description and ")" in description:
+                    match = description[:description.index(")") + 1]
+                    if len(match) > 2:
+                        merchant = match.strip()
+
+            return platform, merchant
+
+    # 不是已知平台
+    if source == "alipay":
+        return "支付宝", counterparty
+    elif source == "wechat":
+        return "微信", counterparty
+    else:
+        return "线下", counterparty
 
 
 def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
@@ -117,15 +165,20 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                 elif "信用卡" in combined:
                     inferred_account = "信用卡"
 
+            # 智能识别平台和商户
+            detected_platform, detected_merchant = identify_platform_and_merchant(
+                merchant, description, "alipay"
+            )
+
             items.append({
                 "order_no": order_no,
                 "transaction_time": txn_time,
-                "merchant": merchant,
+                "merchant": detected_merchant,  # 使用识别后的商户
                 "description": description,
                 "amount": int(amount * 100),  # 转为分
                 "type": txn_type,
-                "platform": "支付宝",  # 统一平台标识
-                "platform_detail": platform,  # 原始来源地
+                "platform": detected_platform,  # 使用识别后的平台
+                "platform_raw": platform,  # 保留原始来源地
                 "payment_method": payment_method or inferred_account,
                 "fund_status": fund_status,
                 "txn_method": txn_method,
@@ -173,14 +226,21 @@ def parse_wechat_csv(content: str) -> tuple[list[dict], dict]:
             if payment_method:
                 methods.add(payment_method)
 
+            # 智能识别平台和商户
+            merchant = row.get("交易对方", "").strip()
+            description = row.get("商品", "").strip()
+            detected_platform, detected_merchant = identify_platform_and_merchant(
+                merchant, description, "wechat"
+            )
+
             items.append({
                 "order_no": row.get("交易单号", "").strip(),
                 "transaction_time": row.get("交易时间", "").strip(),
-                "merchant": row.get("交易对方", "").strip(),
-                "description": row.get("商品", "").strip(),
+                "merchant": detected_merchant,
+                "description": description,
                 "amount": int(amount * 100),
                 "type": txn_type,
-                "platform": "微信",
+                "platform": detected_platform,
                 "payment_method": payment_method,
             })
         except Exception as e:
@@ -507,6 +567,36 @@ async def confirm_import(
         elif default_account_id:
             account_id = default_account_id
 
+        # 查找平台ID（使用模糊匹配，因为检测到的可能是"淘宝闪购"而数据库中是"淘宝"）
+        platform_name = raw.get("platform", "")
+        platform_id = None
+        if platform_name:
+            from app.models.platform import Platform
+            # 先尝试精确匹配
+            platform_result = await db.execute(
+                select(Platform.id).where(Platform.name == platform_name).limit(1)
+            )
+            platform_id = platform_result.scalar()
+            # 如果没找到，尝试模糊匹配
+            if not platform_id:
+                platform_result = await db.execute(
+                    select(Platform.id).where(Platform.name.contains(platform_name[:2])).limit(1)
+                )
+                platform_id = platform_result.scalar()
+
+        # 查找支付渠道ID（根据平台或来源推断）
+        channel_id = None
+        if imp.source == "alipay":
+            channel_result = await db.execute(
+                select(PaymentChannel.id).where(PaymentChannel.name == "支付宝").limit(1)
+            )
+            channel_id = channel_result.scalar()
+        elif imp.source == "wechat":
+            channel_result = await db.execute(
+                select(PaymentChannel.id).where(PaymentChannel.name == "微信支付").limit(1)
+            )
+            channel_id = channel_result.scalar()
+
         txn_type = raw.get("type", "expense")
 
         txn = Transaction(
@@ -521,6 +611,8 @@ async def confirm_import(
             description=raw.get("description"),
             transaction_time=txn_time,
             payment_account_id=account_id,
+            payment_channel_id=channel_id,
+            platform_id=platform_id,
             recorded_by=current_user.id,
             paid_by=current_user.id,
             completion_status="complete",

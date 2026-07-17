@@ -336,14 +336,7 @@ INSERT INTO platforms (family_id, name, type, icon, sort_order) VALUES
 (NULL, '唯品会', 'online',  '🛍️', 9),
 (NULL, '闲鱼',   'online',  '🐟', 10),
 (NULL, '亚马逊', 'online',  '📦', 11),
-(NULL, '超市',   'offline', '🏪', 20),
-(NULL, '餐厅',   'offline', '🍽️', 21),
-(NULL, '便利店', 'offline', '🏪', 22),
-(NULL, '菜市场', 'offline', '🥬', 23),
-(NULL, '商场',   'offline', '🏬', 24),
-(NULL, '加油站', 'offline', '⛽', 25),
-(NULL, '医院',   'offline', '🏥', 26),
-(NULL, '其他',   'offline', '❓', 99);
+(NULL, '线下',   'offline', '🏪', 100);
 
 -- ===================== 银行 =====================
 
