@@ -1,5 +1,6 @@
 from app.models.account import PaymentAccount
 from app.models.backup import BackupConfig, BackupLog
+from app.models.bank import Bank
 from app.models.base import Base
 from app.models.bill_import import BillImport, BillImportItem
 from app.models.budget import Budget
@@ -24,6 +25,7 @@ from app.models.user import AccountBook, Family, FamilySyncSeq, RefreshToken, Us
 
 __all__ = [
     "Base",
+    "Bank",
     "Family",
     "User",
     "RefreshToken",
