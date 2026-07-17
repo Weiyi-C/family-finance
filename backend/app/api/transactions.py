@@ -1,4 +1,5 @@
 import structlog
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,9 +162,19 @@ async def list_transactions(
     if keyword:
         conditions.append(Transaction.description.ilike(f"%{keyword}%"))
     if start_date:
-        conditions.append(Transaction.transaction_time >= start_date)
+        # Convert string date to datetime for comparison
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            conditions.append(Transaction.transaction_time >= start_dt)
+        except ValueError:
+            pass
     if end_date:
-        conditions.append(Transaction.transaction_time <= end_date)
+        # Convert string date to datetime (end of day) for comparison
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            conditions.append(Transaction.transaction_time <= end_dt)
+        except ValueError:
+            pass
     if min_amount:
         conditions.append(Transaction.amount >= min_amount)
     if max_amount:
