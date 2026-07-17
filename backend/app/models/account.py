@@ -1,5 +1,4 @@
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, SmallInteger, String
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, Boolean, ForeignKey, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy import DateTime
@@ -35,5 +34,15 @@ class PaymentAccount(Base):
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # 新增字段：支持账户层级和关联
+    parent_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("payment_accounts.id"))
+    bank_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("banks.id"))
+    channel_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("payment_channels.id"))
+    linked_account_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("payment_accounts.id"))
+    linked_user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    platform_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("platforms.id"))
+    group_label: Mapped[str | None] = mapped_column(String(50))
+
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

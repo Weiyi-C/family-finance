@@ -98,6 +98,7 @@ export interface CategoryUpdate {
 export interface PaymentAccount {
   id: number
   family_id: number
+  user_id: number
   name: string
   type_code: string
   template_id: number | null
@@ -105,19 +106,31 @@ export interface PaymentAccount {
   color: string | null
   currency: string
   balance: number
+  initial_balance: number
   available_balance: number | null
   credit_limit: number | null
+  used_amount: number | null
   billing_day: number | null
   due_day: number | null
   grace_days: number | null
   bank_name: string | null
   bank_code: string | null
+  bank_id: number | null
   card_tail: string | null
   card_type: string | null
   is_shared: boolean
+  shared_with: number | null
+  share_type: string | null
   is_active: boolean
+  is_hidden: boolean
   include_in_total: boolean
   notes: string | null
+  parent_id: number | null
+  channel_id: number | null
+  linked_account_id: number | null
+  linked_user_id: number | null
+  platform_id: number | null
+  group_label: string | null
   created_at: string
 }
 
