@@ -7,17 +7,25 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.accounts import router as accounts_router
+from app.api.aliases import router as aliases_router
 from app.api.auth import router as auth_router
+from app.api.backup import router as backup_router
 from app.api.books import router as books_router
 from app.api.budgets import router as budgets_router
 from app.api.categories import router as categories_router
 from app.api.channels import router as channels_router
+from app.api.credit_bills import router as credit_bills_router
 from app.api.debts import router as debts_router
+from app.api.exports import router as exports_router
+from app.api.imports import router as imports_router
+from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
 from app.api.reimbursements import router as reimbursements_router
+from app.api.rules import router as rules_router
 from app.api.savings import router as savings_router
 from app.api.settings import router as settings_router
 from app.api.stats import router as stats_router
+from app.api.sync import router as sync_router
 from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
 from app.api.users import router as users_router
@@ -42,17 +50,25 @@ logger = structlog.get_logger()
 app = FastAPI(title="Family Finance API", version="0.1.0")
 
 app.include_router(accounts_router)
+app.include_router(aliases_router)
 app.include_router(auth_router)
+app.include_router(backup_router)
 app.include_router(books_router)
 app.include_router(budgets_router)
 app.include_router(categories_router)
 app.include_router(channels_router)
+app.include_router(credit_bills_router)
 app.include_router(debts_router)
+app.include_router(exports_router)
+app.include_router(imports_router)
+app.include_router(notifications_router)
 app.include_router(recurring_router)
 app.include_router(reimbursements_router)
+app.include_router(rules_router)
 app.include_router(savings_router)
 app.include_router(settings_router)
 app.include_router(stats_router)
+app.include_router(sync_router)
 app.include_router(tags_router)
 app.include_router(transactions_router)
 app.include_router(users_router)
