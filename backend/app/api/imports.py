@@ -5,7 +5,7 @@ from datetime import datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -28,8 +28,12 @@ def detect_and_decode(content_bytes: bytes) -> str:
     return content_bytes.decode("utf-8", errors="ignore")
 
 
-def parse_alipay_csv(content: str) -> tuple[list[dict], list[str]]:
-    """解析支付宝 CSV 账单，返回 (交易列表, 未识别的支付方式列表)"""
+def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
+    """解析支付宝 CSV 账单
+
+    返回: (交易列表, 元数据)
+    元数据包含: platform(平台), has_payment_method(是否包含具体支付方式)
+    """
     lines = content.strip().split("\n")
     header_idx = -1
     for i, line in enumerate(lines):
@@ -39,9 +43,12 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], list[str]]:
     if header_idx == -1:
         raise ValueError("无法识别支付宝账单格式")
 
+    headers = [h.strip() for h in lines[header_idx].split(",") if h.strip()]
     reader = csv.DictReader(lines[header_idx:])
     items = []
-    payment_methods = set()
+
+    # 检查是否有"收/付款方式"列（新版支付宝可能有）
+    has_payment_method = "收/付款方式" in headers or "付款方式" in headers
 
     for row in reader:
         try:
@@ -49,28 +56,24 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], list[str]]:
             amount_key = next((k for k in row if k and "金额" in k), None)
             if not amount_key or not row.get(amount_key):
                 continue
-            amount = int(float(row[amount_key].replace(",", "").replace("¥", "").strip()) * 100)
+            amount = float(row[amount_key].replace(",", "").replace("¥", "").strip())
 
             # 收/支
             dir_key = next((k for k in row if k and "收" in k and "支" in k), None)
-            direction = row.get(dir_key, "") if dir_key else ""
+            direction = row.get(dir_key, "").strip() if dir_key else ""
             if "不计收支" in direction:
                 continue
             txn_type = "expense" if "支出" in direction else "income"
 
             # 状态 - 跳过退款
             status_key = next((k for k in row if k and "状态" in k), None)
-            status_val = row.get(status_key, "") if status_key else ""
+            status_val = row.get(status_key, "").strip() if status_key else ""
             if "退款" in status_val:
                 continue
 
-            # 交易号(用于去重)
+            # 交易号
             order_key = next((k for k in row if k and "交易号" in k and "商家" not in k), None)
             order_no = row.get(order_key, "").strip() if order_key else ""
-
-            # 商家订单号
-            merchant_order_key = next((k for k in row if k and "商家订单号" in k), None)
-            merchant_order_no = row.get(merchant_order_key, "").strip() if merchant_order_key else ""
 
             # 交易时间
             time_key = next((k for k in row if k and ("创建时间" in k or "付款时间" in k or "交易时间" in k)), None)
@@ -84,44 +87,61 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], list[str]]:
             desc_key = next((k for k in row if k and ("商品" in k or "名称" in k)), None)
             description = row.get(desc_key, "").strip() if desc_key else ""
 
-            # 交易来源地(平台)
+            # 交易来源地(平台) - 支付宝网站/APP等
             platform_key = next((k for k in row if k and "来源" in k), None)
             platform = row.get(platform_key, "").strip() if platform_key else ""
 
-            # 类型(交易方式)
-            type_key = next((k for k in row if k and row.get(k, "").strip() in ["即时到账交易", "转账", "充值", "提现"] or (k == "类型")), None)
-            txn_method = row.get(type_key, "").strip() if type_key else ""
+            # 收/付款方式(具体资金来源) - 如果有的话
+            payment_key = next((k for k in row if k and ("付款方式" in k or "收/付款方式" in k)), None)
+            payment_method = row.get(payment_key, "").strip() if payment_key else ""
 
-            # 资金状态(推断支付渠道)
+            # 资金状态
             fund_key = next((k for k in row if k and "资金" in k), None)
             fund_status = row.get(fund_key, "").strip() if fund_key else ""
 
-            # 支付方式 - 支付宝账单通常不直接列出，但从"交易来源地"和"类型"推断
-            # 支付宝网页/APP → 支付宝余额
-            # 如果是花呗、余额宝等会有特定标识
-            payment_channel = "支付宝"  # 默认支付宝
+            # 类型(交易方式)
+            type_key = next((k for k in row if k and k == "类型"), None)
+            txn_method = row.get(type_key, "").strip() if type_key else ""
 
-            payment_methods.add(payment_channel)
+            # 尝试从描述推断资金来源
+            inferred_account = ""
+            if not payment_method:
+                # 从商品名称或备注推断
+                combined = f"{description} {merchant}"
+                if "花呗" in combined:
+                    inferred_account = "花呗"
+                elif "余额宝" in combined:
+                    inferred_account = "余额宝"
+                elif "借呗" in combined:
+                    inferred_account = "借呗"
+                elif "信用卡" in combined:
+                    inferred_account = "信用卡"
 
             items.append({
                 "order_no": order_no,
-                "merchant_order_no": merchant_order_no,
                 "transaction_time": txn_time,
                 "merchant": merchant,
                 "description": description,
-                "amount": amount,
+                "amount": int(amount * 100),  # 转为分
                 "type": txn_type,
-                "platform": platform,
-                "payment_channel": payment_channel,
-                "method": txn_method,
+                "platform": "支付宝",  # 统一平台标识
+                "platform_detail": platform,  # 原始来源地
+                "payment_method": payment_method or inferred_account,
+                "fund_status": fund_status,
+                "txn_method": txn_method,
             })
         except Exception as e:
             logger.warning("parse_alipay_row_error", error=str(e))
 
-    return items, list(payment_methods)
+    meta = {
+        "platform": "支付宝",
+        "has_payment_method": has_payment_method,
+        "detected_methods": list(set(i["payment_method"] for i in items if i.get("payment_method"))),
+    }
+    return items, meta
 
 
-def parse_wechat_csv(content: str) -> tuple[list[dict], list[str]]:
+def parse_wechat_csv(content: str) -> tuple[list[dict], dict]:
     """解析微信 CSV 账单"""
     lines = content.strip().split("\n")
     header_idx = -1
@@ -134,41 +154,47 @@ def parse_wechat_csv(content: str) -> tuple[list[dict], list[str]]:
 
     reader = csv.DictReader(lines[header_idx:])
     items = []
-    payment_methods = set()
+    methods = set()
 
     for row in reader:
         try:
             amount_str = row.get("金额(元)", "0").replace(",", "").replace("¥", "").strip()
-            amount = int(float(amount_str) * 100)
-            direction = row.get("收/支", "")
+            amount = float(amount_str)
+            direction = row.get("收/支", "").strip()
             if "不计收支" in direction:
                 continue
             txn_type = "expense" if "支出" in direction else "income"
-            status = row.get("当前状态", "")
+            status = row.get("当前状态", "").strip()
             if "已退款" in status or "退款" in status:
                 continue
 
+            # 微信账单有明确的"支付方式"列
             payment_method = row.get("支付方式", "").strip()
             if payment_method:
-                payment_methods.add(payment_method)
+                methods.add(payment_method)
 
             items.append({
                 "order_no": row.get("交易单号", "").strip(),
                 "transaction_time": row.get("交易时间", "").strip(),
                 "merchant": row.get("交易对方", "").strip(),
                 "description": row.get("商品", "").strip(),
-                "amount": amount,
+                "amount": int(amount * 100),
                 "type": txn_type,
                 "platform": "微信",
-                "payment_channel": payment_method or "微信",
+                "payment_method": payment_method,
             })
         except Exception as e:
             logger.warning("parse_wechat_row_error", error=str(e))
 
-    return items, list(payment_methods)
+    meta = {
+        "platform": "微信",
+        "has_payment_method": True,  # 微信账单总是有支付方式
+        "detected_methods": list(methods),
+    }
+    return items, meta
 
 
-def parse_excel(content: bytes) -> tuple[list[dict], list[str]]:
+def parse_excel(content: bytes) -> tuple[list[dict], dict]:
     """解析 Excel 账单"""
     try:
         from openpyxl import load_workbook
@@ -179,7 +205,7 @@ def parse_excel(content: bytes) -> tuple[list[dict], list[str]]:
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
-        return [], []
+        return [], {}
 
     header_idx = -1
     for i, row in enumerate(rows):
@@ -194,7 +220,6 @@ def parse_excel(content: bytes) -> tuple[list[dict], list[str]]:
 
     headers = [str(c).strip() if c else "" for c in rows[header_idx]]
     items = []
-    payment_methods = set()
 
     for row in rows[header_idx + 1:]:
         data = {}
@@ -210,7 +235,7 @@ def parse_excel(content: bytes) -> tuple[list[dict], list[str]]:
             amount_val = data.get(amount_key, 0)
             if isinstance(amount_val, str):
                 amount_val = float(amount_val.replace(",", "").replace("¥", ""))
-            amount = int(float(amount_val) * 100)
+            amount = float(amount_val)
 
             dir_key = next((k for k in data if "收" in k and "支" in k), None)
             direction = str(data.get(dir_key, "")) if dir_key else ""
@@ -227,16 +252,16 @@ def parse_excel(content: bytes) -> tuple[list[dict], list[str]]:
                 "transaction_time": str(data.get(time_key, "")) if time_key else "",
                 "merchant": str(data.get(merchant_key, "")) if merchant_key else "",
                 "description": str(data.get(desc_key, "")) if desc_key else "",
-                "amount": amount,
+                "amount": int(amount * 100),
                 "type": txn_type,
                 "platform": "",
-                "payment_channel": "",
+                "payment_method": "",
             })
         except Exception:
             pass
 
     wb.close()
-    return items, list(payment_methods)
+    return items, {"platform": "unknown", "has_payment_method": False, "detected_methods": []}
 
 
 @router.post("/api/imports/upload")
@@ -264,15 +289,15 @@ async def upload_import(
                     source = "alipay"
 
             if source == "alipay":
-                items, payment_methods = parse_alipay_csv(content_str)
+                items, meta = parse_alipay_csv(content_str)
             elif source == "wechat":
-                items, payment_methods = parse_wechat_csv(content_str)
+                items, meta = parse_wechat_csv(content_str)
             else:
-                items, payment_methods = parse_alipay_csv(content_str)
+                items, meta = parse_alipay_csv(content_str)
             file_format = "csv"
 
         elif ext in ("xlsx", "xls"):
-            items, payment_methods = parse_excel(content_bytes)
+            items, meta = parse_excel(content_bytes)
             file_format = "xlsx"
         else:
             raise HTTPException(status_code=400, detail=f"不支持的文件格式: {ext}")
@@ -283,11 +308,10 @@ async def upload_import(
         logger.error("import_parse_error", error=str(e))
         raise HTTPException(status_code=500, detail=f"解析失败: {str(e)}")
 
-    # 去重：检查已存在的交易号
+    # 去重
     order_nos = [i["order_no"] for i in items if i.get("order_no")]
     existing_orders = set()
     if order_nos:
-        # 查询已导入的交易号
         result = await db.execute(
             select(BillImportItem.raw_data).where(
                 BillImportItem.import_id.in_(
@@ -299,7 +323,6 @@ async def upload_import(
             if row and row.get("order_no"):
                 existing_orders.add(row["order_no"])
 
-    # 过滤已存在的记录
     new_items = [i for i in items if not i.get("order_no") or i["order_no"] not in existing_orders]
     skipped_dup = len(items) - len(new_items)
 
@@ -337,8 +360,8 @@ async def upload_import(
         "parsed_count": len(new_items),
         "skipped_duplicate": skipped_dup,
         "status": "parsed",
-        "payment_methods": payment_methods,
-        "preview": new_items[:20],
+        "meta": meta,
+        "preview": new_items[:30],
     }
 
 
@@ -406,15 +429,28 @@ async def list_import_items(
 @router.post("/api/imports/{import_id}/confirm")
 async def confirm_import(
     import_id: int,
-    account_mapping: dict[str, int] | None = None,
+    body: dict | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """确认导入，将解析的条目转为正式交易
+    """确认导入
 
-    account_mapping: 支付方式到账户ID的映射，如 {"支付宝": 1, "花呗": 2}
+    body: {
+        "default_account_id": 1,  // 默认账户ID（用于没有明确支付方式的交易）
+        "method_account_map": {   // 支付方式→账户ID映射
+            "花呗": 2,
+            "工商银行信用卡": 3,
+            "零钱": 4
+        }
+    }
     """
     from sqlalchemy import text
+
+    if body is None:
+        body = {}
+
+    default_account_id = body.get("default_account_id")
+    method_account_map = body.get("method_account_map", {})
 
     result = await db.execute(
         select(BillImport).where(
@@ -436,7 +472,6 @@ async def confirm_import(
     )
     items = items_result.scalars().all()
 
-    # 获取 entry_id 序列
     seq_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
     base_entry_id = seq_result.scalar()
 
@@ -446,7 +481,6 @@ async def confirm_import(
         raw = item.raw_data
         amount = item.parsed_amount or raw.get("amount", 0)
 
-        # 跳过金额为0的记录
         if not amount or amount <= 0:
             skipped += 1
             item.action = "skipped"
@@ -456,31 +490,25 @@ async def confirm_import(
 
         # 解析交易时间
         txn_time_str = raw.get("transaction_time", "")
-        try:
-            if isinstance(txn_time_str, str) and txn_time_str:
-                # 尝试多种格式
-                for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M"]:
-                    try:
-                        txn_time = datetime.strptime(txn_time_str.strip(), fmt)
-                        break
-                    except ValueError:
-                        continue
-                else:
-                    txn_time = datetime.now()
-            else:
-                txn_time = datetime.now()
-        except Exception:
-            txn_time = datetime.now()
+        txn_time = datetime.now()
+        if isinstance(txn_time_str, str) and txn_time_str:
+            for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"]:
+                try:
+                    txn_time = datetime.strptime(txn_time_str.strip(), fmt)
+                    break
+                except ValueError:
+                    continue
 
-        # 确定账户ID
-        payment_channel = raw.get("payment_channel", "")
+        # 确定账户ID：优先用 method_account_map，否则用 default_account_id
+        payment_method = raw.get("payment_method", "")
         account_id = None
-        if account_mapping and payment_channel in account_mapping:
-            account_id = account_mapping[payment_channel]
+        if payment_method and payment_method in method_account_map:
+            account_id = method_account_map[payment_method]
+        elif default_account_id:
+            account_id = default_account_id
 
         txn_type = raw.get("type", "expense")
 
-        # 创建交易记录
         txn = Transaction(
             family_id=current_user.family_id,
             book_id=imp.book_id,
@@ -526,5 +554,12 @@ async def delete_import(
     imp = result.scalar_one_or_none()
     if not imp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="导入记录不存在")
+
+    # 先删除关联的明细记录（使用 bulk delete 避免逐条查询）
+    from sqlalchemy import delete as sql_delete
+    await db.execute(
+        sql_delete(BillImportItem).where(BillImportItem.import_id == import_id)
+    )
+
     await db.delete(imp)
     await db.commit()
