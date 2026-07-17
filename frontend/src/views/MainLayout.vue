@@ -43,6 +43,10 @@
           <el-icon><Aim /></el-icon>
           <template #title>储蓄</template>
         </el-menu-item>
+        <el-menu-item index="/credit-bills">
+          <el-icon><CreditCard /></el-icon>
+          <template #title>信用卡</template>
+        </el-menu-item>
         <el-menu-item index="/recurring">
           <el-icon><Clock /></el-icon>
           <template #title>周期交易</template>
@@ -50,6 +54,30 @@
         <el-menu-item index="/reimbursements">
           <el-icon><Document /></el-icon>
           <template #title>报销</template>
+        </el-menu-item>
+        <el-menu-item index="/import">
+          <el-icon><Upload /></el-icon>
+          <template #title>导入/导出</template>
+        </el-menu-item>
+        <el-menu-item index="/notifications">
+          <el-icon><Bell /></el-icon>
+          <template #title>通知</template>
+        </el-menu-item>
+        <el-menu-item index="/aliases">
+          <el-icon><Connection /></el-icon>
+          <template #title>商户别名</template>
+        </el-menu-item>
+        <el-menu-item index="/rules">
+          <el-icon><SetUp /></el-icon>
+          <template #title>规则引擎</template>
+        </el-menu-item>
+        <el-menu-item index="/backup">
+          <el-icon><FolderOpened /></el-icon>
+          <template #title>备份</template>
+        </el-menu-item>
+        <el-menu-item index="/sync">
+          <el-icon><Refresh /></el-icon>
+          <template #title>同步</template>
         </el-menu-item>
         <el-menu-item index="/books">
           <el-icon><Notebook /></el-icon>
@@ -107,7 +135,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
   HomeFilled, List, CreditCard, Grid, Coin, DataAnalysis, Money, Aim,
   Clock, Document, Notebook, PriceTag, Setting, Fold, Expand,
-  ArrowDown, UserFilled, Wallet,
+  ArrowDown, UserFilled, Wallet, Upload, Bell, Connection, SetUp, FolderOpened, Refresh,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -126,8 +154,15 @@ const titleMap: Record<string, string> = {
   '/stats': '统计分析',
   '/debts': '借贷管理',
   '/savings': '储蓄目标',
+  '/credit-bills': '信用卡账单',
   '/recurring': '周期交易',
   '/reimbursements': '报销管理',
+  '/import': '导入/导出',
+  '/notifications': '通知',
+  '/aliases': '商户别名',
+  '/rules': '规则引擎',
+  '/backup': '备份管理',
+  '/sync': '数据同步',
   '/books': '账本管理',
   '/tags': '标签管理',
   '/settings': '设置',
