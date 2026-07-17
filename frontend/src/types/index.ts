@@ -250,39 +250,47 @@ export interface TagUpdate {
 export interface Budget {
   id: number
   family_id: number
+  book_id: number | null
   category_id: number | null
-  name: string
   amount: number
+  currency: string
   period: string
   year: number
   month: number | null
-  week_number: number | null
+  week_start_date: string | null
   rollover: boolean
+  rollover_amount: number
   alert_threshold: number
-  created_at: string
 }
 
 export interface BudgetCreate {
-  name: string
-  amount: number
-  period: string
+  book_id?: number
   category_id?: number
+  amount: number
+  currency?: string
+  period: string
   year: number
   month?: number
-  week_number?: number
+  week_start_date?: string
   rollover?: boolean
   alert_threshold?: number
 }
 
-export interface BudgetUpdate extends Partial<BudgetCreate> {}
+export interface BudgetUpdate {
+  amount?: number
+  rollover?: boolean
+  alert_threshold?: number
+}
 
 export interface BudgetUsage {
   budget_id: number
-  name: string
   amount: number
   spent: number
   remaining: number
-  percentage: number
+  usage_rate: number
+  is_over: boolean
+  period_start: string
+  period_end: string
 }
 
 // ---- Debt ----
@@ -290,77 +298,113 @@ export interface Debt {
   id: number
   family_id: number
   type: string
-  person_name: string
+  counterparty: string
   amount: number
-  remaining_amount: number
   currency: string
-  interest_rate: number | null
+  payment_account_id: number | null
+  debt_date: string
   due_date: string | null
-  note: string | null
   status: string
-  created_at: string
+  repaid_amount: number
+  description: string | null
+  created_by: number
+  repayments: RepaymentResponse[]
 }
 
 export interface DebtCreate {
   type: string
-  person_name: string
+  counterparty: string
   amount: number
   currency?: string
-  interest_rate?: number
+  payment_account_id?: number
+  debt_date: string
   due_date?: string
-  note?: string
+  description?: string
 }
 
-export interface DebtUpdate extends Partial<DebtCreate> {}
+export interface DebtUpdate {
+  counterparty?: string
+  due_date?: string
+  description?: string
+}
 
 export interface RepaymentCreate {
   amount: number
-  note?: string
+  repayment_date: string
+  payment_account_id?: number
+  description?: string
 }
 
 export interface RepaymentResponse {
   id: number
   debt_id: number
   amount: number
-  note: string | null
-  created_at: string
+  repayment_date: string
+  payment_account_id: number | null
+  description: string | null
 }
 
 // ---- Recurring ----
 export interface RecurringTransaction {
   id: number
   family_id: number
+  book_id: number
   type: string
   amount: number
+  currency: string
   category_id: number | null
+  sub_category_id: number | null
   payment_account_id: number | null
+  payment_channel_id: number | null
+  platform_id: number | null
   merchant_name: string | null
-  note: string | null
+  description: string | null
   frequency: string
   day_of_month: number | null
   day_of_week: number | null
+  month_of_year: number | null
+  interval_value: number
   start_date: string
   end_date: string | null
   next_generate: string | null
   is_active: boolean
-  created_at: string
+  remind_days_before: number
+  remind_time: string | null
+  created_by: number
 }
 
 export interface RecurringCreate {
+  book_id: number
   type: string
   amount: number
-  frequency: string
+  currency?: string
   category_id?: number
+  sub_category_id?: number
   payment_account_id?: number
+  payment_channel_id?: number
+  platform_id?: number
   merchant_name?: string
-  note?: string
+  description?: string
+  frequency: string
   day_of_month?: number
   day_of_week?: number
+  month_of_year?: number
+  interval_value?: number
   start_date: string
   end_date?: string
+  remind_days_before?: number
+  remind_time?: string
 }
 
-export interface RecurringUpdate extends Partial<RecurringCreate> {
+export interface RecurringUpdate {
+  amount?: number
+  category_id?: number
+  sub_category_id?: number
+  payment_account_id?: number
+  merchant_name?: string
+  description?: string
+  frequency?: string
+  day_of_month?: number
   is_active?: boolean
 }
 
@@ -368,9 +412,11 @@ export interface RecurringLog {
   id: number
   recurring_id: number
   transaction_id: number | null
+  scheduled_date: string
+  actual_date: string | null
   status: string
-  error_message: string | null
-  generated_at: string
+  amount: number | null
+  note: string | null
 }
 
 // ---- Reimbursement ----
@@ -378,47 +424,46 @@ export interface Reimbursement {
   id: number
   family_id: number
   title: string
-  status: string
   total_amount: number
+  status: string
   submitted_at: string | null
   approved_at: string | null
   received_at: string | null
-  notes: string | null
+  received_amount: number | null
+  submitted_by: number
+  description: string | null
   items: ReimbursementItem[]
-  created_at: string
 }
 
 export interface ReimbursementItem {
   id: number
   reimbursement_id: number
-  transaction_id: number | null
-  description: string
+  transaction_id: number
   amount: number
-  category_id: number | null
-  note: string | null
+  description: string | null
 }
 
 export interface ReimbursementCreate {
   title: string
-  notes?: string
+  total_amount: number
+  description?: string
   items: ReimbursementItemCreate[]
 }
 
 export interface ReimbursementItemCreate {
-  transaction_id?: number
-  description: string
+  transaction_id: number
   amount: number
-  category_id?: number
-  note?: string
+  description?: string
 }
 
 export interface ReimbursementUpdate {
   title?: string
-  notes?: string
+  total_amount?: number
+  description?: string
 }
 
 export interface ReceiveRequest {
-  account_id: number
+  received_amount: number
 }
 
 // ---- Stats ----
@@ -498,24 +543,36 @@ export interface SavingsGoal {
   id: number
   family_id: number
   name: string
+  icon: string | null
+  color: string | null
   target_amount: number
   current_amount: number
-  currency: string
-  deadline: string | null
-  icon: string | null
+  account_id: number | null
+  start_date: string
+  target_date: string | null
   status: string
-  created_at: string
+  achieved_at: string | null
+  created_by: number
+  progress: number
 }
 
 export interface SavingsGoalCreate {
   name: string
-  target_amount: number
-  currency?: string
-  deadline?: string
   icon?: string
+  color?: string
+  target_amount: number
+  account_id?: number
+  start_date: string
+  target_date?: string
 }
 
-export interface SavingsGoalUpdate extends Partial<SavingsGoalCreate> {}
+export interface SavingsGoalUpdate {
+  name?: string
+  icon?: string
+  color?: string
+  target_amount?: number
+  target_date?: string
+}
 
 export interface DepositRequest {
   amount: number

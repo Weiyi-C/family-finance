@@ -37,14 +37,16 @@
     <el-dialog v-model="showDialog" title="新建报销" width="560px" destroy-on-close>
       <el-form :model="form" label-width="80px">
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.notes" /></el-form-item>
+        <el-form-item label="总额(分)"><el-input-number v-model="form.total_amount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="form.description" /></el-form-item>
         <el-divider>明细项</el-divider>
         <div v-for="(item, i) in form.items" :key="i" style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <el-input-number v-model="item.transaction_id" :min="1" placeholder="交易ID" style="flex: 1;" />
+          <el-input-number v-model="item.amount" :min="1" placeholder="金额" style="flex: 1;" />
           <el-input v-model="item.description" placeholder="描述" style="flex: 2;" />
-          <el-input-number v-model="item.amountYuan" :min="0.01" :precision="2" placeholder="金额" style="flex: 1;" />
           <el-button type="danger" :icon="Delete" circle size="small" @click="form.items.splice(i, 1)" />
         </div>
-        <el-button @click="form.items.push({ description: '', amountYuan: 0 })">添加明细</el-button>
+        <el-button @click="form.items.push({ transaction_id: 0, amount: 0, description: '' })">添加明细</el-button>
       </el-form>
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
@@ -57,21 +59,18 @@
         <el-descriptions-item label="标题">{{ detailItem.title }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ statusMap[detailItem.status] }}</el-descriptions-item>
         <el-descriptions-item label="总额">{{ formatMoney(detailItem.total_amount) }}</el-descriptions-item>
-        <el-descriptions-item label="备注">{{ detailItem.notes }}</el-descriptions-item>
+        <el-descriptions-item label="备注">{{ detailItem.description }}</el-descriptions-item>
       </el-descriptions>
       <el-table :data="detailItem?.items || []" style="margin-top: 12px;" stripe>
+        <el-table-column prop="transaction_id" label="交易ID" width="80" />
         <el-table-column prop="description" label="描述" />
         <el-table-column label="金额" align="right"><template #default="{ row }">{{ formatMoney(row.amount) }}</template></el-table-column>
       </el-table>
     </el-dialog>
 
     <el-dialog v-model="showReceive" title="确认到账" width="360px">
-      <el-form label-width="60px">
-        <el-form-item label="账户">
-          <el-select v-model="receiveAccountId" placeholder="选择到账账户" style="width: 100%;">
-            <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
-          </el-select>
-        </el-form-item>
+      <el-form label-width="80px">
+        <el-form-item label="到账金额(分)"><el-input-number v-model="receiveAmount" :min="1" style="width: 100%;" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showReceive = false">取消</el-button>
@@ -86,26 +85,25 @@ import { ref, reactive, onMounted } from 'vue'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getReimbursements, createReimbursement, submitReimbursement, approveReimbursement, receiveReimbursement, deleteReimbursement } from '@/api/reimbursements'
-import { getAccounts } from '@/api/accounts'
-import type { Reimbursement, PaymentAccount } from '@/types'
+import type { Reimbursement } from '@/types'
 
 const loading = ref(false)
 const saving = ref(false)
 const items = ref<Reimbursement[]>([])
-const accounts = ref<PaymentAccount[]>([])
 const filterStatus = ref('')
 const showDialog = ref(false)
 const showDetail = ref(false)
 const showReceive = ref(false)
 const detailItem = ref<Reimbursement | null>(null)
 const receiveId = ref(0)
-const receiveAccountId = ref<number | null>(null)
+const receiveAmount = ref(0)
 
 const statusMap: Record<string, string> = { draft: '草稿', submitted: '待审批', approved: '已审批', received: '已到账' }
 const statusType: Record<string, string> = { draft: 'info', submitted: 'warning', approved: 'success', received: '' }
 
 const form = reactive({
-  title: '', notes: '', items: [{ description: '', amountYuan: 0 }] as { description: string; amountYuan: number }[],
+  title: '', total_amount: 0, description: '',
+  items: [{ transaction_id: 0, amount: 0, description: '' }] as { transaction_id: number; amount: number; description: string }[],
 })
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
@@ -117,12 +115,12 @@ async function load() {
 }
 
 async function handleCreate() {
-  if (!form.title || !form.items.length) { ElMessage.warning('请填写标题和明细'); return }
+  if (!form.title || !form.total_amount) { ElMessage.warning('请填写标题和总额'); return }
   saving.value = true
   try {
     await createReimbursement({
-      title: form.title, notes: form.notes || undefined,
-      items: form.items.map((i) => ({ description: i.description, amount: Math.round(i.amountYuan * 100) })),
+      title: form.title, total_amount: form.total_amount, description: form.description || undefined,
+      items: form.items.filter((i) => i.transaction_id && i.amount).map((i) => ({ transaction_id: i.transaction_id, amount: i.amount, description: i.description || undefined })),
     })
     ElMessage.success('创建成功'); showDialog.value = false; await load()
   } catch (err: unknown) { ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '创建失败') }
@@ -137,11 +135,11 @@ async function handleApprove(id: number) {
   try { await approveReimbursement(id); ElMessage.success('已审批'); await load() } catch { ElMessage.error('审批失败') }
 }
 
-function openReceive(id: number) { receiveId.value = id; receiveAccountId.value = null; showReceive.value = true }
+function openReceive(id: number) { receiveId.value = id; receiveAmount.value = 0; showReceive.value = true }
 
 async function handleReceive() {
-  if (!receiveAccountId.value) { ElMessage.warning('请选择账户'); return }
-  try { await receiveReimbursement(receiveId.value, { account_id: receiveAccountId.value }); ElMessage.success('已到账'); showReceive.value = false; await load() }
+  if (!receiveAmount.value) { ElMessage.warning('请填写金额'); return }
+  try { await receiveReimbursement(receiveId.value, { received_amount: receiveAmount.value }); ElMessage.success('已到账'); showReceive.value = false; await load() }
   catch { ElMessage.error('操作失败') }
 }
 
@@ -151,9 +149,7 @@ async function handleDelete(id: number) {
   try { await deleteReimbursement(id); ElMessage.success('已删除'); await load() } catch { ElMessage.error('删除失败') }
 }
 
-onMounted(async () => {
-  await Promise.all([load(), getAccounts().then((r) => { accounts.value = r.data })])
-})
+onMounted(load)
 </script>
 
 <style scoped>

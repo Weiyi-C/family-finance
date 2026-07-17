@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <h3>储蓄目标</h3>
-      <el-button type="primary" @click="showDialog = true"><el-icon><Plus /></el-icon> 新建目标</el-button>
+      <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 新建目标</el-button>
     </div>
     <el-row :gutter="16">
       <el-col :span="8" v-for="goal in goals" :key="goal.id">
@@ -14,15 +14,15 @@
             </el-tag>
           </div>
           <div class="goal-progress">
-            <el-progress :percentage="Math.min(Math.round(goal.current_amount / goal.target_amount * 100), 100)"
+            <el-progress :percentage="Math.min(Math.round(goal.progress * 100), 100)"
               :status="goal.status === 'achieved' ? 'success' : ''" :stroke-width="20" />
           </div>
           <div class="goal-detail">
             <span>已存: {{ formatMoney(goal.current_amount) }}</span>
             <span>目标: {{ formatMoney(goal.target_amount) }}</span>
           </div>
-          <div class="goal-detail" v-if="goal.deadline">
-            <span>截止: {{ goal.deadline }}</span>
+          <div class="goal-detail" v-if="goal.target_date">
+            <span>截止: {{ goal.target_date }}</span>
           </div>
           <div class="goal-actions" v-if="goal.status === 'active'">
             <el-button type="success" size="small" @click="openDeposit(goal.id)">存款</el-button>
@@ -38,8 +38,9 @@
     <el-dialog v-model="showDialog" :title="editingId ? '编辑目标' : '新建目标'" width="400px" destroy-on-close>
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="目标金额(元)"><el-input-number v-model="form.amountYuan" :min="1" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="截止日期"><el-date-picker v-model="form.deadline" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="目标金额(分)"><el-input-number v-model="form.target_amount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="开始日期"><el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="截止日期"><el-date-picker v-model="form.target_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
@@ -48,8 +49,8 @@
     </el-dialog>
 
     <el-dialog v-model="showDeposit" title="存款" width="320px">
-      <el-form label-width="60px">
-        <el-form-item label="金额(元)"><el-input-number v-model="depositAmount" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+      <el-form label-width="80px">
+        <el-form-item label="金额(分)"><el-input-number v-model="depositAmount" :min="1" style="width: 100%;" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDeposit = false">取消</el-button>
@@ -74,21 +75,29 @@ const showDeposit = ref(false)
 const depositGoalId = ref(0)
 const depositAmount = ref(0)
 const statusMap: Record<string, string> = { active: '进行中', achieved: '已达成', abandoned: '已放弃' }
-const form = reactive({ name: '', amountYuan: 0, deadline: '' })
+const form = reactive({ name: '', target_amount: 0, start_date: new Date().toISOString().slice(0, 10), target_date: '' })
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
 
 async function load() { goals.value = (await getSavings()).data }
 
+function openCreate() {
+  editingId.value = null; form.name = ''; form.target_amount = 0
+  form.start_date = new Date().toISOString().slice(0, 10); form.target_date = ''
+  showDialog.value = true
+}
+
 function editGoal(row: SavingsGoal) {
-  editingId.value = row.id; form.name = row.name; form.amountYuan = row.target_amount / 100; form.deadline = row.deadline || ''; showDialog.value = true
+  editingId.value = row.id; form.name = row.name; form.target_amount = row.target_amount
+  form.start_date = row.start_date; form.target_date = row.target_date || ''
+  showDialog.value = true
 }
 
 async function handleSave() {
-  if (!form.name || !form.amountYuan) { ElMessage.warning('请填写名称和金额'); return }
+  if (!form.name || !form.target_amount || !form.start_date) { ElMessage.warning('请填写名称、金额和开始日期'); return }
   saving.value = true
   try {
-    const payload = { name: form.name, target_amount: Math.round(form.amountYuan * 100), deadline: form.deadline || undefined }
+    const payload = { name: form.name, target_amount: form.target_amount, start_date: form.start_date, target_date: form.target_date || undefined }
     if (editingId.value) { await updateSavingsGoal(editingId.value, payload); ElMessage.success('更新成功') }
     else { await createSavings(payload); ElMessage.success('创建成功') }
     showDialog.value = false; editingId.value = null; await load()
@@ -100,7 +109,7 @@ function openDeposit(id: number) { depositGoalId.value = id; depositAmount.value
 
 async function handleDeposit() {
   if (!depositAmount.value) { ElMessage.warning('请填写金额'); return }
-  try { await depositSavings(depositGoalId.value, { amount: Math.round(depositAmount.value * 100) }); ElMessage.success('存款成功'); showDeposit.value = false; await load() }
+  try { await depositSavings(depositGoalId.value, { amount: depositAmount.value }); ElMessage.success('存款成功'); showDeposit.value = false; await load() }
   catch { ElMessage.error('存款失败') }
 }
 
