@@ -1,8 +1,16 @@
 import api from './index'
 import type { Transaction, TransactionCreate, TransactionUpdate, TransactionListParams } from '@/types'
 
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+}
+
 export function getTransactions(params: TransactionListParams = {}) {
-  return api.get<Transaction[]>('/transactions', { params })
+  return api.get<PaginatedResponse<Transaction>>('/transactions', { params })
 }
 
 export function createTransaction(data: TransactionCreate) {

@@ -154,7 +154,8 @@ onMounted(async () => {
     Object.assign(summary, summaryRes.data)
     categoryData.value = catRes.data
     monthlyData.value = monthRes.data
-    recentTxns.value = txnRes.data
+    // 后端返回 {items, total, ...} 格式
+    recentTxns.value = txnRes.data.items || txnRes.data
 
     renderMonthlyChart(monthlyData.value)
     renderCategoryChart(categoryData.value)

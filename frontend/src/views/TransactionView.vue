@@ -268,8 +268,10 @@ async function loadTransactions() {
       }
     })
     const res = await getTransactions(params as any)
-    transactions.value = res.data
-    total.value = res.data.length // 后端暂未返回总数
+    // 后端返回 {items, total, page, page_size, pages}
+    const data = res.data
+    transactions.value = data.items || data
+    total.value = data.total || (Array.isArray(data) ? data.length : 0)
   } catch {
     ElMessage.error('加载交易失败')
   } finally {

@@ -126,7 +126,7 @@ async def create_transaction(
     return _to_response(debit, body.tag_ids)
 
 
-@router.get("", response_model=list[TransactionResponse])
+@router.get("")
 async def list_transactions(
     book_id: int | None = None,
     type: str | None = None,
@@ -179,11 +179,23 @@ async def list_transactions(
     result = await db.execute(stmt)
     txns = list(result.scalars())
 
+    # 获取总数
+    count_stmt = select(func.count()).select_from(Transaction).where(and_(*conditions))
+    total_result = await db.execute(count_stmt)
+    total = total_result.scalar() or 0
+
     responses = []
     for txn in txns:
         tag_ids = await _get_tag_ids(db, txn.entry_id)
         responses.append(_to_response(txn, tag_ids))
-    return responses
+
+    return {
+        "items": responses,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": (total + page_size - 1) // page_size,
+    }
 
 
 @router.get("/{txn_id}", response_model=TransactionResponse)
