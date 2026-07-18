@@ -156,26 +156,50 @@
       </template>
     </el-dialog>
 
-    <!-- 新建账户对话框 -->
-    <el-dialog v-model="showAccountDialog" title="新建账户" width="500px" append-to-body destroy-on-close>
-      <el-form :model="accountForm" label-width="80px">
-        <el-form-item label="类型">
-          <el-select v-model="accountForm.type_code" style="width: 100%;" @change="onTypeChange">
-            <el-option-group v-for="group in templateGroups" :key="group.name" :label="group.name">
-              <el-option v-for="t in group.templates" :key="t.type_code" :label="`${t.icon} ${t.name}`" :value="t.type_code" />
-            </el-option-group>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="名称"><el-input v-model="accountForm.name" /></el-form-item>
-        <el-form-item label="银行" v-if="needBank">
-          <el-select v-model="accountForm.bank_name" filterable placeholder="选择银行" style="width: 100%;">
-            <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.name" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="卡号后四位" v-if="needCard"><el-input v-model="accountForm.card_tail" maxlength="4" /></el-form-item>
-        <el-form-item label="信用额度(元)" v-if="needCreditLimit"><el-input-number v-model="accountForm.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="账单日" v-if="needBillingDay"><el-input-number v-model="accountForm.billing_day" :min="1" :max="28" /></el-form-item>
-        <el-form-item label="还款日" v-if="needDueDay"><el-input-number v-model="accountForm.due_day" :min="1" :max="28" /></el-form-item>
+    <!-- 新建账户对话框 - 使用新的渠道选择流程 -->
+    <el-dialog v-model="showAccountDialog" title="新建账户" width="550px" append-to-body destroy-on-close>
+      <!-- 根据建议的类型显示不同的表单 -->
+      <el-form :model="accountForm" label-width="100px">
+        <!-- 银行卡类型 -->
+        <template v-if="isBankType">
+          <el-form-item label="银行">
+            <el-select v-model="accountForm.bank_id" filterable style="width: 100%;" @change="onBankChange">
+              <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="账户类型">
+            <el-radio-group v-model="accountForm.type_code">
+              <el-radio-button value="bank_savings">储蓄卡</el-radio-button>
+              <el-radio-button value="bank_credit">信用卡</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="卡号后四位"><el-input v-model="accountForm.card_tail" maxlength="4" /></el-form-item>
+          <el-form-item label="账户名称"><el-input v-model="accountForm.name" /></el-form-item>
+          <template v-if="accountForm.type_code === 'bank_credit'">
+            <el-form-item label="信用额度(元)"><el-input-number v-model="accountForm.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
+            <el-form-item label="账单日"><el-input-number v-model="accountForm.billing_day" :min="1" :max="28" /></el-form-item>
+            <el-form-item label="还款日"><el-input-number v-model="accountForm.due_day" :min="1" :max="28" /></el-form-item>
+          </template>
+        </template>
+
+        <!-- 支付渠道类型（支付宝/微信等） -->
+        <template v-else>
+          <el-form-item label="支付渠道">
+            <el-select v-model="accountForm.channel_id" style="width: 100%;">
+              <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="产品类型">
+            <el-select v-model="accountForm.type_code" style="width: 100%;">
+              <el-option label="余额" value="e_wallet" />
+              <el-option label="花呗" value="alipay_huabei" />
+              <el-option label="余额宝" value="alipay_yuebao" />
+              <el-option label="零钱通" value="wechat_lingqian" />
+              <el-option label="白条" value="jd_baitiao" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="账户名称"><el-input v-model="accountForm.name" /></el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="showAccountDialog = false">取消</el-button>
@@ -229,6 +253,7 @@ import { getImports, getImportItems, deleteImport } from '@/api/imports'
 import { getAccounts, createAccount } from '@/api/accounts'
 import { getBooks } from '@/api/books'
 import { getBanks, getAccountTemplates } from '@/api/reference'
+import { getChannels } from '@/api/channels'
 import { exportTransactions, exportAccounts, exportCategories } from '@/api/exports'
 import api from '@/api/index'
 import type { BillImport, BillImportItem } from '@/api/imports'
@@ -261,6 +286,7 @@ interface UploadResult {
 
 interface BankItem { id: number; name: string; code: string; short_name: string }
 interface TemplateItem { id: number; type_code: string; name: string; icon: string | null; group_name: string; is_credit: boolean; has_credit_limit: boolean; has_billing_day: boolean; has_due_day: boolean }
+interface ChannelItem { id: number; name: string }
 
 const loading = ref(false)
 const uploading = ref(false)
@@ -272,6 +298,7 @@ const books = ref<AccountBook[]>([])
 const accounts = ref<PaymentAccount[]>([])
 const banks = ref<BankItem[]>([])
 const templates = ref<TemplateItem[]>([])
+const channels = ref<ChannelItem[]>([])
 const showImportDialog = ref(false)
 const showItemsDialog = ref(false)
 const showExportDialog = ref(false)
@@ -293,32 +320,26 @@ const actionMap: Record<string, string> = { pending: '待处理', imported: '已
 const importForm = reactive({ book_id: 0, source: 'auto' })
 
 const accountForm = reactive({
-  type_code: '', name: '', bank_name: '', card_tail: '',
+  type_code: '', name: '', bank_id: null as number | null, bank_name: '', card_tail: '',
+  channel_id: null as number | null,
   credit_limit_yuan: 0, billing_day: null as number | null, due_day: null as number | null,
 })
 
-const currentTemplate = computed(() => templates.value.find((t) => t.type_code === accountForm.type_code))
-const needBank = computed(() => ['bank_savings', 'bank_credit'].includes(accountForm.type_code))
-const needCard = computed(() => ['bank_savings', 'bank_credit'].includes(accountForm.type_code))
-const needCreditLimit = computed(() => currentTemplate.value?.has_credit_limit ?? false)
-const needBillingDay = computed(() => currentTemplate.value?.has_billing_day ?? false)
-const needDueDay = computed(() => currentTemplate.value?.has_due_day ?? false)
+const isBankType = computed(() => ['bank_savings', 'bank_credit'].includes(accountForm.type_code))
 
-const templateGroups = computed(() => {
-  const groups: Record<string, TemplateItem[]> = {}
-  for (const t of templates.value) {
-    if (!groups[t.group_name]) groups[t.group_name] = []
-    groups[t.group_name].push(t)
+function onBankChange() {
+  const bank = banks.value.find((b) => b.id === accountForm.bank_id)
+  if (bank) {
+    accountForm.bank_name = bank.name
+    if (!accountForm.name) {
+      accountForm.name = accountForm.type_code === 'bank_credit'
+        ? `${bank.name}信用卡`
+        : `${bank.name}储蓄卡`
+    }
   }
-  return Object.entries(groups).map(([name, ts]) => ({ name, templates: ts }))
-})
+}
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
-
-function onTypeChange() {
-  const t = currentTemplate.value
-  if (t) accountForm.name = t.name
-}
 
 function resetImport() {
   step.value = 1
@@ -407,18 +428,39 @@ function openCreateAccount(method: string) {
   if (unmatched?.suggestion) {
     accountForm.type_code = unmatched.suggestion.type_code
     accountForm.name = unmatched.suggestion.name
-    accountForm.bank_name = unmatched.suggestion.bank_name || ''
     accountForm.card_tail = unmatched.suggestion.card_tail || ''
+
+    // 根据类型设置渠道或银行
+    if (['bank_savings', 'bank_credit'].includes(unmatched.suggestion.type_code)) {
+      // 银行卡类型
+      accountForm.bank_id = null
+      accountForm.bank_name = unmatched.suggestion.bank_name || ''
+      accountForm.channel_id = null
+      // 尝试匹配银行
+      const bank = banks.value.find((b) => b.name === unmatched.suggestion.bank_name)
+      if (bank) accountForm.bank_id = bank.id
+    } else {
+      // 支付渠道类型
+      accountForm.bank_id = null
+      accountForm.bank_name = ''
+      accountForm.channel_id = null
+      // 根据支付方式设置默认渠道
+      if (method.includes('微信') || method === '零钱' || method === '零钱通') {
+        const wechat = channels.value.find((c) => c.name.includes('微信'))
+        if (wechat) accountForm.channel_id = wechat.id
+      } else if (method.includes('支付宝') || method.includes('花呗') || method.includes('余额宝')) {
+        const alipay = channels.value.find((c) => c.name.includes('支付宝'))
+        if (alipay) accountForm.channel_id = alipay.id
+      }
+    }
   } else {
     // 兜底逻辑
-    const methodTypeMap: Record<string, string> = {
-      '花呗': 'alipay_huabei', '余额宝': 'alipay_yuebao', '借呗': 'alipay_jiebei',
-      '零钱': 'wechat_balance', '零钱通': 'wechat_lingqian',
-    }
-    accountForm.type_code = methodTypeMap[method] || 'bank_credit'
+    accountForm.type_code = 'e_wallet'
     accountForm.name = method
+    accountForm.bank_id = null
     accountForm.bank_name = ''
     accountForm.card_tail = ''
+    accountForm.channel_id = null
   }
   accountForm.credit_limit_yuan = 0
   accountForm.billing_day = null
@@ -431,13 +473,24 @@ async function handleCreateAccount() {
   savingAccount.value = true
   try {
     const payload: Record<string, unknown> = {
-      name: accountForm.name, type_code: accountForm.type_code,
+      name: accountForm.name,
+      type_code: accountForm.type_code,
     }
-    if (needBank.value && accountForm.bank_name) payload.bank_name = accountForm.bank_name
-    if (needCard.value && accountForm.card_tail) payload.card_tail = accountForm.card_tail
-    if (needCreditLimit.value && accountForm.credit_limit_yuan) payload.credit_limit = Math.round(accountForm.credit_limit_yuan * 100)
-    if (needBillingDay.value && accountForm.billing_day) payload.billing_day = accountForm.billing_day
-    if (needDueDay.value && accountForm.due_day) payload.due_day = accountForm.due_day
+
+    // 银行卡类型
+    if (isBankType.value) {
+      if (accountForm.bank_id) payload.bank_id = accountForm.bank_id
+      if (accountForm.bank_name) payload.bank_name = accountForm.bank_name
+      if (accountForm.card_tail) payload.card_tail = accountForm.card_tail
+      if (accountForm.type_code === 'bank_credit') {
+        if (accountForm.credit_limit_yuan) payload.credit_limit = Math.round(accountForm.credit_limit_yuan * 100)
+        if (accountForm.billing_day) payload.billing_day = accountForm.billing_day
+        if (accountForm.due_day) payload.due_day = accountForm.due_day
+      }
+    } else {
+      // 支付渠道类型
+      if (accountForm.channel_id) payload.channel_id = accountForm.channel_id
+    }
 
     const res = await createAccount(payload as any)
     ElMessage.success('账户创建成功')
@@ -478,6 +531,7 @@ onMounted(async () => {
     getBooks().then((r) => { books.value = r.data; if (books.value.length) importForm.book_id = books.value[0].id }),
     getBanks().then((r) => { banks.value = r.data }),
     getAccountTemplates().then((r) => { templates.value = r.data }),
+    getChannels().then((r) => { channels.value = r.data }),
   ])
 })
 </script>
