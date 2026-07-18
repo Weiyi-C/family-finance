@@ -275,3 +275,92 @@ async def delete_transaction(
     await db.commit()
 
     logger.info("transaction_deleted", txn_id=txn_id)
+
+
+# ---- 批量操作 ----
+
+@router.post("/batch")
+async def batch_create(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量创建交易"""
+    items = body.get("items", [])
+    if not items:
+        raise HTTPException(status_code=400, detail="请提供交易列表")
+
+    created = []
+    for item in items:
+        entry_id_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
+        entry_id = entry_id_result.scalar()
+
+        txn_type = item.get("type", "expense")
+        debit_side = "debit" if txn_type != "income" else "credit"
+
+        # 解析交易时间
+        txn_time = item.get("transaction_time")
+        if isinstance(txn_time, str) and txn_time:
+            try:
+                txn_time = datetime.fromisoformat(txn_time.replace("Z", "+00:00"))
+            except ValueError:
+                txn_time = datetime.now()
+        elif not txn_time:
+            txn_time = datetime.now()
+
+        debit_txn = Transaction(
+            family_id=current_user.family_id,
+            book_id=item.get("book_id"),
+            entry_id=entry_id,
+            entry_side=debit_side,
+            type=txn_type,
+            amount=item.get("amount", 0),
+            currency=item.get("currency", "CNY"),
+            category_id=item.get("category_id"),
+            sub_category_id=item.get("sub_category_id"),
+            payment_account_id=item.get("payment_account_id"),
+            payment_channel_id=item.get("payment_channel_id"),
+            platform_id=item.get("platform_id"),
+            merchant_name=item.get("merchant_name"),
+            description=item.get("description"),
+            transaction_time=txn_time,
+            recorded_by=current_user.id,
+            paid_by=item.get("paid_by", current_user.id),
+        )
+        db.add(debit_txn)
+        created.append(entry_id)
+
+    await db.commit()
+    return {"created": len(created), "entry_ids": created}
+
+
+@router.patch("/batch")
+async def batch_update(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量修改交易"""
+    ids = body.get("ids", [])
+    updates = body.get("updates", {})
+    if not ids or not updates:
+        raise HTTPException(status_code=400, detail="请提供交易ID列表和更新内容")
+
+    # 只更新允许的字段
+    allowed_fields = {"category_id", "sub_category_id", "payment_account_id", "payment_channel_id",
+                      "platform_id", "merchant_name", "description", "tag_ids"}
+    update_data = {k: v for k, v in updates.items() if k in allowed_fields}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="没有有效的更新字段")
+
+    result = await db.execute(
+        update(Transaction)
+        .where(
+            Transaction.id.in_(ids),
+            Transaction.family_id == current_user.family_id,
+            Transaction.is_deleted == False,
+        )
+        .values(**update_data)
+    )
+    await db.commit()
+    return {"updated": result.rowcount}

@@ -185,3 +185,100 @@ async def get_merchant_ranking(
         MerchantRank(merchant=r.merchant_name, total=r.total, count=r.count)
         for r in result.all()
     ]
+
+
+@router.get("/compare")
+async def get_comparison(
+    current: str = Query(..., description="当期日期范围，如 2026-07-01:2026-07-31"),
+    previous: str = Query(..., description="对比日期范围，如 2026-06-01:2026-06-30"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """同比/环比统计"""
+    cur_start, cur_end = current.split(":")
+    prev_start, prev_end = previous.split(":")
+
+    async def get_period_stats(start: str, end: str):
+        conds = _base_conditions(current_user.family_id, start, end, None)
+        result = await db.execute(
+            select(
+                func.sum(case((Transaction.type == "expense", Transaction.amount), else_=0)).label("expense"),
+                func.sum(case((Transaction.type == "income", Transaction.amount), else_=0)).label("income"),
+                func.count().label("count"),
+            ).where(and_(*conds))
+        )
+        row = result.one()
+        return {
+            "expense": row.expense or 0,
+            "income": row.income or 0,
+            "net": (row.income or 0) - (row.expense or 0),
+            "count": row.count or 0,
+        }
+
+    current_stats = await get_period_stats(cur_start, cur_end)
+    previous_stats = await get_period_stats(prev_start, prev_end)
+
+    # 计算变化率
+    def calc_change(curr: int, prev: int):
+        if prev == 0:
+            return None if curr == 0 else 100.0
+        return round((curr - prev) / prev * 100, 2)
+
+    return {
+        "current": current_stats,
+        "previous": previous_stats,
+        "changes": {
+            "expense_change": calc_change(current_stats["expense"], previous_stats["expense"]),
+            "income_change": calc_change(current_stats["income"], previous_stats["income"]),
+            "net_change": calc_change(current_stats["net"], previous_stats["net"]),
+            "count_change": calc_change(current_stats["count"], previous_stats["count"]),
+        },
+    }
+
+
+@router.get("/cross")
+async def get_cross_analysis(
+    dimension1: str = Query("category", description="维度1: category/account/channel/platform"),
+    dimension2: str = Query("month", description="维度2: month/day/weekday"),
+    start: str | None = None,
+    end: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """三维交叉分析"""
+    conds = _base_conditions(current_user.family_id, start, end, None)
+    conds.append(Transaction.type == "expense")
+
+    # 维度1字段映射
+    dim1_map = {
+        "category": Transaction.category_id,
+        "account": Transaction.payment_account_id,
+        "channel": Transaction.payment_channel_id,
+        "platform": Transaction.platform_id,
+    }
+    # 维度2字段映射
+    dim2_map = {
+        "month": func.to_char(Transaction.transaction_time, "YYYY-MM"),
+        "day": func.to_char(Transaction.transaction_time, "YYYY-MM-DD"),
+        "weekday": func.extract("dow", Transaction.transaction_time),
+    }
+
+    dim1_col = dim1_map.get(dimension1, Transaction.category_id)
+    dim2_col = dim2_map.get(dimension2, func.to_char(Transaction.transaction_time, "YYYY-MM"))
+
+    result = await db.execute(
+        select(
+            dim1_col.label("dim1"),
+            dim2_col.label("dim2"),
+            func.sum(Transaction.amount).label("total"),
+            func.count().label("count"),
+        )
+        .where(and_(*conds))
+        .group_by(dim1_col, dim2_col)
+        .order_by(dim1_col, dim2_col)
+    )
+
+    return [
+        {"dim1": str(r.dim1), "dim2": str(r.dim2), "total": r.total, "count": r.count}
+        for r in result.all()
+    ]

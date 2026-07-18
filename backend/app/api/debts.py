@@ -1,6 +1,6 @@
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -48,6 +48,56 @@ async def list_debts(
     stmt = stmt.order_by(Debt.debt_date.desc())
     result = await db.execute(stmt)
     return [DebtResponse.model_validate(d) for d in result.scalars()]
+
+
+@router.get("/summary")
+async def get_debt_summary(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """借贷汇总"""
+    # 借出汇总
+    lend_result = await db.execute(
+        select(
+            func.count().label("count"),
+            func.sum(Debt.amount).label("total"),
+            func.sum(Debt.repaid_amount).label("repaid"),
+        ).where(
+            Debt.family_id == current_user.family_id,
+            Debt.type == "lend",
+            Debt.status != "settled",
+        )
+    )
+    lend = lend_result.one()
+
+    # 借入汇总
+    borrow_result = await db.execute(
+        select(
+            func.count().label("count"),
+            func.sum(Debt.amount).label("total"),
+            func.sum(Debt.repaid_amount).label("repaid"),
+        ).where(
+            Debt.family_id == current_user.family_id,
+            Debt.type == "borrow",
+            Debt.status != "settled",
+        )
+    )
+    borrow = borrow_result.one()
+
+    return {
+        "lend": {
+            "count": lend.count or 0,
+            "total": lend.total or 0,
+            "repaid": lend.repaid or 0,
+            "remaining": (lend.total or 0) - (lend.repaid or 0),
+        },
+        "borrow": {
+            "count": borrow.count or 0,
+            "total": borrow.total or 0,
+            "repaid": borrow.repaid or 0,
+            "remaining": (borrow.total or 0) - (borrow.repaid or 0),
+        },
+    }
 
 
 @router.post("", response_model=DebtResponse, status_code=status.HTTP_201_CREATED)

@@ -18,6 +18,7 @@ from app.api.channels import router as channels_router
 from app.api.credit_bills import router as credit_bills_router
 from app.api.debts import router as debts_router
 from app.api.exports import router as exports_router
+from app.api.families import router as families_router
 from app.api.imports import router as imports_router
 from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
@@ -65,6 +66,7 @@ app.include_router(channels_router)
 app.include_router(credit_bills_router)
 app.include_router(debts_router)
 app.include_router(exports_router)
+app.include_router(families_router)
 app.include_router(imports_router)
 app.include_router(notifications_router)
 app.include_router(recurring_router)

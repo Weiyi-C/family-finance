@@ -155,7 +155,47 @@ async def get_account_balance(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="账户不存在")
 
     is_credit = account.credit_limit is not None
-    balance = account.initial_balance if not is_credit else (account.credit_limit - account.used_amount)
+
+    if is_credit:
+        # 信用卡：额度 - 已用
+        balance = account.credit_limit - account.used_amount
+    else:
+        # 非信用卡：初始余额 + 收入 - 支出
+        from sqlalchemy import func, case
+        from app.models.transaction import Transaction
+
+        # 计算该账户的交易净额
+        income_sum = func.coalesce(
+            func.sum(
+                case(
+                    (Transaction.type == "income", Transaction.amount),
+                    else_=0,
+                )
+            ),
+            0,
+        )
+        expense_sum = func.coalesce(
+            func.sum(
+                case(
+                    (Transaction.type == "expense", Transaction.amount),
+                    else_=0,
+                )
+            ),
+            0,
+        )
+
+        txn_result = await db.execute(
+            select(
+                (income_sum - expense_sum).label("net")
+            ).where(
+                Transaction.payment_account_id == account_id,
+                Transaction.family_id == current_user.family_id,
+                Transaction.is_deleted == False,
+                Transaction.entry_side == "debit",
+            )
+        )
+        txn_sum = txn_result.scalar() or 0
+        balance = account.initial_balance + txn_sum
 
     return AccountBalance(
         id=account.id,
