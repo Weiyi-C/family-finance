@@ -9,6 +9,7 @@ from app.models.channel import PaymentChannel
 from app.models.credit_bill import CreditCardBill
 from app.models.debt import Debt, DebtRepayment
 from app.models.merchant_alias import MerchantAlias
+from app.models.monitoring import AccountBalanceSnapshot, ExchangeRate, AppErrorLog, AppSlowQuery
 from app.models.notification import Notification
 from app.models.platform import Platform
 from app.models.recurring import RecurringTransaction, RecurringTransactionLog
@@ -60,4 +61,8 @@ __all__ = [
     "SyncChangeLog",
     "ClientSyncState",
     "SyncLog",
+    "AccountBalanceSnapshot",
+    "ExchangeRate",
+    "AppErrorLog",
+    "AppSlowQuery",
 ]

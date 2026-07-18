@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from app.api.accounts import router as accounts_router
 from app.api.aliases import router as aliases_router
+from app.api.ai import router as ai_router
 from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.backup import router as backup_router
@@ -17,9 +18,11 @@ from app.api.categories import router as categories_router
 from app.api.channels import router as channels_router
 from app.api.credit_bills import router as credit_bills_router
 from app.api.debts import router as debts_router
+from app.api.exchange_rates import router as exchange_rates_router
 from app.api.exports import router as exports_router
 from app.api.families import router as families_router
 from app.api.imports import router as imports_router
+from app.api.monitor import router as monitor_router
 from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
 from app.api.reference import router as reference_router
@@ -29,6 +32,7 @@ from app.api.rules import router as rules_router
 from app.api.savings import router as savings_router
 from app.api.settlements import router as settlements_router
 from app.api.settings import router as settings_router
+from app.api.snapshots import router as snapshots_router
 from app.api.stats import router as stats_router
 from app.api.sync import router as sync_router
 from app.api.tags import router as tags_router
@@ -56,6 +60,7 @@ app = FastAPI(title="Family Finance API", version="0.1.0")
 
 app.include_router(accounts_router)
 app.include_router(aliases_router)
+app.include_router(ai_router)
 app.include_router(attachments_router)
 app.include_router(auth_router)
 app.include_router(backup_router)
@@ -65,9 +70,11 @@ app.include_router(categories_router)
 app.include_router(channels_router)
 app.include_router(credit_bills_router)
 app.include_router(debts_router)
+app.include_router(exchange_rates_router)
 app.include_router(exports_router)
 app.include_router(families_router)
 app.include_router(imports_router)
+app.include_router(monitor_router)
 app.include_router(notifications_router)
 app.include_router(recurring_router)
 app.include_router(reference_router)
@@ -77,6 +84,7 @@ app.include_router(rules_router)
 app.include_router(savings_router)
 app.include_router(settlements_router)
 app.include_router(settings_router)
+app.include_router(snapshots_router)
 app.include_router(stats_router)
 app.include_router(sync_router)
 app.include_router(tags_router)
