@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from app.api.accounts import router as accounts_router
 from app.api.aliases import router as aliases_router
+from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.backup import router as backup_router
 from app.api.books import router as books_router
@@ -22,8 +23,10 @@ from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
 from app.api.reference import router as reference_router
 from app.api.reimbursements import router as reimbursements_router
+from app.api.refunds import router as refunds_router
 from app.api.rules import router as rules_router
 from app.api.savings import router as savings_router
+from app.api.settlements import router as settlements_router
 from app.api.settings import router as settings_router
 from app.api.stats import router as stats_router
 from app.api.sync import router as sync_router
@@ -52,6 +55,7 @@ app = FastAPI(title="Family Finance API", version="0.1.0")
 
 app.include_router(accounts_router)
 app.include_router(aliases_router)
+app.include_router(attachments_router)
 app.include_router(auth_router)
 app.include_router(backup_router)
 app.include_router(books_router)
@@ -66,8 +70,10 @@ app.include_router(notifications_router)
 app.include_router(recurring_router)
 app.include_router(reference_router)
 app.include_router(reimbursements_router)
+app.include_router(refunds_router)
 app.include_router(rules_router)
 app.include_router(savings_router)
+app.include_router(settlements_router)
 app.include_router(settings_router)
 app.include_router(stats_router)
 app.include_router(sync_router)
