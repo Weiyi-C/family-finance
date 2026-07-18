@@ -9,6 +9,11 @@
 
     <el-card class="filter-card">
       <el-form :inline="true" :model="filters">
+        <el-form-item label="账本">
+          <el-select v-model="filters.book_id" clearable placeholder="全部" style="width: 120px;" @change="loadTransactions">
+            <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="filters.type" clearable placeholder="全部" style="width: 100px;">
             <el-option label="支出" value="expense" />
@@ -48,6 +53,11 @@
       <el-table :data="transactions" stripe v-loading="loading" style="width: 100%;">
         <el-table-column prop="transaction_time" label="时间" width="160" fixed>
           <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
+        </el-table-column>
+        <el-table-column label="账本" width="80">
+          <template #default="{ row }">
+            <span>{{ getBookName(row.book_id) }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="type" label="类型" width="70">
           <template #default="{ row }">
@@ -182,7 +192,8 @@ import { getCategoriesFlat } from '@/api/categories'
 import { getAccounts } from '@/api/accounts'
 import { getChannels, getPlatforms } from '@/api/channels'
 import { getTags } from '@/api/tags'
-import type { Transaction, Category, PaymentAccount, Tag, Channel, Platform } from '@/types'
+import { getBooks } from '@/api/books'
+import type { Transaction, Category, PaymentAccount, Tag, Channel, Platform, AccountBook } from '@/types'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -192,6 +203,7 @@ const accounts = ref<PaymentAccount[]>([])
 const channels = ref<Channel[]>([])
 const platforms = ref<Platform[]>([])
 const tags = ref<Tag[]>([])
+const books = ref<AccountBook[]>([])
 const page = ref(1)
 const pageSize = 20
 const total = ref(0)
@@ -203,6 +215,7 @@ const typeMap: Record<string, string> = { expense: '支出', income: '收入', t
 const typeTag: Record<string, string> = { expense: 'danger', income: 'success', transfer: 'info' }
 
 const filters = reactive({
+  book_id: null as number | null,
   type: '', keyword: '', start_date: '', end_date: '',
   payment_account_id: null as number | null,
   payment_channel_id: null as number | null,
@@ -238,6 +251,9 @@ function getPlatformName(id: number) {
 }
 function getTagName(id: number) {
   return tags.value.find((t) => t.id === id)?.name || `标签${id}`
+}
+function getBookName(id: number) {
+  return books.value.find((b) => b.id === id)?.name || `账本${id}`
 }
 
 function formatMoney(val: number) {
@@ -365,6 +381,7 @@ onMounted(async () => {
     getChannels().then((r) => { channels.value = r.data }),
     getPlatforms().then((r) => { platforms.value = r.data }),
     getTags().then((r) => { tags.value = r.data }),
+    getBooks().then((r) => { books.value = r.data }),
   ])
 })
 </script>
