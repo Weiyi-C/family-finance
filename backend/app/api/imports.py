@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.bill_import import BillImport, BillImportItem
+from app.models.category import Category
 from app.models.channel import PaymentChannel
 from app.models.transaction import Transaction
 from app.models.user import User
@@ -255,7 +256,7 @@ def parse_wechat_csv(content: str) -> tuple[list[dict], dict]:
 
 
 def parse_excel(content: bytes) -> tuple[list[dict], dict]:
-    """解析 Excel 账单"""
+    """解析 Excel 账单（支持微信等）"""
     try:
         from openpyxl import load_workbook
     except ImportError:
@@ -265,12 +266,21 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
-        return [], {}
+        return [], {"platform": "unknown", "has_payment_method": False, "detected_methods": []}
 
+    # 检测是否是微信账单
+    first_few_rows = " ".join(str(c) for row in rows[:10] for c in row if c)
+    is_wechat = "微信" in first_few_rows
+
+    # 查找表头行
     header_idx = -1
     for i, row in enumerate(rows):
         row_str = " ".join(str(c) for c in row if c)
-        if "交易" in row_str and ("对方" in row_str or "金额" in row_str):
+        if "交易时间" in row_str and ("对方" in row_str or "商品" in row_str):
+            header_idx = i
+            break
+        # 微信Excel表头在"交易时间"行
+        if row and row[0] and str(row[0]).strip() == "交易时间":
             header_idx = i
             break
 
@@ -280,6 +290,7 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
 
     headers = [str(c).strip() if c else "" for c in rows[header_idx]]
     items = []
+    payment_methods = set()
 
     for row in rows[header_idx + 1:]:
         data = {}
@@ -287,6 +298,11 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
             if j < len(headers) and headers[j]:
                 data[headers[j]] = val
 
+        # 跳过空行
+        if not any(data.values()):
+            continue
+
+        # 金额
         amount_key = next((k for k in data if "金额" in k), None)
         if not amount_key or not data.get(amount_key):
             continue
@@ -294,34 +310,193 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
         try:
             amount_val = data.get(amount_key, 0)
             if isinstance(amount_val, str):
-                amount_val = float(amount_val.replace(",", "").replace("¥", ""))
+                amount_val = float(amount_val.replace(",", "").replace("¥", "").replace("元", ""))
             amount = float(amount_val)
+            if amount <= 0:
+                continue
 
+            # 收/支
             dir_key = next((k for k in data if "收" in k and "支" in k), None)
             direction = str(data.get(dir_key, "")) if dir_key else ""
             if "不计收支" in direction:
                 continue
             txn_type = "expense" if "支出" in direction else "income"
 
-            merchant_key = next((k for k in data if "对方" in k), None)
-            desc_key = next((k for k in data if "商品" in k or "名称" in k), None)
+            # 状态 - 跳过退款
+            status_key = next((k for k in data if "状态" in k), None)
+            status_val = str(data.get(status_key, "")) if status_key else ""
+            if "退款" in status_val:
+                continue
+
+            # 交易时间
             time_key = next((k for k in data if "时间" in k), None)
+            txn_time = data.get(time_key, "")
+            if hasattr(txn_time, 'strftime'):
+                txn_time = txn_time.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                txn_time = str(txn_time) if txn_time else ""
+
+            # 交易对方
+            merchant_key = next((k for k in data if "对方" in k), None)
+            merchant = str(data.get(merchant_key, "")).strip() if merchant_key else ""
+
+            # 商品描述
+            desc_key = next((k for k in data if "商品" in k or "名称" in k), None)
+            description = str(data.get(desc_key, "")).strip() if desc_key else ""
+
+            # 支付方式（微信账单特有）
+            payment_key = next((k for k in data if "支付方式" in k), None)
+            payment_method = str(data.get(payment_key, "")).strip() if payment_key else ""
+            if payment_method:
+                payment_methods.add(payment_method)
+
+            # 交易号
+            order_key = next((k for k in data if "交易单号" in k or "交易号" in k), None)
+            order_no = str(data.get(order_key, "")).strip() if order_key else ""
+
+            # 智能识别平台和商户
+            platform = "微信" if is_wechat else ""
+            detected_platform, detected_merchant = identify_platform_and_merchant(
+                merchant, description, "wechat" if is_wechat else ""
+            )
 
             items.append({
-                "order_no": str(data.get("交易号", "")),
-                "transaction_time": str(data.get(time_key, "")) if time_key else "",
-                "merchant": str(data.get(merchant_key, "")) if merchant_key else "",
-                "description": str(data.get(desc_key, "")) if desc_key else "",
+                "order_no": order_no,
+                "transaction_time": txn_time,
+                "merchant": detected_merchant,
+                "description": description,
                 "amount": int(amount * 100),
                 "type": txn_type,
-                "platform": "",
-                "payment_method": "",
+                "platform": detected_platform,
+                "payment_method": payment_method,
             })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("parse_excel_row_error", error=str(e))
 
     wb.close()
-    return items, {"platform": "unknown", "has_payment_method": False, "detected_methods": []}
+
+    return items, {
+        "platform": "微信" if is_wechat else "unknown",
+        "has_payment_method": len(payment_methods) > 0,
+        "detected_methods": list(payment_methods),
+    }
+
+
+# 支付方式到账户类型的映射
+PAYMENT_METHOD_TYPE_MAP = {
+    "零钱": "wechat_balance",
+    "零钱通": "wechat_lingqian",
+    "工商银行": "bank_savings",
+    "建设银行": "bank_savings",
+    "农业银行": "bank_savings",
+    "中国银行": "bank_savings",
+    "交通银行": "bank_savings",
+    "招商银行": "bank_savings",
+    "储蓄卡": "bank_savings",
+    "信用卡": "bank_credit",
+}
+
+
+def match_payment_method_to_account(method: str, accounts: list) -> int | None:
+    """尝试将支付方式匹配到已有账户
+
+    匹配规则：
+    1. 精确匹配账户名称
+    2. 匹配银行卡尾号（如"工商银行储蓄卡(0726)" → 匹配尾号0726的账户）
+    3. 匹配关键词（如"零钱" → 微信零钱）
+    """
+    if not method or not accounts:
+        return None
+
+    method_clean = method.strip()
+
+    # 1. 精确匹配
+    for acc in accounts:
+        if acc.name == method_clean:
+            return acc.id
+
+    # 2. 提取尾号匹配（格式：银行xxx(尾号)）
+    import re
+    tail_match = re.search(r'\((\d{4})\)', method_clean)
+    if tail_match:
+        tail = tail_match.group(1)
+        for acc in accounts:
+            if acc.card_tail == tail:
+                return acc.id
+
+    # 3. 关键词匹配
+    for acc in accounts:
+        # 零钱 → 微信零钱
+        if method_clean == "零钱" and "零钱" in acc.name and "零钱通" not in acc.name:
+            return acc.id
+        # 零钱通
+        if method_clean == "零钱通" and "零钱通" in acc.name:
+            return acc.id
+        # 银行卡匹配
+        for bank_keyword in ["工商银行", "建设银行", "农业银行", "中国银行", "交通银行", "招商银行"]:
+            if bank_keyword in method_clean and bank_keyword in acc.name:
+                return acc.id
+
+    return None
+
+
+def suggest_account_type(method: str) -> dict:
+    """根据支付方式建议账户类型"""
+    method_clean = method.strip()
+
+    if "零钱通" in method_clean:
+        return {"type_code": "wechat_lingqian", "name": "零钱通", "group": "微信"}
+    elif "零钱" in method_clean:
+        return {"type_code": "wechat_balance", "name": "微信零钱", "group": "微信"}
+    elif "储蓄卡" in method_clean or "借记卡" in method_clean:
+        # 提取银行名
+        import re
+        bank_match = re.search(r'([\u4e00-\u9fa5]+银行)', method_clean)
+        bank_name = bank_match.group(1) if bank_match else "银行"
+        tail_match = re.search(r'\((\d{4})\)', method_clean)
+        tail = tail_match.group(1) if tail_match else ""
+        return {"type_code": "bank_savings", "name": f"{bank_name}储蓄卡", "bank_name": bank_name, "card_tail": tail, "group": bank_name}
+    elif "信用卡" in method_clean:
+        import re
+        bank_match = re.search(r'([\u4e00-\u9fa5]+银行)', method_clean)
+        bank_name = bank_match.group(1) if bank_match else "银行"
+        tail_match = re.search(r'\((\d{4})\)', method_clean)
+        tail = tail_match.group(1) if tail_match else ""
+        return {"type_code": "bank_credit", "name": f"{bank_name}信用卡", "bank_name": bank_name, "card_tail": tail, "group": bank_name}
+    else:
+        return {"type_code": "e_wallet", "name": method_clean, "group": "其他"}
+
+
+# 自动分类规则（基于关键词）
+AUTO_CATEGORY_RULES = [
+    # 餐饮
+    {"keywords": ["外卖", "美团", "饿了么", "餐厅", "饭店", "食堂", "麦当劳", "肯德基", "星巴克", "瑞幸"], "category": "餐饮"},
+    {"keywords": ["超市", "便利店", "菜市场", "水果"], "category": "食材采购"},
+    # 交通
+    {"keywords": ["滴滴", "打车", "出租车", "停车", "加油", "地铁", "公交"], "category": "交通出行"},
+    {"keywords": ["火车", "高铁", "机票", "飞机"], "category": "差旅"},
+    # 购物
+    {"keywords": ["淘宝", "京东", "拼多多", "天猫"], "category": "购物"},
+    # 娱乐
+    {"keywords": ["电影", "游戏", "KTV", "酒吧"], "category": "休闲娱乐"},
+    # 生活
+    {"keywords": ["电费", "水费", "燃气", "物业", "房租"], "category": "住房"},
+    {"keywords": ["话费", "流量", "宽带"], "category": "通讯"},
+    # 医疗
+    {"keywords": ["医院", "药店", "诊所"], "category": "医疗健康"},
+    # 转账
+    {"keywords": ["转账", "红包"], "category": "转账"},
+]
+
+
+def auto_categorize(merchant: str, description: str) -> str | None:
+    """根据商户名和描述自动分类"""
+    combined = f"{merchant} {description}".lower()
+    for rule in AUTO_CATEGORY_RULES:
+        for keyword in rule["keywords"]:
+            if keyword in combined:
+                return rule["category"]
+    return None
 
 
 @router.post("/api/imports/upload")
@@ -412,6 +587,52 @@ async def upload_import(
     await db.commit()
     await db.refresh(imp)
 
+    # 自动匹配账户
+    from app.models.account import PaymentAccount
+    accounts_result = await db.execute(
+        select(PaymentAccount).where(
+            PaymentAccount.family_id == current_user.family_id,
+            PaymentAccount.is_active == True,
+        )
+    )
+    user_accounts = list(accounts_result.scalars())
+
+    # 为每个支付方式尝试匹配账户
+    detected_methods = meta.get("detected_methods", [])
+    method_matches = {}
+    unmatched_methods = []
+    for method in detected_methods:
+        matched_id = match_payment_method_to_account(method, user_accounts)
+        if matched_id:
+            method_matches[method] = matched_id
+        else:
+            suggestion = suggest_account_type(method)
+            unmatched_methods.append({"method": method, "suggestion": suggestion})
+
+    # 为每条交易添加自动分类
+    categories_result = await db.execute(
+        select(Category).where(
+            (Category.family_id == current_user.family_id) | (Category.family_id.is_(None)),
+            Category.level == 1,
+        )
+    )
+    categories = list(categories_result.scalars())
+
+    for item in new_items:
+        # 自动分类
+        suggested_cat = auto_categorize(item.get("merchant", ""), item.get("description", ""))
+        if suggested_cat:
+            # 查找分类ID
+            cat = next((c for c in categories if c.name == suggested_cat), None)
+            if cat:
+                item["suggested_category_id"] = cat.id
+                item["suggested_category_name"] = cat.name
+
+        # 自动匹配账户
+        pm = item.get("payment_method", "")
+        if pm and pm in method_matches:
+            item["suggested_account_id"] = method_matches[pm]
+
     return {
         "id": imp.id,
         "source": source,
@@ -421,6 +642,8 @@ async def upload_import(
         "skipped_duplicate": skipped_dup,
         "status": "parsed",
         "meta": meta,
+        "method_matches": method_matches,
+        "unmatched_methods": unmatched_methods,
         "preview": new_items[:30],
     }
 

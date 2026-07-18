@@ -138,6 +138,12 @@
                 <span v-else style="color: #c0c4cc;">{{ defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.name : '待分配' }}</span>
               </template>
             </el-table-column>
+            <el-table-column label="自动分类" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.suggested_category_name" type="success" size="small">{{ row.suggested_category_name }}</el-tag>
+                <span v-else style="color: #c0c4cc;">-</span>
+              </template>
+            </el-table-column>
           </el-table>
         </el-card>
       </div>
@@ -239,6 +245,17 @@ interface UploadResult {
     has_payment_method: boolean
     detected_methods: string[]
   }
+  method_matches: Record<string, number>
+  unmatched_methods: Array<{
+    method: string
+    suggestion: {
+      type_code: string
+      name: string
+      bank_name?: string
+      card_tail?: string
+      group: string
+    }
+  }>
   preview: Record<string, unknown>[]
 }
 
@@ -336,14 +353,25 @@ async function handleUpload() {
     uploadResult.value = res.data
     step.value = 2
 
-    // 初始化支付方式映射
-    if (res.data.meta?.detected_methods) {
-      for (const method of res.data.meta.detected_methods) {
-        if (!(method in methodAccountMap.value)) {
-          const matched = accounts.value.find((a) => a.name.includes(method) || method.includes(a.name))
-          methodAccountMap.value[method] = matched?.id ?? null
-        }
+    // 使用后端返回的匹配结果
+    const methodMatches = res.data.method_matches || {}
+    const unmatchedMethods = res.data.unmatched_methods || []
+
+    // 初始化已匹配的支付方式
+    for (const [method, accountId] of Object.entries(methodMatches)) {
+      methodAccountMap.value[method] = accountId as number
+    }
+
+    // 为未匹配的支付方式初始化空值
+    for (const um of unmatchedMethods) {
+      if (!(um.method in methodAccountMap.value)) {
+        methodAccountMap.value[um.method] = null
       }
+    }
+
+    // 如果有未匹配的支付方式，提示用户
+    if (unmatchedMethods.length > 0) {
+      ElMessage.info(`检测到 ${unmatchedMethods.length} 个未匹配的支付方式，请配置账户映射`)
     }
   } catch (err: unknown) {
     ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '上传失败')
@@ -373,14 +401,25 @@ async function handleConfirmImport() {
 
 function openCreateAccount(method: string) {
   currentCreateMethod.value = method
-  const methodTypeMap: Record<string, string> = {
-    '花呗': 'alipay_huabei', '余额宝': 'alipay_yuebao', '借呗': 'alipay_jiebei',
-    '零钱': 'wechat_balance', '零钱通': 'wechat_lingqian',
+
+  // 从后端返回的建议中获取账户类型
+  const unmatched = uploadResult.value?.unmatched_methods?.find((u: any) => u.method === method)
+  if (unmatched?.suggestion) {
+    accountForm.type_code = unmatched.suggestion.type_code
+    accountForm.name = unmatched.suggestion.name
+    accountForm.bank_name = unmatched.suggestion.bank_name || ''
+    accountForm.card_tail = unmatched.suggestion.card_tail || ''
+  } else {
+    // 兜底逻辑
+    const methodTypeMap: Record<string, string> = {
+      '花呗': 'alipay_huabei', '余额宝': 'alipay_yuebao', '借呗': 'alipay_jiebei',
+      '零钱': 'wechat_balance', '零钱通': 'wechat_lingqian',
+    }
+    accountForm.type_code = methodTypeMap[method] || 'bank_credit'
+    accountForm.name = method
+    accountForm.bank_name = ''
+    accountForm.card_tail = ''
   }
-  accountForm.type_code = methodTypeMap[method] || 'bank_credit'
-  accountForm.name = method
-  accountForm.bank_name = ''
-  accountForm.card_tail = ''
   accountForm.credit_limit_yuan = 0
   accountForm.billing_day = null
   accountForm.due_day = null
