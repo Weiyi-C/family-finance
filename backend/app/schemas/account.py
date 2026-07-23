@@ -9,6 +9,9 @@ class AccountCreate(BaseModel):
     color: str | None = None
     bank_name: str | None = None
     bank_code: str | None = None
+    bank_id: int | None = None
+    channel_id: int | None = None
+    parent_id: int | None = None
     card_tail: str | None = None
     card_type: str | None = None
     initial_balance: int = 0
@@ -50,6 +53,9 @@ class AccountResponse(BaseModel):
     color: str | None
     bank_name: str | None
     bank_code: str | None
+    bank_id: int | None
+    channel_id: int | None
+    parent_id: int | None
     card_tail: str | None
     card_type: str | None
     initial_balance: int

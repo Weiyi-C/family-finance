@@ -12,6 +12,9 @@
           :collapse="isCollapsed"
           router
           class="sidebar-menu"
+          background-color="#2b3a4a"
+          text-color="#ffffff"
+          active-text-color="#409eff"
         >
           <!-- 首页 -->
           <el-menu-item index="/">
@@ -192,7 +195,7 @@ onMounted(loadUnreadCount)
   height: 100vh;
 }
 .sidebar {
-  background: #304156;
+  background: #2b3a4a;
   display: flex;
   flex-direction: column;
   transition: width 0.3s;
@@ -202,10 +205,12 @@ onMounted(loadUnreadCount)
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
+  padding: 18px 16px;
   color: #fff;
   cursor: pointer;
   flex-shrink: 0;
+  background: #1f2d3d;
+  border-bottom: 1px solid #3a4a5a;
 }
 .logo-text {
   font-size: 18px;
@@ -218,47 +223,47 @@ onMounted(loadUnreadCount)
 }
 .sidebar-menu {
   border-right: none;
-  background: #304156;
 }
 .sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+  color: #d4d7de !important;
+  height: 44px;
+  line-height: 44px;
+  padding-left: 56px !important;
 }
-.sidebar-menu .el-menu-item:hover,
+.sidebar-menu .el-menu-item:hover {
+  background: #354555 !important;
+  color: #fff !important;
+}
 .sidebar-menu .el-menu-item.is-active {
-  background: #263445;
-  color: #409eff;
-}
-.sidebar-menu .el-sub-menu__title {
-  color: #bfcbd9;
-}
-.sidebar-menu .el-sub-menu__title:hover {
-  background: #263445;
-  color: #fff;
+  background: #409eff !important;
+  color: #fff !important;
 }
 .collapse-btn {
-  padding: 12px;
+  padding: 14px;
   text-align: center;
-  color: #bfcbd9;
+  color: #909399;
   cursor: pointer;
-  border-top: 1px solid #3a4a5b;
+  border-top: 1px solid #3a4a5a;
   flex-shrink: 0;
 }
 .collapse-btn:hover {
-  color: #409eff;
+  color: #fff;
+  background: #354555;
 }
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #dcdfe6;
   background: #fff;
-  padding: 0 20px;
+  padding: 0 24px;
   height: 56px;
 }
 .top-left h3 {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  color: #303133;
+  font-weight: 600;
 }
 .top-right {
   display: flex;
@@ -271,6 +276,9 @@ onMounted(loadUnreadCount)
   cursor: pointer;
   color: #606266;
 }
+.user-info:hover {
+  color: #409eff;
+}
 .user-name {
   font-size: 14px;
 }
@@ -280,5 +288,6 @@ onMounted(loadUnreadCount)
 .content-area {
   background: #f5f7fa;
   padding: 20px;
+  overflow-y: auto;
 }
 </style>

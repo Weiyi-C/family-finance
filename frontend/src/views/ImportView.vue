@@ -80,7 +80,7 @@
         <el-card style="margin-bottom: 16px;">
           <template #header><span>默认资金来源</span></template>
           <p style="color: #909399; font-size: 13px; margin-bottom: 12px;">
-            选择一个默认账户，用于没有明确支付方式的交易。您也可以为每种支付方式单独指定账户。
+            选择一个默认账户，用于没有明确支付方式的交易。
           </p>
           <el-select v-model="defaultAccountId" placeholder="选择默认账户" style="width: 100%;" clearable>
             <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
@@ -90,7 +90,11 @@
 
         <!-- 支付方式映射 -->
         <el-card v-if="uploadResult?.meta?.detected_methods?.length" style="margin-bottom: 16px;">
-          <template #header><span>支付方式 → 账户映射</span></template>
+          <template #header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span>支付方式 → 账户映射</span>
+            </div>
+          </template>
           <p style="color: #909399; font-size: 13px; margin-bottom: 12px;">
             系统检测到以下支付方式，请为每种方式选择对应的资金来源账户。
           </p>
@@ -101,22 +105,6 @@
             </el-select>
             <el-button size="small" type="primary" link @click="openCreateAccount(method)">新建账户</el-button>
           </div>
-        </el-card>
-
-        <!-- 支付宝没有明确支付方式的提示 -->
-        <el-card v-if="uploadResult?.source === 'alipay' && !uploadResult?.meta?.has_payment_method" style="margin-bottom: 16px;">
-          <template #header><span>提示</span></template>
-          <el-alert title="支付宝标准账单不包含每笔交易的具体扣款渠道" type="info" :closable="false">
-            <template #default>
-              <p>支付宝余额、花呗、余额宝、绑定的银行卡等都通过支付宝扣款，但账单中不会显示具体使用了哪个。</p>
-              <p style="margin-top: 8px;">建议：</p>
-              <ul style="margin-top: 4px;">
-                <li>如果大部分交易使用花呗，选择"花呗"作为默认账户</li>
-                <li>如果大部分交易使用余额，选择"支付宝余额"作为默认账户</li>
-                <li>导入后可以在交易列表中手动修改个别交易的账户</li>
-              </ul>
-            </template>
-          </el-alert>
         </el-card>
 
         <!-- 预览 -->
@@ -156,56 +144,14 @@
       </template>
     </el-dialog>
 
-    <!-- 新建账户对话框 - 使用新的渠道选择流程 -->
-    <el-dialog v-model="showAccountDialog" title="新建账户" width="550px" append-to-body destroy-on-close>
-      <!-- 根据建议的类型显示不同的表单 -->
-      <el-form :model="accountForm" label-width="100px">
-        <!-- 银行卡类型 -->
-        <template v-if="isBankType">
-          <el-form-item label="银行">
-            <el-select v-model="accountForm.bank_id" filterable style="width: 100%;" @change="onBankChange">
-              <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="账户类型">
-            <el-radio-group v-model="accountForm.type_code">
-              <el-radio-button value="bank_savings">储蓄卡</el-radio-button>
-              <el-radio-button value="bank_credit">信用卡</el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="卡号后四位"><el-input v-model="accountForm.card_tail" maxlength="4" /></el-form-item>
-          <el-form-item label="账户名称"><el-input v-model="accountForm.name" /></el-form-item>
-          <template v-if="accountForm.type_code === 'bank_credit'">
-            <el-form-item label="信用额度(元)"><el-input-number v-model="accountForm.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
-            <el-form-item label="账单日"><el-input-number v-model="accountForm.billing_day" :min="1" :max="28" /></el-form-item>
-            <el-form-item label="还款日"><el-input-number v-model="accountForm.due_day" :min="1" :max="28" /></el-form-item>
-          </template>
-        </template>
-
-        <!-- 支付渠道类型（支付宝/微信等） -->
-        <template v-else>
-          <el-form-item label="支付渠道">
-            <el-select v-model="accountForm.channel_id" style="width: 100%;">
-              <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="产品类型">
-            <el-select v-model="accountForm.type_code" style="width: 100%;">
-              <el-option label="余额" value="e_wallet" />
-              <el-option label="花呗" value="alipay_huabei" />
-              <el-option label="余额宝" value="alipay_yuebao" />
-              <el-option label="零钱通" value="wechat_lingqian" />
-              <el-option label="白条" value="jd_baitiao" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="账户名称"><el-input v-model="accountForm.name" /></el-form-item>
-        </template>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAccountDialog = false">取消</el-button>
-        <el-button type="primary" :loading="savingAccount" @click="handleCreateAccount">创建</el-button>
-      </template>
-    </el-dialog>
+    <!-- 新建账户对话框 - 使用共享组件 -->
+    <AccountCreateDialog
+      v-model="showAccountDialog"
+      :banks="banks"
+      :channels="channels"
+      :accounts="accounts"
+      @created="onAccountCreated"
+    />
 
     <!-- 明细对话框 -->
     <el-dialog v-model="showItemsDialog" title="导入明细" width="600px">
@@ -246,18 +192,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getImports, getImportItems, deleteImport } from '@/api/imports'
-import { getAccounts, createAccount } from '@/api/accounts'
+import { getAccounts } from '@/api/accounts'
 import { getBooks } from '@/api/books'
 import { getBanks, getAccountTemplates } from '@/api/reference'
 import { getChannels } from '@/api/channels'
 import { exportTransactions, exportAccounts, exportCategories } from '@/api/exports'
 import api from '@/api/index'
+import AccountCreateDialog from '@/components/AccountCreateDialog.vue'
 import type { BillImport, BillImportItem } from '@/api/imports'
-import type { PaymentAccount, AccountBook } from '@/types'
+import type { PaymentAccount, AccountBook, Channel } from '@/types'
 import type { UploadFile } from 'element-plus'
 
 interface UploadResult {
@@ -285,20 +232,18 @@ interface UploadResult {
 }
 
 interface BankItem { id: number; name: string; code: string; short_name: string }
-interface TemplateItem { id: number; type_code: string; name: string; icon: string | null; group_name: string; is_credit: boolean; has_credit_limit: boolean; has_billing_day: boolean; has_due_day: boolean }
-interface ChannelItem { id: number; name: string }
+interface TemplateItem { id: number; type_code: string; name: string; icon: string | null; group_name: string; is_credit: boolean }
 
 const loading = ref(false)
 const uploading = ref(false)
 const confirming = ref(false)
-const savingAccount = ref(false)
 const imports = ref<BillImport[]>([])
 const items = ref<BillImportItem[]>([])
 const books = ref<AccountBook[]>([])
 const accounts = ref<PaymentAccount[]>([])
 const banks = ref<BankItem[]>([])
 const templates = ref<TemplateItem[]>([])
-const channels = ref<ChannelItem[]>([])
+const channels = ref<Channel[]>([])
 const showImportDialog = ref(false)
 const showItemsDialog = ref(false)
 const showExportDialog = ref(false)
@@ -318,26 +263,6 @@ const statusType: Record<string, string> = { pending: 'info', parsed: 'warning',
 const actionMap: Record<string, string> = { pending: '待处理', imported: '已导入', skipped: '跳过', matched: '已匹配' }
 
 const importForm = reactive({ book_id: 0, source: 'auto' })
-
-const accountForm = reactive({
-  type_code: '', name: '', bank_id: null as number | null, bank_name: '', card_tail: '',
-  channel_id: null as number | null,
-  credit_limit_yuan: 0, billing_day: null as number | null, due_day: null as number | null,
-})
-
-const isBankType = computed(() => ['bank_savings', 'bank_credit'].includes(accountForm.type_code))
-
-function onBankChange() {
-  const bank = banks.value.find((b) => b.id === accountForm.bank_id)
-  if (bank) {
-    accountForm.bank_name = bank.name
-    if (!accountForm.name) {
-      accountForm.name = accountForm.type_code === 'bank_credit'
-        ? `${bank.name}信用卡`
-        : `${bank.name}储蓄卡`
-    }
-  }
-}
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
 
@@ -374,23 +299,18 @@ async function handleUpload() {
     uploadResult.value = res.data
     step.value = 2
 
-    // 使用后端返回的匹配结果
     const methodMatches = res.data.method_matches || {}
     const unmatchedMethods = res.data.unmatched_methods || []
 
-    // 初始化已匹配的支付方式
     for (const [method, accountId] of Object.entries(methodMatches)) {
       methodAccountMap.value[method] = accountId as number
     }
-
-    // 为未匹配的支付方式初始化空值
     for (const um of unmatchedMethods) {
       if (!(um.method in methodAccountMap.value)) {
         methodAccountMap.value[um.method] = null
       }
     }
 
-    // 如果有未匹配的支付方式，提示用户
     if (unmatchedMethods.length > 0) {
       ElMessage.info(`检测到 ${unmatchedMethods.length} 个未匹配的支付方式，请配置账户映射`)
     }
@@ -422,84 +342,15 @@ async function handleConfirmImport() {
 
 function openCreateAccount(method: string) {
   currentCreateMethod.value = method
-
-  // 从后端返回的建议中获取账户类型
-  const unmatched = uploadResult.value?.unmatched_methods?.find((u: any) => u.method === method)
-  if (unmatched?.suggestion) {
-    accountForm.type_code = unmatched.suggestion.type_code
-    accountForm.name = unmatched.suggestion.name
-    accountForm.card_tail = unmatched.suggestion.card_tail || ''
-
-    // 根据类型设置渠道或银行
-    if (['bank_savings', 'bank_credit'].includes(unmatched.suggestion.type_code)) {
-      // 银行卡类型
-      accountForm.bank_id = null
-      accountForm.bank_name = unmatched.suggestion.bank_name || ''
-      accountForm.channel_id = null
-      // 尝试匹配银行
-      const bank = banks.value.find((b) => b.name === unmatched.suggestion.bank_name)
-      if (bank) accountForm.bank_id = bank.id
-    } else {
-      // 支付渠道类型
-      accountForm.bank_id = null
-      accountForm.bank_name = ''
-      accountForm.channel_id = null
-      // 根据支付方式设置默认渠道
-      if (method.includes('微信') || method === '零钱' || method === '零钱通') {
-        const wechat = channels.value.find((c) => c.name.includes('微信'))
-        if (wechat) accountForm.channel_id = wechat.id
-      } else if (method.includes('支付宝') || method.includes('花呗') || method.includes('余额宝')) {
-        const alipay = channels.value.find((c) => c.name.includes('支付宝'))
-        if (alipay) accountForm.channel_id = alipay.id
-      }
-    }
-  } else {
-    // 兜底逻辑
-    accountForm.type_code = 'e_wallet'
-    accountForm.name = method
-    accountForm.bank_id = null
-    accountForm.bank_name = ''
-    accountForm.card_tail = ''
-    accountForm.channel_id = null
-  }
-  accountForm.credit_limit_yuan = 0
-  accountForm.billing_day = null
-  accountForm.due_day = null
   showAccountDialog.value = true
 }
 
-async function handleCreateAccount() {
-  if (!accountForm.name) { ElMessage.warning('请填写名称'); return }
-  savingAccount.value = true
-  try {
-    const payload: Record<string, unknown> = {
-      name: accountForm.name,
-      type_code: accountForm.type_code,
-    }
-
-    // 银行卡类型
-    if (isBankType.value) {
-      if (accountForm.bank_id) payload.bank_id = accountForm.bank_id
-      if (accountForm.bank_name) payload.bank_name = accountForm.bank_name
-      if (accountForm.card_tail) payload.card_tail = accountForm.card_tail
-      if (accountForm.type_code === 'bank_credit') {
-        if (accountForm.credit_limit_yuan) payload.credit_limit = Math.round(accountForm.credit_limit_yuan * 100)
-        if (accountForm.billing_day) payload.billing_day = accountForm.billing_day
-        if (accountForm.due_day) payload.due_day = accountForm.due_day
-      }
-    } else {
-      // 支付渠道类型
-      if (accountForm.channel_id) payload.channel_id = accountForm.channel_id
-    }
-
-    const res = await createAccount(payload as any)
-    ElMessage.success('账户创建成功')
-    showAccountDialog.value = false
-    await loadAccounts()
-    methodAccountMap.value[currentCreateMethod.value] = res.data.id
-  } catch (err: unknown) {
-    ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '创建失败')
-  } finally { savingAccount.value = false }
+function onAccountCreated(account: PaymentAccount) {
+  // 将新创建的账户关联到当前支付方式
+  if (currentCreateMethod.value) {
+    methodAccountMap.value[currentCreateMethod.value] = account.id
+  }
+  loadAccounts()
 }
 
 async function viewItems(importId: number) {
