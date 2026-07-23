@@ -80,10 +80,12 @@
               <el-icon><SetUp /></el-icon>
               <span>系统</span>
             </template>
+            <el-menu-item index="/family">家庭管理</el-menu-item>
             <el-menu-item index="/settings">个人设置</el-menu-item>
             <el-menu-item index="/notifications">通知</el-menu-item>
             <el-menu-item index="/backup">备份恢复</el-menu-item>
             <el-menu-item index="/sync">数据同步</el-menu-item>
+            <el-menu-item index="/monitor">系统监控</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-scrollbar>
@@ -160,10 +162,12 @@ const titleMap: Record<string, string> = {
   '/reimbursements': '报销管理',
   '/import': '导入/导出',
   '/notifications': '通知',
+  '/family': '家庭管理',
   '/aliases': '商户别名',
   '/rules': '规则引擎',
   '/backup': '备份恢复',
   '/sync': '数据同步',
+  '/monitor': '系统监控',
   '/books': '账本管理',
   '/tags': '标签管理',
   '/settings': '个人设置',

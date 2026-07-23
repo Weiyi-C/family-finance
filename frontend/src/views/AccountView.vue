@@ -51,11 +51,41 @@
     />
 
     <!-- 编辑对话框 -->
-    <el-dialog v-model="showEditDialog" title="编辑账户" width="500px" destroy-on-close>
+    <el-dialog v-model="showEditDialog" title="编辑账户" width="550px" destroy-on-close>
       <el-form :model="editForm" label-width="100px">
-        <el-form-item label="名称"><el-input v-model="editForm.name" /></el-form-item>
-        <el-form-item label="初始余额(元)"><el-input-number v-model="editForm.initialBalanceYuan" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="editForm.notes" type="textarea" /></el-form-item>
+        <el-form-item label="账户名称">
+          <el-input v-model="editForm.name" placeholder="如：支付宝-138xxxx" />
+        </el-form-item>
+        <el-form-item label="账户类型">
+          <el-input :model-value="getTemplateName(editForm.type_code)" disabled />
+        </el-form-item>
+        <el-form-item label="所属渠道" v-if="editForm.channel_id">
+          <el-select v-model="editForm.channel_id" style="width: 100%;">
+            <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属银行" v-if="editForm.bank_id">
+          <el-select v-model="editForm.bank_id" filterable style="width: 100%;">
+            <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="父账户">
+          <el-select v-model="editForm.parent_id" clearable placeholder="无（顶级账户）" style="width: 100%;">
+            <el-option v-for="a in parentOptions" :key="a.id" :label="a.name" :value="a.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="卡号后四位" v-if="editForm.type_code?.startsWith('bank_')">
+          <el-input v-model="editForm.card_tail" maxlength="4" />
+        </el-form-item>
+        <el-form-item label="初始余额(元)">
+          <el-input-number v-model="editForm.initialBalanceYuan" :precision="2" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="信用额度(元)" v-if="editForm.credit_limit !== null && editForm.credit_limit !== undefined">
+          <el-input-number v-model="editForm.creditLimitYuan" :min="0" :precision="2" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editForm.notes" type="textarea" :rows="2" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
@@ -86,7 +116,26 @@ const templates = ref<TemplateItem[]>([])
 const channels = ref<Channel[]>([])
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
-const editForm = reactive({ id: 0, name: '', initialBalanceYuan: 0, notes: '' })
+const editForm = reactive({
+  id: 0,
+  name: '',
+  type_code: '',
+  channel_id: null as number | null,
+  bank_id: null as number | null,
+  parent_id: null as number | null,
+  card_tail: '',
+  initialBalanceYuan: 0,
+  credit_limit: null as number | null,
+  creditLimitYuan: 0,
+  notes: '',
+})
+
+// 可选的父账户列表（排除自己和自己的子账户）
+const parentOptions = computed(() => {
+  return accounts.value.filter((a) =>
+    a.is_active && a.id !== editForm.id && !a.parent_id
+  )
+})
 
 // 账户分组 - 支持同一平台多个账号
 const accountGroups = computed(() => {
@@ -165,7 +214,14 @@ function onAccountCreated() {
 function editAccount(row: PaymentAccount) {
   editForm.id = row.id
   editForm.name = row.name
+  editForm.type_code = row.type_code
+  editForm.channel_id = row.channel_id
+  editForm.bank_id = row.bank_id
+  editForm.parent_id = row.parent_id
+  editForm.card_tail = row.card_tail || ''
   editForm.initialBalanceYuan = row.initial_balance / 100
+  editForm.credit_limit = row.credit_limit
+  editForm.creditLimitYuan = (row.credit_limit || 0) / 100
   editForm.notes = ''
   showEditDialog.value = true
 }
@@ -174,11 +230,19 @@ async function handleUpdate() {
   if (!editForm.name) { ElMessage.warning('请填写名称'); return }
   saving.value = true
   try {
-    await updateAccount(editForm.id, {
+    const payload: Record<string, unknown> = {
       name: editForm.name,
       initial_balance: Math.round(editForm.initialBalanceYuan * 100),
+      channel_id: editForm.channel_id,
+      bank_id: editForm.bank_id,
+      parent_id: editForm.parent_id,
+      card_tail: editForm.card_tail || null,
       notes: editForm.notes || undefined,
-    } as any)
+    }
+    if (editForm.credit_limit !== null && editForm.credit_limit !== undefined) {
+      payload.credit_limit = Math.round(editForm.creditLimitYuan * 100)
+    }
+    await updateAccount(editForm.id, payload as any)
     ElMessage.success('更新成功')
     showEditDialog.value = false
     await load()

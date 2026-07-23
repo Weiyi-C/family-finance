@@ -19,6 +19,10 @@ CREATE UNIQUE INDEX idx_cat_unique_name ON categories(family_id, parent_id, name
 -- Payment accounts
 CREATE INDEX idx_pa_family ON payment_accounts(family_id);
 CREATE INDEX idx_pa_user ON payment_accounts(user_id);
+CREATE INDEX idx_pa_parent ON payment_accounts(parent_id);
+CREATE INDEX idx_pa_bank ON payment_accounts(bank_id);
+CREATE INDEX idx_pa_channel ON payment_accounts(channel_id);
+CREATE INDEX idx_pa_platform ON payment_accounts(platform_id);
 
 -- Transactions (partitioned - indexes auto-apply to all partitions)
 CREATE INDEX idx_txn_family ON transactions(family_id);

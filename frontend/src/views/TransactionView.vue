@@ -50,16 +50,29 @@
     </el-card>
 
     <el-card style="margin-top: 16px;">
-      <el-table :data="transactions" stripe v-loading="loading" style="width: 100%;">
+      <!-- 批量操作栏 -->
+      <div v-if="selectedIds.length > 0" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; background: #f0f9ff; border-radius: 4px;">
+        <span style="font-size: 13px; color: #606266;">已选 {{ selectedIds.length }} 条</span>
+        <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
+        <el-button size="small" @click="selectedIds = []">取消选择</el-button>
+      </div>
+
+      <el-table :data="transactions" stripe v-loading="loading" style="width: 100%;"
+        @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" fixed />
         <el-table-column prop="transaction_time" label="时间" width="160" fixed>
           <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
         </el-table-column>
         <el-table-column label="账本" width="80">
           <template #default="{ row }">{{ getBookName(row.book_id) }}</template>
         </el-table-column>
-        <el-table-column prop="type" label="类型" width="70">
+        <el-table-column prop="type" label="类型" width="120">
           <template #default="{ row }">
             <el-tag :type="typeTag[row.type]" size="small">{{ typeMap[row.type] }}</el-tag>
+            <el-tag v-if="row.is_quick_entry" size="small" type="warning" style="margin-left: 4px;">快速</el-tag>
+            <span v-if="row.type === 'transfer' && row.payment_account_id" style="font-size: 11px; color: #909399; margin-left: 4px;">
+              → {{ getAccountName(row.payment_account_id) }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="分类" width="120">
@@ -260,7 +273,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '@/api/transactions'
 import { getCategories } from '@/api/categories'
 import { getAccounts } from '@/api/accounts'
@@ -274,6 +287,7 @@ interface FamilyMember { id: number; nickname: string }
 const loading = ref(false)
 const saving = ref(false)
 const transactions = ref<Transaction[]>([])
+const selectedIds = ref<number[]>([])
 const categoryTree = ref<Category[]>([])
 const categoriesFlat = ref<Category[]>([])
 const accounts = ref<PaymentAccount[]>([])
@@ -445,6 +459,24 @@ async function handleSave() {
 async function handleDelete(id: number) {
   try { await deleteTransaction(id); ElMessage.success('已删除'); await loadTransactions() }
   catch { ElMessage.error('删除失败') }
+}
+
+function handleSelectionChange(rows: Transaction[]) {
+  selectedIds.value = rows.map((r) => r.id)
+}
+
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条记录？`, '批量删除', { type: 'warning' })
+    let success = 0
+    for (const id of selectedIds.value) {
+      try { await deleteTransaction(id); success++ } catch { /* skip */ }
+    }
+    ElMessage.success(`成功删除 ${success} 条`)
+    selectedIds.value = []
+    await loadTransactions()
+  } catch { /* cancelled */ }
 }
 
 onMounted(async () => {

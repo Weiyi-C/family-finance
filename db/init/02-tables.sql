@@ -111,6 +111,31 @@ CREATE TABLE banks (
     sort_order      SMALLINT DEFAULT 0
 );
 
+-- ===================== 5. 支付渠道 & 交易平台 =====================
+
+CREATE TABLE payment_channels (
+    id              BIGSERIAL PRIMARY KEY,
+    family_id       BIGINT REFERENCES families(id),
+    name            VARCHAR(50) NOT NULL,
+    icon            VARCHAR(50),
+    sort_order      SMALLINT DEFAULT 0,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE platforms (
+    id              BIGSERIAL PRIMARY KEY,
+    family_id       BIGINT REFERENCES families(id),
+    name            VARCHAR(100) NOT NULL,
+    type            VARCHAR(20) NOT NULL,
+    icon            VARCHAR(50),
+    sort_order      SMALLINT DEFAULT 0,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE payment_accounts (
     id              BIGSERIAL PRIMARY KEY,
     family_id       BIGINT NOT NULL REFERENCES families(id),
@@ -137,34 +162,21 @@ CREATE TABLE payment_accounts (
     sort_order      SMALLINT DEFAULT 0,
     is_active       BOOLEAN DEFAULT TRUE,
     is_hidden       BOOLEAN DEFAULT FALSE,
+
+    -- 账户层级和关联字段（v1.1）
+    parent_id       BIGINT REFERENCES payment_accounts(id),  -- 父账户ID
+    bank_id         BIGINT REFERENCES banks(id),              -- 关联银行
+    channel_id      BIGINT REFERENCES payment_channels(id),  -- 关联支付渠道
+    linked_account_id BIGINT REFERENCES payment_accounts(id), -- 关联扣款账户（亲情卡/代付）
+    linked_user_id  BIGINT REFERENCES users(id),              -- 关联用户（亲情卡使用者）
+    platform_id     BIGINT REFERENCES platforms(id),          -- 关联购物平台
+    group_label     VARCHAR(50),                              -- 分组标签
+
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ===================== 5. 支付渠道 & 交易平台 =====================
-
-CREATE TABLE payment_channels (
-    id              BIGSERIAL PRIMARY KEY,
-    family_id       BIGINT REFERENCES families(id),
-    name            VARCHAR(50) NOT NULL,
-    icon            VARCHAR(50),
-    sort_order      SMALLINT DEFAULT 0,
-    is_active       BOOLEAN DEFAULT TRUE,
-    created_at      TIMESTAMPTZ DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE platforms (
-    id              BIGSERIAL PRIMARY KEY,
-    family_id       BIGINT REFERENCES families(id),
-    name            VARCHAR(100) NOT NULL,
-    type            VARCHAR(20) NOT NULL,
-    icon            VARCHAR(50),
-    sort_order      SMALLINT DEFAULT 0,
-    is_active       BOOLEAN DEFAULT TRUE,
-    created_at      TIMESTAMPTZ DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
+-- (payment_channels & platforms 已移至 payment_accounts 之前)
 
 -- ===================== 6. 交易记录（分区表） =====================
 

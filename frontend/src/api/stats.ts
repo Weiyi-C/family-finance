@@ -1,5 +1,5 @@
 import api from './index'
-import type { StatsSummary, CategoryStats, MonthlyStats, DailyStats, MerchantRank } from '@/types'
+import type { StatsSummary, CategoryStats, MonthlyStats, DailyStats, MerchantRank, ComparisonResult, CrossAnalysisItem } from '@/types'
 
 export interface StatsParams {
   start?: string
@@ -28,4 +28,17 @@ export function getByDay(params: StatsParams = {}) {
 
 export function getMerchantRanking(params: StatsParams = {}) {
   return api.get<MerchantRank[]>('/stats/merchant-ranking', { params })
+}
+
+export function getComparison(params: { current: string; previous: string }) {
+  return api.get<ComparisonResult>('/stats/compare', { params })
+}
+
+export function getCrossAnalysis(params: {
+  dimension1?: string
+  dimension2?: string
+  start?: string
+  end?: string
+}) {
+  return api.get<CrossAnalysisItem[]>('/stats/cross', { params })
 }

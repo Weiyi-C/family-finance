@@ -30,6 +30,9 @@ class AccountUpdate(BaseModel):
     icon: str | None = None
     color: str | None = None
     bank_name: str | None = None
+    bank_id: int | None = None
+    channel_id: int | None = None
+    parent_id: int | None = None
     card_tail: str | None = None
     initial_balance: int | None = None
     credit_limit: int | None = None

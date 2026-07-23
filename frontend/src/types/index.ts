@@ -511,6 +511,31 @@ export interface MerchantRank {
   count: number
 }
 
+export interface PeriodStats {
+  expense: number
+  income: number
+  net: number
+  count: number
+}
+
+export interface ComparisonResult {
+  current: PeriodStats
+  previous: PeriodStats
+  changes: {
+    expense_change: number | null
+    income_change: number | null
+    net_change: number | null
+    count_change: number | null
+  }
+}
+
+export interface CrossAnalysisItem {
+  dim1: string
+  dim2: string
+  total: number
+  count: number
+}
+
 // ---- Channel & Platform ----
 export interface Channel {
   id: number
