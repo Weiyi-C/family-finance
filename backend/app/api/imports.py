@@ -467,36 +467,172 @@ def suggest_account_type(method: str) -> dict:
         return {"type_code": "e_wallet", "name": method_clean, "group": "其他"}
 
 
-# 自动分类规则（基于关键词）
+# ===================== 自动分类规则 =====================
+# 按优先级排序，先匹配先生效
+# category_expense: 支出分类名 | category_income: 收入分类名
 AUTO_CATEGORY_RULES = [
-    # 餐饮
-    {"keywords": ["外卖", "美团", "饿了么", "餐厅", "饭店", "食堂", "麦当劳", "肯德基", "星巴克", "瑞幸"], "category": "餐饮"},
-    {"keywords": ["超市", "便利店", "菜市场", "水果"], "category": "食材采购"},
-    # 交通
-    {"keywords": ["滴滴", "打车", "出租车", "停车", "加油", "地铁", "公交"], "category": "交通出行"},
-    {"keywords": ["火车", "高铁", "机票", "飞机"], "category": "差旅"},
-    # 购物
-    {"keywords": ["淘宝", "京东", "拼多多", "天猫"], "category": "购物"},
-    # 娱乐
-    {"keywords": ["电影", "游戏", "KTV", "酒吧"], "category": "休闲娱乐"},
-    # 生活
-    {"keywords": ["电费", "水费", "燃气", "物业", "房租"], "category": "住房"},
-    {"keywords": ["话费", "流量", "宽带"], "category": "通讯"},
-    # 医疗
-    {"keywords": ["医院", "药店", "诊所"], "category": "医疗健康"},
-    # 转账
-    {"keywords": ["转账", "红包"], "category": "转账"},
+    # -- 转账/红包（最高优先级，先排除） --
+    {"keywords": ["红包"], "category_expense": "红包", "category_income": "红包收入", "tags": ["红包"]},
+    {"keywords": ["转账", "还款", "代付", "亲属卡"], "category_expense": "转账", "category_income": "转账收入", "tags": ["转账"]},
+
+    # -- 餐饮 --
+    {"keywords": ["外卖", "美团外卖", "饿了么"], "category_expense": "餐饮", "tags": ["外卖"]},
+    {"keywords": ["麦当劳", "肯德基", "KFC", "星巴克", "瑞幸", "喜茶", "奈雪", "蜜雪冰城", "必胜客", "汉堡王", "海底捞", "西贝"], "category_expense": "餐饮", "tags": ["餐饮"]},
+    {"keywords": ["餐厅", "饭店", "食堂", "小吃", "烧烤", "火锅", "面馆", "早餐", "午餐", "晚餐", "下午茶", "咖啡", "奶茶", "蛋糕", "面包"], "category_expense": "餐饮", "tags": ["餐饮"]},
+    {"keywords": ["美团", "饿了么"], "category_expense": "餐饮", "tags": ["外卖"]},
+
+    # -- 食材采购 --
+    {"keywords": ["超市", "便利店", "菜市场", "水果", "盒马", "永辉", "大润发", "沃尔玛", "家乐福", "山姆", "Costco", "开市客"], "category_expense": "食材采购", "tags": ["超市"]},
+
+    # -- 交通出行 --
+    {"keywords": ["滴滴", "打车", "出租车", "曹操出行", "T3出行", "高德打车"], "category_expense": "交通出行", "tags": ["打车"]},
+    {"keywords": ["停车", "加油", "充电桩", "中石油", "中石化", "ETC"], "category_expense": "交通出行", "tags": ["交通"]},
+    {"keywords": ["地铁", "公交", "一卡通", "交通卡"], "category_expense": "交通出行", "tags": ["交通"]},
+
+    # -- 差旅 --
+    {"keywords": ["火车", "高铁", "12306", "机票", "飞机", "携程", "去哪儿", "飞猪", "同程", "酒店", "民宿", "Airbnb"], "category_expense": "差旅", "tags": ["出差"]},
+
+    # -- 购物 --
+    {"keywords": ["淘宝", "天猫", "京东", "拼多多", "抖音商城", "抖音小店", "唯品会", "得物", "闲鱼"], "category_expense": "购物", "tags": ["网购"]},
+    {"keywords": ["Apple", "苹果", "华为", "小米", "OPPO", "VIVO", "三星"], "category_expense": "购物", "tags": ["购物"]},
+
+    # -- 休闲娱乐 --
+    {"keywords": ["电影", "影院", "万达影城", "猫眼", "淘票票"], "category_expense": "休闲娱乐", "tags": ["娱乐"]},
+    {"keywords": ["游戏", "Steam", "腾讯游戏", "网易游戏", "App Store", "Apple Music", "爱奇艺", "优酷", "腾讯视频", "B站", "bilibili", "Netflix", "Spotify"], "category_expense": "休闲娱乐", "tags": ["订阅"]},
+    {"keywords": ["KTV", "酒吧", "网吧", "剧本杀", "密室"], "category_expense": "休闲娱乐", "tags": ["娱乐"]},
+
+    # -- 居住 --
+    {"keywords": ["电费", "水费", "燃气", "暖气", "物业", "房租", "房贷", "按揭"], "category_expense": "住房", "tags": ["居住"]},
+    {"keywords": ["装修", "家具", "家电", "宜家"], "category_expense": "住房", "tags": ["购物"]},
+
+    # -- 通讯 --
+    {"keywords": ["话费", "流量", "宽带", "中国移动", "中国联通", "中国电信"], "category_expense": "通讯", "tags": ["通讯"]},
+
+    # -- 医疗健康 --
+    {"keywords": ["医院", "药店", "诊所", "口腔", "牙科", "体检", "药房", "大参林", "老百姓大药房"], "category_expense": "医疗健康", "tags": ["医疗"]},
+
+    # -- 教育 --
+    {"keywords": ["学费", "培训", "课程", "书店", "图书", "当当", "得到", "知乎", "网课"], "category_expense": "教育学习", "tags": ["教育"]},
+
+    # -- 服饰美容 --
+    {"keywords": ["理发", "美甲", "化妆品", "护肤", "ZARA", "H&M", "优衣库", "耐克", "阿迪"], "category_expense": "服饰美容", "tags": ["美容"]},
+
+    # -- 孝敬家长 --
+    {"keywords": ["孝敬", "爸妈", "父母", "长辈"], "category_expense": "孝敬家长", "tags": ["孝敬"]},
+
+    # -- 保险 --
+    {"keywords": ["保险", "社保", "公积金", "平安保险", "中国人寿"], "category_expense": "保险", "tags": ["保险"]},
+
+    # -- 投资 --
+    {"keywords": ["基金", "股票", "理财", "定期", "利息"], "category_expense": "投资亏损", "category_income": "投资收益", "tags": ["投资"]},
 ]
 
+# 平台 → 默认分类映射（当关键词匹配失败时使用）
+PLATFORM_CATEGORY_MAP = {
+    "美团": "餐饮",
+    "饿了么": "餐饮",
+    "大众点评": "餐饮",
+    "淘宝": "购物",
+    "天猫": "购物",
+    "京东": "购物",
+    "拼多多": "购物",
+    "抖音": "购物",
+    "闲鱼": "购物",
+    "携程": "差旅",
+    "去哪儿": "差旅",
+    "飞猪": "差旅",
+    "滴滴": "交通出行",
+}
 
-def auto_categorize(merchant: str, description: str) -> str | None:
-    """根据商户名和描述自动分类"""
+# 支付方式 → 默认分类映射
+PAYMENT_METHOD_CATEGORY_MAP = {
+    "花呗": "购物",  # 花呗多数用于网购
+    "余额宝": None,  # 余额宝是资金来源，不能推断分类
+    "零钱通": None,
+}
+
+# 平台 → 默认标签
+PLATFORM_TAG_MAP = {
+    "淘宝": "网购",
+    "天猫": "网购",
+    "京东": "网购",
+    "拼多多": "网购",
+    "抖音": "网购",
+    "美团": "外卖",
+    "饿了么": "外卖",
+    "携程": "出差",
+    "去哪儿": "出差",
+}
+
+
+def auto_categorize(merchant: str, description: str, txn_type: str = "expense",
+                    platform: str = "", payment_method: str = "") -> tuple[str | None, list[str]]:
+    """自动分类 + 自动标签，返回 (分类名, 标签列表)"""
     combined = f"{merchant} {description}".lower()
+    tags: list[str] = []
+
+    # 1. 关键词规则匹配
     for rule in AUTO_CATEGORY_RULES:
         for keyword in rule["keywords"]:
+            if keyword.lower() in combined:
+                cat = rule.get("category_income") if txn_type == "income" and "category_income" in rule else rule["category_expense"]
+                tags.extend(rule.get("tags", []))
+                return cat, tags
+
+    # 2. 平台分类回退
+    if platform:
+        cat = PLATFORM_CATEGORY_MAP.get(platform)
+        if cat:
+            tag = PLATFORM_TAG_MAP.get(platform)
+            if tag:
+                tags.append(tag)
+            return cat, tags
+
+    # 3. 支付方式回退
+    if payment_method:
+        cat = PAYMENT_METHOD_CATEGORY_MAP.get(payment_method)
+        if cat:
+            return cat, tags
+
+    return None, tags
+
+
+async def _ai_suggest_category(db: AsyncSession, user: User, merchant: str, description: str) -> str | None:
+    """调用 AI 规则引擎推荐分类（与 ai.py 的 suggest_category 逻辑一致）"""
+    from app.api.ai import CATEGORY_KEYWORDS
+    combined = f"{merchant} {description}".lower()
+    for cat_name, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
             if keyword in combined:
-                return rule["category"]
+                return cat_name
     return None
+
+
+async def _auto_assign_tags(db: AsyncSession, family_id: int, txn_id: int, tag_names: list[str]):
+    """自动创建并分配标签到交易"""
+    from app.models.tag import Tag
+    from app.models.transaction_tag import TransactionTag
+    for name in tag_names:
+        if not name:
+            continue
+        # 查找或创建标签
+        result = await db.execute(
+            select(Tag).where(Tag.family_id == family_id, Tag.name == name)
+        )
+        tag = result.scalar_one_or_none()
+        if not tag:
+            tag = Tag(family_id=family_id, name=name)
+            db.add(tag)
+            await db.flush()
+        # 创建关联（忽略重复）
+        existing = await db.execute(
+            select(TransactionTag).where(
+                TransactionTag.transaction_id == txn_id,
+                TransactionTag.tag_id == tag.id,
+            )
+        )
+        if not existing.scalar_one_or_none():
+            db.add(TransactionTag(transaction_id=txn_id, tag_id=tag.id))
 
 
 @router.post("/api/imports/upload")
@@ -561,6 +697,70 @@ async def upload_import(
     new_items = [i for i in items if not i.get("order_no") or i["order_no"] not in existing_orders]
     skipped_dup = len(items) - len(new_items)
 
+    # === 自动匹配账户 ===
+    from app.models.account import PaymentAccount
+    accounts_result = await db.execute(
+        select(PaymentAccount).where(
+            PaymentAccount.family_id == current_user.family_id,
+            PaymentAccount.is_active == True,
+        )
+    )
+    user_accounts = list(accounts_result.scalars())
+
+    detected_methods = meta.get("detected_methods", [])
+    method_matches = {}
+    unmatched_methods = []
+    for method in detected_methods:
+        matched_id = match_payment_method_to_account(method, user_accounts)
+        if matched_id:
+            method_matches[method] = matched_id
+        else:
+            suggestion = suggest_account_type(method)
+            unmatched_methods.append({"method": method, "suggestion": suggestion})
+
+    # === 自动分类和标签（在存储之前完成） ===
+    categories_result = await db.execute(
+        select(Category).where(
+            (Category.family_id == current_user.family_id) | (Category.family_id.is_(None)),
+        )
+    )
+    category_names = {c.name: c.id for c in categories_result.scalars()}
+
+    for item in new_items:
+        txn_type = item.get("type", "expense")
+        merchant = item.get("merchant", "")
+        description = item.get("description", "")
+        platform = item.get("platform", "")
+        pm = item.get("payment_method", "")
+
+        # 1. 规则分类 + 标签
+        suggested_cat, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+
+        # 2. AI 回退
+        if not suggested_cat and (merchant or description):
+            try:
+                ai_result = await _ai_suggest_category(db, current_user, merchant, description)
+                if ai_result:
+                    suggested_cat = ai_result
+            except Exception:
+                pass
+
+        # 3. 写入分类建议
+        if suggested_cat:
+            cat_id = category_names.get(suggested_cat)
+            if cat_id:
+                item["suggested_category_id"] = cat_id
+                item["suggested_category_name"] = suggested_cat
+
+        # 4. 写入标签建议
+        if auto_tags:
+            item["suggested_tags"] = auto_tags
+
+        # 5. 自动匹配账户
+        if pm and pm in method_matches:
+            item["suggested_account_id"] = method_matches[pm]
+
+    # === 存储到数据库（此时 raw_data 已包含分类和标签） ===
     imp = BillImport(
         family_id=current_user.family_id,
         book_id=book_id,
@@ -586,52 +786,6 @@ async def upload_import(
 
     await db.commit()
     await db.refresh(imp)
-
-    # 自动匹配账户
-    from app.models.account import PaymentAccount
-    accounts_result = await db.execute(
-        select(PaymentAccount).where(
-            PaymentAccount.family_id == current_user.family_id,
-            PaymentAccount.is_active == True,
-        )
-    )
-    user_accounts = list(accounts_result.scalars())
-
-    # 为每个支付方式尝试匹配账户
-    detected_methods = meta.get("detected_methods", [])
-    method_matches = {}
-    unmatched_methods = []
-    for method in detected_methods:
-        matched_id = match_payment_method_to_account(method, user_accounts)
-        if matched_id:
-            method_matches[method] = matched_id
-        else:
-            suggestion = suggest_account_type(method)
-            unmatched_methods.append({"method": method, "suggestion": suggestion})
-
-    # 为每条交易添加自动分类
-    categories_result = await db.execute(
-        select(Category).where(
-            (Category.family_id == current_user.family_id) | (Category.family_id.is_(None)),
-            Category.level == 1,
-        )
-    )
-    categories = list(categories_result.scalars())
-
-    for item in new_items:
-        # 自动分类
-        suggested_cat = auto_categorize(item.get("merchant", ""), item.get("description", ""))
-        if suggested_cat:
-            # 查找分类ID
-            cat = next((c for c in categories if c.name == suggested_cat), None)
-            if cat:
-                item["suggested_category_id"] = cat.id
-                item["suggested_category_name"] = cat.name
-
-        # 自动匹配账户
-        pm = item.get("payment_method", "")
-        if pm and pm in method_matches:
-            item["suggested_account_id"] = method_matches[pm]
 
     return {
         "id": imp.id,
@@ -755,6 +909,15 @@ async def confirm_import(
     )
     items = items_result.scalars().all()
 
+    # 加载分类名称→ID映射（用于实时分类）
+    from app.models.category import Category
+    cats_result = await db.execute(
+        select(Category).where(
+            (Category.family_id == current_user.family_id) | (Category.family_id.is_(None)),
+        )
+    )
+    _category_name_map = {c.name: c.id for c in cats_result.scalars()}
+
     seq_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
     base_entry_id = seq_result.scalar()
 
@@ -834,8 +997,31 @@ async def confirm_import(
 
         txn_type = raw.get("type", "expense")
 
-        # 使用自动分类建议（如果有的话）
+        # 使用自动分类建议（如果有的话），否则实时分类
         category_id = raw.get("suggested_category_id")
+        suggested_tags = raw.get("suggested_tags", [])
+
+        if not category_id:
+            # raw_data 中没有分类（可能是旧代码上传的），实时分类
+            merchant = raw.get("merchant", "")
+            description = raw.get("description", "")
+            platform = raw.get("platform", "")
+            pm = raw.get("payment_method", "")
+            cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+
+            # AI 回退
+            if not cat_name and (merchant or description):
+                try:
+                    cat_name = await _ai_suggest_category(db, current_user, merchant, description)
+                except Exception:
+                    pass
+
+            if cat_name:
+                cat_id = _category_name_map.get(cat_name)
+                if cat_id:
+                    category_id = cat_id
+            if auto_tags:
+                suggested_tags = auto_tags
 
         # 双式记账：创建 debit（业务信息）+ credit（资金来源）两条记录
         # 两边都设置 payment_account_id，与 create_transaction 保持一致
@@ -875,6 +1061,12 @@ async def confirm_import(
         )
         db.add(debit)
         db.add(credit)
+        await db.flush()
+
+        # 自动打标签（使用 entry_id，与查询保持一致）
+        if suggested_tags:
+            await _auto_assign_tags(db, current_user.family_id, entry_id, suggested_tags)
+
         item.action = "imported"
         item.matched_txn_id = entry_id
         created += 1

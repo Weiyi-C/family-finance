@@ -150,6 +150,7 @@
       :banks="banks"
       :channels="channels"
       :accounts="accounts"
+      :initial-method="currentCreateMethod"
       @created="onAccountCreated"
     />
 

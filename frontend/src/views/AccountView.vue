@@ -11,7 +11,12 @@
         <template #header>
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span>{{ group.icon }} {{ group.label }} ({{ group.accounts.length }}个)</span>
-            <el-button size="small" @click="openAddProduct(group)">添加产品</el-button>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-weight: 600; font-size: 15px;" :class="group.total < 0 ? 'text-expense' : ''">
+                {{ group.accounts.length > 1 ? formatMoney(group.total) : '' }}
+              </span>
+              <el-button size="small" @click="openAddProduct(group)">添加产品</el-button>
+            </div>
           </div>
         </template>
         <el-table :data="group.accounts" stripe size="small">
@@ -26,7 +31,8 @@
           </el-table-column>
           <el-table-column label="余额" align="right" width="120">
             <template #default="{ row }">
-              <span :class="row.initial_balance < 0 ? 'text-expense' : ''">{{ formatMoney(row.initial_balance) }}</span>
+              <span v-if="hasChildren(row.id)" style="color: #909399;">—</span>
+              <span v-else :class="row.initial_balance < 0 ? 'text-expense' : ''">{{ formatMoney(row.initial_balance) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="140">
@@ -137,9 +143,14 @@ const parentOptions = computed(() => {
   )
 })
 
+// 判断账户是否有子账户
+function hasChildren(accountId: number): boolean {
+  return accounts.value.some((a) => a.parent_id === accountId && a.is_active)
+}
+
 // 账户分组 - 支持同一平台多个账号
 const accountGroups = computed(() => {
-  const groups: Record<string, { icon: string; label: string; accounts: PaymentAccount[] }> = {}
+  const groups: Record<string, { icon: string; label: string; accounts: PaymentAccount[]; total: number }> = {}
 
   // 找出所有顶级账户（没有parent_id的）
   const topAccounts = accounts.value.filter((a) => a.is_active && !a.is_hidden && !a.parent_id)
@@ -151,14 +162,11 @@ const accountGroups = computed(() => {
     let key: string, icon: string, label: string
 
     if (a.channel_id) {
-      // 平台账号顶级账户（如"支付宝-138xxxx"）
       const c = channels.value.find((c) => c.id === a.channel_id)
       icon = c?.name.includes('支付宝') ? '📱' : c?.name.includes('微信') ? '💬' : '🌐'
-      // 使用账户名称作为分组标签（包含账号标识）
       key = `parent_${a.id}`
       label = a.name
     } else if (a.bank_id) {
-      // 银行顶级账户
       const b = banks.value.find((b) => b.id === a.bank_id)
       key = `bank_${a.bank_id}`
       icon = '🏦'
@@ -173,7 +181,7 @@ const accountGroups = computed(() => {
       label = '其他'
     }
 
-    if (!groups[key]) groups[key] = { icon, label, accounts: [] }
+    if (!groups[key]) groups[key] = { icon, label, accounts: [], total: 0 }
     groups[key].accounts.push(a)
   }
 
@@ -183,16 +191,16 @@ const accountGroups = computed(() => {
     if (parent) {
       const key = `parent_${parent.id}`
       if (!groups[key]) {
-        // 父账户可能不在当前列表中，创建一个分组
         const c = channels.value.find((c) => c.id === parent.channel_id)
         const icon = c?.name.includes('支付宝') ? '📱' : c?.name.includes('微信') ? '💬' : '🌐'
-        groups[key] = { icon, label: parent.name, accounts: [] }
+        groups[key] = { icon, label: parent.name, accounts: [], total: 0 }
       }
       groups[key].accounts.push(a)
+      groups[key].total += a.initial_balance || 0
     } else {
-      // 父账户不存在，放入"其他"
-      if (!groups['other']) groups['other'] = { icon: '💰', label: '其他', accounts: [] }
+      if (!groups['other']) groups['other'] = { icon: '💰', label: '其他', accounts: [], total: 0 }
       groups['other'].accounts.push(a)
+      groups['other'].total += a.initial_balance || 0
     }
   }
 

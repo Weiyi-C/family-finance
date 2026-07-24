@@ -73,7 +73,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="账户类型">
-          <el-radio-group v-model="form.bank_type">
+          <el-radio-group v-model="form.bank_type" @change="onBankTypeChange">
             <el-radio-button value="savings">储蓄卡</el-radio-button>
             <el-radio-button value="credit">信用卡</el-radio-button>
             <el-radio-button value="investment">投资理财</el-radio-button>
@@ -139,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createAccount } from '@/api/accounts'
 import type { PaymentAccount, Channel } from '@/types'
@@ -151,6 +151,7 @@ const props = defineProps<{
   banks: BankItem[]
   channels: Channel[]
   accounts: PaymentAccount[]
+  initialMethod?: string  // 从导入传入的支付方式，如"工商银行储蓄卡（0726）"
 }>()
 
 const emit = defineEmits<{
@@ -311,6 +312,15 @@ function onBankChange() {
   }
 }
 
+function onBankTypeChange(bankType: string) {
+  const bank = props.banks.find((b) => b.id === form.bank_id)
+  if (bank) {
+    const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
+    const tail = form.card_tail ? `(尾号${form.card_tail})` : ''
+    form.name = `${bank.name}${typeMap[bankType] || '储蓄卡'}${tail}`
+  }
+}
+
 async function handleCreate() {
   if (!form.name) { ElMessage.warning('请填写账户名称'); return }
   saving.value = true
@@ -371,11 +381,66 @@ async function handleCreate() {
   }
 }
 
+function parseMethodString(method: string) {
+  // 解析 "工商银行储蓄卡（0726）" → { bank: "工商银行", type: "savings", tail: "0726" }
+  const tailMatch = method.match(/[（(](\d{4})[）)]/)
+  const tail = tailMatch ? tailMatch[1] : ''
+
+  let bankType = 'savings'
+  if (method.includes('信用卡')) bankType = 'credit'
+  else if (method.includes('投资') || method.includes('理财')) bankType = 'investment'
+
+  // 提取银行名：去掉类型词和尾号
+  let bankName = method
+    .replace(/储蓄卡|信用卡|投资|理财/g, '')
+    .replace(/[（(]\d{4}[）)]/, '')
+    .trim()
+
+  // 尝试匹配已知银行（精确匹配优先，然后前缀匹配）
+  const matchedBank = props.banks.find((b) =>
+    bankName === b.name || bankName === b.short_name
+  ) || props.banks.find((b) =>
+    bankName.includes(b.name) || b.name.includes(bankName) ||
+    (b.short_name && (bankName.includes(b.short_name) || b.short_name.includes(bankName)))
+  )
+
+  return { bankName, bankType, tail, matchedBank }
+}
+
+// 尝试填充银行信息（banks 加载后可能需要重试）
+function tryFillFromMethod() {
+  if (!props.initialMethod || categoryType.value !== 'bank') return
+  const parsed = parseMethodString(props.initialMethod)
+  if (parsed.matchedBank && !form.bank_id) {
+    form.bank_id = parsed.matchedBank.id
+    form.bank_name = parsed.matchedBank.name
+    form.bank_type = parsed.bankType
+    form.card_tail = parsed.tail
+    const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
+    form.name = `${parsed.matchedBank.name}${typeMap[parsed.bankType] || '储蓄卡'}${parsed.tail ? `(尾号${parsed.tail})` : ''}`
+  }
+}
+
 watch(visible, (v) => {
   if (v) {
     step.value = 1
     categoryType.value = 'channel'
     resetForm()
+
+    // 如果传入了 initialMethod，自动填充银行信息
+    if (props.initialMethod) {
+      categoryType.value = 'bank'
+      step.value = 2
+      // 尝试立即填充
+      nextTick(() => { tryFillFromMethod() })
+    }
   }
 })
+
+// banks 加载后重试填充（immediate 确保首次加载也触发）
+watch(() => props.banks, (newBanks) => {
+  if (newBanks && newBanks.length > 0) {
+    tryFillFromMethod()
+  }
+}, { deep: true, immediate: true })
 </script>
