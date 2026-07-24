@@ -790,22 +790,34 @@ async def confirm_import(
         elif default_account_id:
             account_id = default_account_id
 
-        # 查找平台ID（使用模糊匹配，因为检测到的可能是"淘宝闪购"而数据库中是"淘宝"）
+        # 查找平台ID
         platform_name = raw.get("platform", "")
         platform_id = None
         if platform_name:
             from app.models.platform import Platform
-            # 先尝试精确匹配
+            # 先尝试精确匹配（系统预设或家庭自定义）
             platform_result = await db.execute(
-                select(Platform.id).where(Platform.name == platform_name).limit(1)
+                select(Platform.id).where(
+                    Platform.name == platform_name,
+                    (Platform.family_id.is_(None)) | (Platform.family_id == current_user.family_id),
+                ).limit(1)
             )
             platform_id = platform_result.scalar()
-            # 如果没找到，尝试模糊匹配
+            # 如果没找到，用已知映射
             if not platform_id:
-                platform_result = await db.execute(
-                    select(Platform.id).where(Platform.name.contains(platform_name[:2])).limit(1)
-                )
-                platform_id = platform_result.scalar()
+                PLATFORM_ALIASES = {
+                    "淘宝闪购": "淘宝", "天猫": "淘宝", "淘宝商城": "淘宝",
+                    "京东到家": "京东", "京东商城": "京东",
+                    "美团外卖": "美团", "大众点评": "美团",
+                    "饿了么星选": "饿了么",
+                    "拼多多": "拼多多", "抖音商城": "抖音",
+                }
+                mapped_name = PLATFORM_ALIASES.get(platform_name)
+                if mapped_name:
+                    platform_result = await db.execute(
+                        select(Platform.id).where(Platform.name == mapped_name).limit(1)
+                    )
+                    platform_id = platform_result.scalar()
 
         # 查找支付渠道ID（根据平台或来源推断）
         channel_id = None
@@ -822,7 +834,11 @@ async def confirm_import(
 
         txn_type = raw.get("type", "expense")
 
-        txn = Transaction(
+        # 使用自动分类建议（如果有的话）
+        category_id = raw.get("suggested_category_id")
+
+        # 双式记账：创建 debit（业务信息）+ credit（资金来源）两条记录
+        debit = Transaction(
             family_id=current_user.family_id,
             book_id=imp.book_id,
             entry_id=entry_id,
@@ -830,18 +846,35 @@ async def confirm_import(
             type=txn_type,
             amount=amount,
             currency="CNY",
+            category_id=category_id,
             merchant_name=item.parsed_merchant or raw.get("merchant"),
             description=raw.get("description"),
             transaction_time=txn_time,
-            payment_account_id=account_id,
             payment_channel_id=channel_id,
             platform_id=platform_id,
             recorded_by=current_user.id,
             paid_by=current_user.id,
             completion_status="complete",
+            import_id=imp.id,
+            raw_data=raw,
         )
-        db.add(txn)
+        credit = Transaction(
+            family_id=current_user.family_id,
+            book_id=imp.book_id,
+            entry_id=entry_id,
+            entry_side="credit",
+            type=txn_type,
+            amount=amount,
+            currency="CNY",
+            payment_account_id=account_id,
+            transaction_time=txn_time,
+            recorded_by=current_user.id,
+            import_id=imp.id,
+        )
+        db.add(debit)
+        db.add(credit)
         item.action = "imported"
+        item.matched_txn_id = entry_id
         created += 1
 
     imp.status = "confirmed"

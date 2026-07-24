@@ -40,13 +40,27 @@
         </template>
 
         <el-form-item label="产品类型">
-          <el-select v-model="form.type_code" style="width: 100%;">
+          <el-select v-model="form.type_code" style="width: 100%;" @change="onProductChange">
             <el-option v-for="p in channelProducts" :key="p.type_code" :label="`${p.icon} ${p.name}`" :value="p.type_code" />
           </el-select>
         </el-form-item>
         <el-form-item label="产品名称">
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" placeholder="如：花呗、余额宝" />
         </el-form-item>
+        <!-- 信用类产品显示额度/账单日/还款日 -->
+        <template v-if="isChannelCredit">
+          <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
+          <el-form-item label="账单日">
+            <el-select v-model="form.billing_day" clearable placeholder="每月几号" style="width: 100%;">
+              <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="还款日">
+            <el-select v-model="form.due_day" clearable placeholder="每月几号" style="width: 100%;">
+              <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
+            </el-select>
+          </el-form-item>
+        </template>
       </el-form>
     </div>
 
@@ -66,21 +80,32 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="卡号后四位" v-if="form.bank_type !== 'investment'">
-          <el-input v-model="form.card_tail" maxlength="4" />
+          <el-input v-model="form.card_tail" maxlength="4" placeholder="0000" @input="form.card_tail = form.card_tail.replace(/\D/g, '')" />
         </el-form-item>
         <el-form-item label="账户名称">
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" :placeholder="bankNamePlaceholder" />
         </el-form-item>
         <template v-if="form.bank_type === 'credit'">
           <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
-          <el-form-item label="账单日"><el-input-number v-model="form.billing_day" :min="1" :max="28" /></el-form-item>
-          <el-form-item label="还款日"><el-input-number v-model="form.due_day" :min="1" :max="28" /></el-form-item>
+          <el-form-item label="账单日">
+            <el-select v-model="form.billing_day" clearable placeholder="每月几号" style="width: 100%;">
+              <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="还款日">
+            <el-select v-model="form.due_day" clearable placeholder="每月几号" style="width: 100%;">
+              <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
+            </el-select>
+          </el-form-item>
         </template>
         <template v-if="form.bank_type === 'investment'">
           <el-form-item label="关联储蓄卡">
-            <el-select v-model="form.parent_id" style="width: 100%;">
+            <el-select v-model="form.parent_id" clearable placeholder="可选，不关联则独立显示" style="width: 100%;">
               <el-option v-for="a in savingsAccounts" :key="a.id" :label="a.name" :value="a.id" />
             </el-select>
+            <div v-if="savingsAccounts.length === 0" style="color: #e6a23c; font-size: 12px; margin-top: 4px;">
+              暂无储蓄卡，请先创建
+            </div>
           </el-form-item>
         </template>
       </el-form>
@@ -216,6 +241,22 @@ const channelProducts = computed(() => {
 
 const savingsAccounts = computed(() => props.accounts.filter((a) => a.type_code === 'bank_savings' && a.is_active))
 
+// 日期选项 1-28
+const dayOptions = Array.from({ length: 28 }, (_, i) => i + 1)
+
+// 当前渠道产品是否为信用类
+const creditTypeCodes = new Set(['alipay_huabei', 'alipay_jiebei', 'jd_baitiao'])
+const isChannelCredit = computed(() => creditTypeCodes.has(form.type_code))
+
+// 银行卡名称占位符
+const bankNamePlaceholder = computed(() => {
+  const bank = props.banks.find((b) => b.id === form.bank_id)
+  const bankName = bank?.name || '银行'
+  const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
+  const tail = form.card_tail ? `(尾号${form.card_tail})` : ''
+  return `${bankName}${typeMap[form.bank_type] || ''}${tail}`
+})
+
 function selectCategory(cat: string) {
   categoryType.value = cat as 'channel' | 'bank' | 'other'
   step.value = 2
@@ -243,10 +284,22 @@ function onChannelChange() {
   form.existing_parent_id = null
   form.account_identifier = ''
   form.parent_name = ''
+  form.credit_limit_yuan = 0
+  form.billing_day = null
+  form.due_day = null
   if (channelProducts.value.length > 0) {
     form.type_code = channelProducts.value[0].type_code
     form.name = channelProducts.value[0].name
   }
+}
+
+function onProductChange(typeCode: string) {
+  const product = channelProducts.value.find((p) => p.type_code === typeCode)
+  if (product) form.name = product.name
+  // 重置信用字段
+  form.credit_limit_yuan = 0
+  form.billing_day = null
+  form.due_day = null
 }
 
 function onBankChange() {
@@ -284,17 +337,24 @@ async function handleCreate() {
     if (categoryType.value === 'channel') {
       payload.channel_id = form.channel_id
       if (parentId) payload.parent_id = parentId
+      // 渠道信用类产品（花呗、借呗、白条）
+      if (isChannelCredit.value) {
+        payload.credit_limit = Math.round((form.credit_limit_yuan || 0) * 100)
+        if (form.billing_day) payload.billing_day = form.billing_day
+        if (form.due_day) payload.due_day = form.due_day
+      }
     } else if (categoryType.value === 'bank') {
       payload.bank_id = form.bank_id
       payload.bank_name = form.bank_name
       if (form.card_tail) payload.card_tail = form.card_tail
-      if (form.bank_type === 'credit') {
+      if (form.bank_type === 'savings') {
+        payload.type_code = 'bank_savings'
+      } else if (form.bank_type === 'credit') {
         payload.type_code = 'bank_credit'
-        if (form.credit_limit_yuan) payload.credit_limit = Math.round(form.credit_limit_yuan * 100)
+        payload.credit_limit = Math.round((form.credit_limit_yuan || 0) * 100)
         if (form.billing_day) payload.billing_day = form.billing_day
         if (form.due_day) payload.due_day = form.due_day
-      }
-      if (form.bank_type === 'investment') {
+      } else if (form.bank_type === 'investment') {
         payload.type_code = 'fund_account'
         if (form.parent_id) payload.parent_id = form.parent_id
       }

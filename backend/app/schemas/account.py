@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -16,8 +17,8 @@ class AccountCreate(BaseModel):
     card_type: str | None = None
     initial_balance: int = 0
     credit_limit: int | None = None
-    billing_day: int | None = None
-    due_day: int | None = None
+    billing_day: int | None = Field(None, ge=1, le=28)
+    due_day: int | None = Field(None, ge=1, le=28)
     grace_days: int | None = None
     is_shared: bool = False
     shared_with: int | None = None
@@ -36,8 +37,8 @@ class AccountUpdate(BaseModel):
     card_tail: str | None = None
     initial_balance: int | None = None
     credit_limit: int | None = None
-    billing_day: int | None = None
-    due_day: int | None = None
+    billing_day: int | None = Field(None, ge=1, le=28)
+    due_day: int | None = Field(None, ge=1, le=28)
     is_shared: bool | None = None
     shared_with: int | None = None
     share_type: str | None = None
@@ -73,6 +74,11 @@ class AccountResponse(BaseModel):
     sort_order: int
     is_active: bool
     is_hidden: bool
+    linked_account_id: int | None = None
+    linked_user_id: int | None = None
+    platform_id: int | None = None
+    group_label: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
