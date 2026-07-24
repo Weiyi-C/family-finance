@@ -838,6 +838,7 @@ async def confirm_import(
         category_id = raw.get("suggested_category_id")
 
         # 双式记账：创建 debit（业务信息）+ credit（资金来源）两条记录
+        # 两边都设置 payment_account_id，与 create_transaction 保持一致
         debit = Transaction(
             family_id=current_user.family_id,
             book_id=imp.book_id,
@@ -850,6 +851,7 @@ async def confirm_import(
             merchant_name=item.parsed_merchant or raw.get("merchant"),
             description=raw.get("description"),
             transaction_time=txn_time,
+            payment_account_id=account_id,
             payment_channel_id=channel_id,
             platform_id=platform_id,
             recorded_by=current_user.id,
@@ -903,8 +905,17 @@ async def delete_import(
     if not imp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="导入记录不存在")
 
-    # 先删除关联的明细记录（使用 bulk delete 避免逐条查询）
+    # 先删除关联的交易记录（debit + credit 两行）
     from sqlalchemy import delete as sql_delete
+    from app.models.transaction import Transaction
+    await db.execute(
+        sql_delete(Transaction).where(
+            Transaction.import_id == import_id,
+            Transaction.family_id == current_user.family_id,
+        )
+    )
+
+    # 再删除关联的明细记录
     await db.execute(
         sql_delete(BillImportItem).where(BillImportItem.import_id == import_id)
     )
