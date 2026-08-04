@@ -203,7 +203,7 @@ const budgetUsages = ref<BudgetUsageWithName[]>([])
 // 环比对比
 const comparison = ref<ComparisonResult | null>(null)
 
-const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '转账' }
+const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '资金转移' }
 const typeTag: Record<string, string> = { expense: 'danger', income: 'success', transfer: 'info' }
 
 const periodLabel = computed(() => {

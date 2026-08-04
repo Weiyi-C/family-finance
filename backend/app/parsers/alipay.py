@@ -41,16 +41,23 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                 continue
             amount = float(amount_str)
 
-            # 收/支方向
+            # 收/支方向 + 资金状态 → 交易类型
             direction = ""
             for key in ["收/支", "收/支"]:
                 if key in cleaned_row:
                     direction = cleaned_row[key]
                     break
             direction = direction.strip()
-            if "不计收支" in direction:
+
+            fund_status = (cleaned_row.get("资金状态", "") or "").strip()
+            if fund_status == "资金转移":
+                txn_type = "transfer"
+            elif "支出" in direction or fund_status == "已支出":
+                txn_type = "expense"
+            elif "收入" in direction or fund_status == "已收入":
+                txn_type = "income"
+            else:
                 continue
-            txn_type = "expense" if "支出" in direction else "income"
 
             # 状态过滤（跳过退款）
             status = ""

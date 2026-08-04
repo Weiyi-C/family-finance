@@ -18,7 +18,7 @@
           <el-select v-model="filters.type" clearable placeholder="全部" style="width: 100px;">
             <el-option label="支出" value="expense" />
             <el-option label="收入" value="income" />
-            <el-option label="转账" value="transfer" />
+            <el-option label="资金转移" value="transfer" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期">
@@ -149,7 +149,7 @@
               <el-radio-group v-model="form.type">
                 <el-radio-button value="expense">支出</el-radio-button>
                 <el-radio-button value="income">收入</el-radio-button>
-                <el-radio-button value="transfer">转账</el-radio-button>
+                <el-radio-button value="transfer">资金转移</el-radio-button>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -311,7 +311,7 @@ const showCreateDialog = ref(false)
 const editingId = ref<number | null>(null)
 const categoryPath = ref<number[]>([])
 
-const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '转账' }
+const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '资金转移' }
 const typeTag: Record<string, string> = { expense: 'danger', income: 'success', transfer: 'info' }
 
 const filters = reactive({
