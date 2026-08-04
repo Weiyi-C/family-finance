@@ -1,6 +1,6 @@
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -84,6 +84,14 @@ async def update_book(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="账本不存在")
 
     update_data = body.model_dump(exclude_unset=True)
+
+    if update_data.get("is_default") and not book.is_default:
+        await db.execute(
+            update(AccountBook)
+            .where(AccountBook.family_id == current_user.family_id, AccountBook.is_default == True)
+            .values(is_default=False)
+        )
+
     for field, value in update_data.items():
         setattr(book, field, value)
 

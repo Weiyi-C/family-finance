@@ -41,6 +41,7 @@
           <el-form-item label="账本">
             <el-select v-model="importForm.book_id" style="width: 100%;">
               <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
+              <el-option label="+ 新建账本" value="__new__" />
             </el-select>
           </el-form-item>
           <el-form-item label="来源">
@@ -203,12 +204,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { Plus, Upload } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getImports, getImportItems, deleteImport } from '@/api/imports'
 import { getAccounts } from '@/api/accounts'
-import { getBooks } from '@/api/books'
+import { getBooks, createBook } from '@/api/books'
 import { getBanks, getAccountTemplates } from '@/api/reference'
 import { getChannels } from '@/api/channels'
 import { exportTransactions, exportAccounts, exportCategories } from '@/api/exports'
@@ -274,7 +275,23 @@ const statusMap: Record<string, string> = { pending: '待处理', parsed: '已�
 const statusType: Record<string, string> = { pending: 'info', parsed: 'warning', confirmed: 'success', failed: 'danger' }
 const actionMap: Record<string, string> = { pending: '待处理', imported: '已导入', skipped: '跳过', matched: '已匹配' }
 
-const importForm = reactive({ book_id: 0, source: 'auto' })
+const importForm = reactive({ book_id: 0 as number | string, source: 'auto' })
+
+watch(() => importForm.book_id, async (val) => {
+  if (val !== '__new__') return
+  try {
+    const { value } = await ElMessageBox.prompt('请输入账本名称', '新建账本', {
+      inputPlaceholder: '如：日常、旅行、装修',
+      inputValidator: (v) => !!v?.trim() || '名称不能为空',
+    })
+    const res = await createBook({ name: value.trim() })
+    books.value.push(res.data)
+    importForm.book_id = res.data.id
+    ElMessage.success('账本已创建')
+  } catch {
+    importForm.book_id = books.value[0]?.id || 0
+  }
+})
 
 // 判断是否为图片文件
 const isImageFile = computed(() => {

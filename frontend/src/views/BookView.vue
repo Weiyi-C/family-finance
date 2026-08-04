@@ -31,6 +31,10 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" /></el-form-item>
+        <el-form-item v-if="editingId" label="设为默认">
+          <el-switch v-model="form.is_default" />
+          <span style="color: #909399; font-size: 12px; margin-left: 8px;">记账时默认选中此账本</span>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
@@ -52,7 +56,7 @@ const saving = ref(false)
 const books = ref<AccountBook[]>([])
 const showDialog = ref(false)
 const editingId = ref<number | null>(null)
-const form = reactive({ name: '', description: '' })
+const form = reactive({ name: '', description: '', is_default: false })
 
 async function load() {
   loading.value = true
@@ -60,16 +64,21 @@ async function load() {
 }
 
 function editBook(row: AccountBook) {
-  editingId.value = row.id; form.name = row.name; form.description = row.description || ''; showDialog.value = true
+  editingId.value = row.id; form.name = row.name; form.description = row.description || ''
+  form.is_default = row.is_default || false; showDialog.value = true
 }
 
 async function handleSave() {
   if (!form.name) { ElMessage.warning('请填写名称'); return }
   saving.value = true
   try {
-    const payload = { name: form.name, description: form.description || undefined }
-    if (editingId.value) { await updateBook(editingId.value, payload); ElMessage.success('更新成功') }
-    else { await createBook(payload); ElMessage.success('创建成功') }
+    if (editingId.value) {
+      await updateBook(editingId.value, { name: form.name, description: form.description || undefined, is_default: form.is_default })
+      ElMessage.success('更新成功')
+    } else {
+      await createBook({ name: form.name, description: form.description || undefined })
+      ElMessage.success('创建成功')
+    }
     showDialog.value = false; editingId.value = null; await load()
   } catch (err: unknown) { ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '保存失败') }
   finally { saving.value = false }

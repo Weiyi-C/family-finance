@@ -13,6 +13,7 @@ class BookUpdate(BaseModel):
     icon: str | None = None
     color: str | None = None
     description: str | None = None
+    is_default: bool | None = None
 
 
 class BookResponse(BaseModel):

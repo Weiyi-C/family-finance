@@ -154,13 +154,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="币种">
-              <el-select v-model="form.currency" style="width: 100%;">
-                <el-option label="人民币 CNY" value="CNY" />
-                <el-option label="美元 USD" value="USD" />
-                <el-option label="欧元 EUR" value="EUR" />
-                <el-option label="日元 JPY" value="JPY" />
-                <el-option label="港币 HKD" value="HKD" />
+            <el-form-item label="账本">
+              <el-select v-model="form.book_id" style="width: 100%;">
+                <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -393,10 +389,12 @@ async function loadTransactions() {
 function openCreate() {
   editingId.value = null
   form.type = 'expense'; form.amountYuan = 0; form.transaction_time = ''
-  form.currency = 'CNY'; form.category_id = null; form.sub_category_id = null; form.detail_category_id = null
+  form.currency = 'CNY'
+  form.category_id = null; form.sub_category_id = null; form.detail_category_id = null
   form.payment_account_id = null; form.payment_channel_id = null; form.platform_id = null
   form.paid_by = null; form.merchant_name = ''; form.description = ''; form.tag_ids = []
-  form.book_id = books.value[0]?.id || 1
+  const defaultBook = books.value.find((b) => b.is_default) || books.value[0]
+  form.book_id = defaultBook?.id || 0
   form.originalAmountYuan = 0; form.original_currency = ''; form.exchange_rate = 1
   categoryPath.value = []
   showCreateDialog.value = true

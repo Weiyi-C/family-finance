@@ -60,6 +60,7 @@ export interface BookUpdate {
   name?: string
   description?: string
   icon?: string
+  is_default?: boolean
 }
 
 // ---- Category ----
