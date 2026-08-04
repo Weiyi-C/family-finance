@@ -56,15 +56,24 @@
               :auto-upload="false"
               :limit="1"
               :on-change="handleFileChange"
-              accept=".csv,.xlsx,.xls,.pdf,.txt"
+              accept=".csv,.xlsx,.xls,.pdf,.txt,.jpg,.jpeg,.png"
               drag
             >
               <el-icon style="font-size: 40px; color: #c0c4cc;"><Upload /></el-icon>
               <div style="color: #909399;">拖拽文件到此处，或<em style="color: #409eff;">点击上传</em></div>
               <template #tip>
-                <div style="color: #909399; font-size: 12px;">支持支付宝/微信导出的 CSV 或 Excel 文件</div>
+                <div style="color: #909399; font-size: 12px;">
+                  支持 CSV、Excel、PDF、TXT 文件，或账单截图（JPG/PNG）
+                </div>
               </template>
             </el-upload>
+          </el-form-item>
+          <el-form-item v-if="isImageFile">
+            <el-alert title="图片导入" type="info" :closable="false" style="width: 100%;">
+              <template #default>
+                检测到图片文件，将使用 AI 识别账单内容。请确保图片清晰且包含完整的账单信息。
+              </template>
+            </el-alert>
           </el-form-item>
         </el-form>
       </div>
@@ -194,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getImports, getImportItems, deleteImport } from '@/api/imports'
@@ -203,6 +212,7 @@ import { getBooks } from '@/api/books'
 import { getBanks, getAccountTemplates } from '@/api/reference'
 import { getChannels } from '@/api/channels'
 import { exportTransactions, exportAccounts, exportCategories } from '@/api/exports'
+import { aiParseImage } from '@/api/ai'
 import api from '@/api/index'
 import AccountCreateDialog from '@/components/AccountCreateDialog.vue'
 import type { BillImport, BillImportItem } from '@/api/imports'
@@ -266,6 +276,13 @@ const actionMap: Record<string, string> = { pending: '待处理', imported: '已
 
 const importForm = reactive({ book_id: 0, source: 'auto' })
 
+// 判断是否为图片文件
+const isImageFile = computed(() => {
+  if (!selectedFile.value) return false
+  const type = selectedFile.value.type || ''
+  return type.startsWith('image/')
+})
+
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
 
 function resetImport() {
@@ -293,28 +310,47 @@ async function handleUpload() {
   if (!selectedFile.value || !importForm.book_id) { ElMessage.warning('请选择账本和文件'); return }
   uploading.value = true
   try {
-    const formData = new FormData()
-    formData.append('file', selectedFile.value)
-    formData.append('book_id', String(importForm.book_id))
-    formData.append('source', importForm.source)
-    const res = await api.post('/imports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    uploadResult.value = res.data
-    step.value = 2
-
-    const methodMatches = res.data.method_matches || {}
-    const unmatchedMethods = res.data.unmatched_methods || []
-
-    for (const [method, accountId] of Object.entries(methodMatches)) {
-      methodAccountMap.value[method] = accountId as number
-    }
-    for (const um of unmatchedMethods) {
-      if (!(um.method in methodAccountMap.value)) {
-        methodAccountMap.value[um.method] = null
+    // 判断是否为图片文件，使用 AI 识别
+    if (isImageFile.value) {
+      const res = await aiParseImage(selectedFile.value)
+      // 将 AI 解析结果转换为预览格式
+      uploadResult.value = {
+        id: 0,
+        source: 'ai_vision',
+        parsed_count: res.data.count,
+        skipped_duplicate: 0,
+        meta: { platform: 'AI识别', has_payment_method: false, detected_methods: [] },
+        method_matches: {},
+        unmatched_methods: [],
+        preview: res.data.transactions as unknown as Record<string, unknown>[],
       }
-    }
+      step.value = 2
+      ElMessage.success(`AI 识别出 ${res.data.count} 条交易记录`)
+    } else {
+      // 普通文件上传
+      const formData = new FormData()
+      formData.append('file', selectedFile.value)
+      formData.append('book_id', String(importForm.book_id))
+      formData.append('source', importForm.source)
+      const res = await api.post('/imports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      uploadResult.value = res.data
+      step.value = 2
 
-    if (unmatchedMethods.length > 0) {
-      ElMessage.info(`检测到 ${unmatchedMethods.length} 个未匹配的支付方式，请配置账户映射`)
+      const methodMatches = res.data.method_matches || {}
+      const unmatchedMethods = res.data.unmatched_methods || []
+
+      for (const [method, accountId] of Object.entries(methodMatches)) {
+        methodAccountMap.value[method] = accountId as number
+      }
+      for (const um of unmatchedMethods) {
+        if (!(um.method in methodAccountMap.value)) {
+          methodAccountMap.value[um.method] = null
+        }
+      }
+
+      if (unmatchedMethods.length > 0) {
+        ElMessage.info(`检测到 ${unmatchedMethods.length} 个未匹配的支付方式，请配置账户映射`)
+      }
     }
   } catch (err: unknown) {
     ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '上传失败')

@@ -186,15 +186,51 @@ def auto_categorize(
 
 
 async def ai_suggest_category(
-    db: AsyncSession, user, merchant: str, description: str
+    db: AsyncSession, user, merchant: str, description: str,
+    amount: float = 0, txn_type: str = "expense"
 ) -> str | None:
-    """调用 AI 规则引擎推荐分类（规则匹配失败时的回退）
+    """调用 AI 推荐分类
 
-    使用与种子数据一致的分类名
+    优先使用大模型 API，回退到关键词规则
     """
+    # 1. 尝试使用大模型 API
+    if user and hasattr(user, 'family_id') and user.family_id:
+        from app.services.ai_service import get_ai_service
+
+        # 从家庭设置中获取 AI 配置
+        family_settings = {}
+        if hasattr(user, 'family') and user.family:
+            family_settings = user.family.settings or {}
+
+        ai_service = get_ai_service(family_settings=family_settings, user_settings=user.settings)
+        if ai_service:
+            # 获取分类列表
+            from app.models.category import Category
+            cats_result = await db.execute(
+                select(Category).where(
+                    (Category.family_id == user.family_id) | (Category.family_id.is_(None))
+                )
+            )
+            categories = [
+                {"id": c.id, "name": c.name, "level": c.level}
+                for c in cats_result.scalars()
+            ]
+
+            # 调用 AI 分类
+            result = await ai_service.categorize_transaction(
+                merchant=merchant,
+                description=description,
+                amount=amount / 100,  # 转换为元
+                txn_type=txn_type,
+                categories=categories,
+            )
+
+            if result and result.get("category_name"):
+                return result["category_name"]
+
+    # 2. 回退到关键词规则
     combined = f"{merchant} {description}".lower()
 
-    # AI 关键词规则（使用正确的分类名）
     AI_RULES = {
         # 支出分类
         "餐饮": ["外卖", "餐厅", "饭店", "食堂", "小吃", "烧烤", "火锅", "面馆", "咖啡", "奶茶", "蛋糕"],

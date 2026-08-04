@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000,
+  timeout: 180000, // 3 分钟，支持 AI 批量处理
 })
 
 let isRefreshing = false

@@ -158,26 +158,17 @@ async def upload_import(
         platform = item.get("platform", "")
         pm = item.get("payment_method", "")
 
-        # 1. 规则分类 + 标签
+        # 本地关键词规则分类（上传阶段快速分类，AI 在确认阶段使用）
         suggested_cat, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
 
-        # 2. AI 回退
-        if not suggested_cat and (merchant or description):
-            try:
-                ai_result = await ai_suggest_category(db, current_user, merchant, description)
-                if ai_result:
-                    suggested_cat = ai_result
-            except Exception:
-                pass
-
-        # 3. 写入分类建议
+        # 写入分类建议
         if suggested_cat:
             cat_id = category_names.get(suggested_cat)
             if cat_id:
                 item["suggested_category_id"] = cat_id
                 item["suggested_category_name"] = suggested_cat
 
-        # 4. 写入标签建议
+        # 写入标签建议
         if auto_tags:
             item["suggested_tags"] = auto_tags
 
@@ -354,6 +345,56 @@ async def confirm_import(
     )
     _category_name_map = {c.name: c.id for c in cats_result.scalars()}
 
+    # 检查是否配置了 AI
+    use_ai = False
+    ai_service = None
+    if current_user.family_id:
+        from app.models.user import Family
+        from app.services.ai_service import get_ai_service
+        family_result = await db.execute(
+            select(Family.settings).where(Family.id == current_user.family_id)
+        )
+        family_row = family_result.first()
+        family_settings = family_row[0] if family_row else {}
+        if family_settings and family_settings.get("ai", {}).get("enabled"):
+            ai_service = get_ai_service(family_settings=family_settings)
+            if ai_service:
+                use_ai = True
+
+    # 如果启用了 AI，先批量分类未匹配的交易
+    ai_results = {}
+    if use_ai and ai_service:
+        # 收集需要 AI 分类的交易
+        pending_txns = []
+        pending_indices = []
+        for i, item in enumerate(items):
+            raw = item.raw_data
+            merchant = raw.get("merchant", "")
+            description = raw.get("description", "")
+            # 只对没有分类建议的交易调用 AI
+            if not raw.get("suggested_category_id") and (merchant or description):
+                pending_txns.append({
+                    "merchant": merchant,
+                    "description": description,
+                    "amount": (item.parsed_amount or raw.get("amount", 0)) / 100,
+                    "type": raw.get("type", "expense"),
+                })
+                pending_indices.append(i)
+
+        # 批量调用 AI（每次最多50条）
+        categories = [{"id": c.id, "name": c.name, "level": c.level} for c in cats_result.scalars()]
+        for batch_start in range(0, len(pending_txns), 50):
+            batch = pending_txns[batch_start:batch_start+50]
+            batch_indices = pending_indices[batch_start:batch_start+50]
+            try:
+                results = await ai_service.categorize_batch(batch, categories)
+                if results:
+                    for j, result in enumerate(results):
+                        if j < len(batch_indices) and result.get("category_name"):
+                            ai_results[batch_indices[j]] = result["category_name"]
+            except Exception:
+                pass
+
     seq_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
     base_entry_id = seq_result.scalar()
 
@@ -462,13 +503,23 @@ async def confirm_import(
             description = raw.get("description", "")
             platform = raw.get("platform", "")
             pm = raw.get("payment_method", "")
-            cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
 
-            if not cat_name and (merchant or description):
+            # 1. AI 优先分类
+            cat_name = None
+            if use_ai and (merchant or description):
                 try:
-                    cat_name = await ai_suggest_category(db, current_user, merchant, description)
+                    cat_name = await ai_suggest_category(
+                        db, current_user, merchant, description,
+                        amount=amount, txn_type=txn_type
+                    )
                 except Exception:
                     pass
+
+            # 2. AI 未返回结果时，使用本地规则
+            if not cat_name:
+                cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+            else:
+                _, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
 
             if cat_name:
                 cat_id = _category_name_map.get(cat_name)
