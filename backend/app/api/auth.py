@@ -80,7 +80,11 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()
-    if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
+
+    DUMMY_HASH = "$2b$12$B8KaV6tHWq2YNAKUvolYL.5TmomNavmqi92Q9pqpiBminYgao27le"
+    password_ok = verify_password(body.password, user.password_hash if user else DUMMY_HASH)
+
+    if not user or not password_ok:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="手机号或密码错误")
 
     tokens = await _create_token_pair(user, db)
