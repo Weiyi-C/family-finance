@@ -144,7 +144,7 @@
     <el-dialog v-model="showCreateDialog" :title="editingId ? '编辑交易' : '记一笔'" width="650px" destroy-on-close>
       <el-form :model="form" label-width="80px">
         <el-row :gutter="16">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="类型">
               <el-radio-group v-model="form.type">
                 <el-radio-button value="expense">支出</el-radio-button>
@@ -153,10 +153,21 @@
               </el-radio-group>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="账本">
               <el-select v-model="form.book_id" style="width: 100%;">
                 <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="币种">
+              <el-select v-model="form.currency" style="width: 100%;">
+                <el-option label="人民币 CNY" value="CNY" />
+                <el-option label="美元 USD" value="USD" />
+                <el-option label="欧元 EUR" value="EUR" />
+                <el-option label="日元 JPY" value="JPY" />
+                <el-option label="港币 HKD" value="HKD" />
               </el-select>
             </el-form-item>
           </el-col>
