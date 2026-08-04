@@ -14,7 +14,7 @@ from app.models.transaction import Transaction
 from app.models.user import User
 
 # 从新模块导入
-from app.parsers import detect_and_decode, parse_alipay_csv, parse_wechat_csv, parse_excel
+from app.parsers import detect_and_decode, parse_alipay_csv, parse_wechat_csv, parse_excel, parse_icbc_pdf, parse_icbc_csv
 from app.services import (
     auto_categorize,
     ai_suggest_category,
@@ -54,7 +54,10 @@ async def upload_import(
         if ext == "csv":
             content_str = detect_and_decode(content_bytes)
             if source == "auto":
-                if "支付宝" in content_str[:500] or "交易号" in content_str[:1000]:
+                # 检测来源
+                if "明细查询文件下载" in content_str[:500] or "卡号:" in content_str[:500]:
+                    source = "icbc"
+                elif "支付宝" in content_str[:500] or "交易号" in content_str[:1000]:
                     source = "alipay"
                 elif "微信" in content_str[:500] or "交易单号" in content_str[:1000]:
                     source = "wechat"
@@ -65,13 +68,36 @@ async def upload_import(
                 items, meta = parse_alipay_csv(content_str)
             elif source == "wechat":
                 items, meta = parse_wechat_csv(content_str)
+            elif source == "icbc":
+                items, meta = parse_icbc_csv(content_str)
             else:
                 raise ValueError(f"不支持的 CSV 来源: {source}")
             file_format = "csv"
+        elif ext == "txt":
+            content_str = detect_and_decode(content_bytes)
+            # TXT 文件可能是工行明细（^ 分隔）
+            if "明细查询文件下载" in content_str[:500] or "^" in content_str[:1000]:
+                items, meta = parse_icbc_csv(content_str)
+                source = "icbc"
+            else:
+                raise ValueError("无法识别 TXT 文件格式")
+            file_format = "txt"
         elif ext in ("xlsx", "xls"):
             items, meta = parse_excel(content_bytes)
-            source = "auto"
+            # 从解析器返回的 meta 中获取实际来源
+            detected_platform = meta.get("platform", "")
+            if detected_platform == "微信":
+                source = "wechat"
+            elif detected_platform == "支付宝":
+                source = "alipay"
+            # 保留用户选择的 source（如果不是 auto）
+            elif source == "auto":
+                source = "auto"
             file_format = "xlsx"
+        elif ext == "pdf":
+            items, meta = parse_icbc_pdf(content_bytes)
+            source = "icbc"
+            file_format = "pdf"
         else:
             raise ValueError(f"不支持的文件格式: {ext}")
     except Exception as e:
@@ -289,11 +315,16 @@ async def list_import_items(
 @router.post("/api/imports/{import_id}/confirm")
 async def confirm_import(
     import_id: int,
+    body: dict | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """确认导入，创建交易记录"""
     from sqlalchemy import text
+
+    # 从请求体获取账户映射
+    default_account_id = (body or {}).get("default_account_id")
+    method_account_map = (body or {}).get("method_account_map", {})
 
     result = await db.execute(
         select(BillImport).where(
@@ -353,8 +384,6 @@ async def confirm_import(
         # 确定账户ID
         from app.models.account import PaymentAccount
 
-        default_account_id = None
-        method_account_map = {}
         account_id = None
 
         suggested_account_id = raw.get("suggested_account_id")
@@ -363,6 +392,8 @@ async def confirm_import(
         elif method_account_map:
             pm = raw.get("payment_method", "")
             account_id = method_account_map.get(pm)
+        elif default_account_id:
+            account_id = default_account_id
 
         # 查找平台ID
         platform_name = raw.get("platform", "")
@@ -388,22 +419,35 @@ async def confirm_import(
         # 查找支付渠道ID（支持自动识别）
         channel_id = None
         source_for_channel = imp.source
-        # 如果 source 是 auto，从 raw_data 的 platform 推断
-        if source_for_channel == "auto":
+
+        # 从交易场所/摘要推断实际支付渠道（工行账单中 venue 字段很重要）
+        venue = raw.get("venue", "") or raw.get("交易场所", "")
+        summary = raw.get("summary", "") or raw.get("摘要", "")
+
+        if "支付宝" in venue or "支付宝" in summary:
+            source_for_channel = "alipay"
+        elif "财付通" in venue or "微信" in venue or "微信" in summary:
+            source_for_channel = "wechat"
+        elif source_for_channel == "auto":
             platform_name = raw.get("platform", "")
             if platform_name == "微信" or "微信" in str(raw.get("payment_method", "")):
                 source_for_channel = "wechat"
             elif platform_name == "支付宝":
                 source_for_channel = "alipay"
 
-        if source_for_channel == "alipay":
+        if source_for_channel in ("alipay",):
             channel_result = await db.execute(
                 select(PaymentChannel.id).where(PaymentChannel.name == "支付宝").limit(1)
             )
             channel_id = channel_result.scalar()
-        elif source_for_channel == "wechat":
+        elif source_for_channel in ("wechat",):
             channel_result = await db.execute(
                 select(PaymentChannel.id).where(PaymentChannel.name == "微信支付").limit(1)
+            )
+            channel_id = channel_result.scalar()
+        elif source_for_channel == "icbc":
+            channel_result = await db.execute(
+                select(PaymentChannel.id).where(PaymentChannel.name == "银行转账").limit(1)
             )
             channel_id = channel_result.scalar()
 

@@ -427,12 +427,32 @@ watch(visible, (v) => {
     categoryType.value = 'channel'
     resetForm()
 
-    // 如果传入了 initialMethod，自动填充银行信息
+    // 如果传入了 initialMethod，根据类型自动填充
     if (props.initialMethod) {
-      categoryType.value = 'bank'
-      step.value = 2
-      // 尝试立即填充
-      nextTick(() => { tryFillFromMethod() })
+      const method = props.initialMethod
+      // 判断是否为银行卡
+      const isBank = method.includes('银行') || method.includes('储蓄卡') || method.includes('信用卡') || method.includes('借记卡')
+      // 判断是否为微信/支付宝
+      const isChannel = method.includes('零钱') || method.includes('零钱通') || method.includes('余额') || method.includes('花呗') || method.includes('微信') || method.includes('支付宝')
+
+      if (isBank) {
+        categoryType.value = 'bank'
+        step.value = 2
+        nextTick(() => { tryFillFromMethod() })
+      } else if (isChannel) {
+        // 自动选择对应的渠道
+        categoryType.value = 'channel'
+        step.value = 2
+        nextTick(() => {
+          // 尝试匹配渠道
+          const channel = props.channels.find((c) => method.includes(c.name))
+          if (channel) {
+            form.channel_id = channel.id
+            onChannelChange()
+          }
+        })
+      }
+      // 其他情况保持 step=1，让用户选择类别
     }
   }
 })

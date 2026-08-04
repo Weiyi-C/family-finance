@@ -48,6 +48,7 @@
               <el-option label="自动识别" value="auto" />
               <el-option label="支付宝" value="alipay" />
               <el-option label="微信" value="wechat" />
+              <el-option label="工商银行" value="icbc" />
             </el-select>
           </el-form-item>
           <el-form-item label="账单文件">
@@ -55,7 +56,7 @@
               :auto-upload="false"
               :limit="1"
               :on-change="handleFileChange"
-              accept=".csv,.xlsx,.xls"
+              accept=".csv,.xlsx,.xls,.pdf,.txt"
               drag
             >
               <el-icon style="font-size: 40px; color: #c0c4cc;"><Upload /></el-icon>
@@ -258,7 +259,7 @@ const currentCreateMethod = ref('')
 const exportType = ref('transactions')
 const exportFormat = ref('csv')
 
-const sourceMap: Record<string, string> = { alipay: '支付宝', wechat: '微信', bank: '银行', auto: '自动' }
+const sourceMap: Record<string, string> = { alipay: '支付宝', wechat: '微信', icbc: '工商银行', bank: '银行', auto: '自动' }
 const statusMap: Record<string, string> = { pending: '待处理', parsed: '已解析', confirmed: '已导入', failed: '失败' }
 const statusType: Record<string, string> = { pending: 'info', parsed: 'warning', confirmed: 'success', failed: 'danger' }
 const actionMap: Record<string, string> = { pending: '待处理', imported: '已导入', skipped: '跳过', matched: '已匹配' }

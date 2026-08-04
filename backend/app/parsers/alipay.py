@@ -27,28 +27,50 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
 
     for row in reader:
         try:
-            # 金额处理
-            amount_str = row.get("金额", "0").replace(",", "").strip()
+            # 清理列名空格
+            cleaned_row = {k.strip(): v for k, v in row.items() if k}
+
+            # 金额处理（支持多种列名格式）
+            amount_str = "0"
+            for key in ["金额", "金额（元）", "金额(元)"]:
+                if key in cleaned_row:
+                    amount_str = cleaned_row[key]
+                    break
+            amount_str = amount_str.replace(",", "").strip()
             if not amount_str:
                 continue
             amount = float(amount_str)
 
             # 收/支方向
-            direction = row.get("收/支", "").strip()
+            direction = ""
+            for key in ["收/支", "收/支"]:
+                if key in cleaned_row:
+                    direction = cleaned_row[key]
+                    break
+            direction = direction.strip()
             if "不计收支" in direction:
                 continue
             txn_type = "expense" if "支出" in direction else "income"
 
             # 状态过滤（跳过退款）
-            status = row.get("交易状态", "").strip()
+            status = ""
+            for key in ["交易状态", "当前状态"]:
+                if key in cleaned_row:
+                    status = cleaned_row[key]
+                    break
+            status = status.strip()
             if "退款" in status:
                 continue
 
             # 支付方式
-            payment_method = row.get("收/付款方式", "").strip()
+            payment_method = ""
+            for key in ["收/付款方式", "支付方式"]:
+                if key in cleaned_row:
+                    payment_method = cleaned_row[key]
+                    break
+            payment_method = payment_method.strip()
             if not payment_method:
-                # 尝试从"商品名称"推断
-                desc = row.get("商品名称", "")
+                desc = cleaned_row.get("商品名称", "") or cleaned_row.get("商品", "")
                 if "花呗" in desc:
                     payment_method = "花呗"
                 elif "余额宝" in desc:
@@ -59,24 +81,34 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                 methods.add(payment_method)
 
             # 智能识别平台和商户
-            counterparty = row.get("交易对方", "").strip()
-            description = row.get("商品名称", "").strip()
+            counterparty = (cleaned_row.get("交易对方", "") or "").strip()
+            description = (cleaned_row.get("商品名称", "") or cleaned_row.get("商品", "") or "").strip()
             detected_platform, detected_merchant = identify_platform_and_merchant(
                 counterparty, description, "alipay"
             )
 
+            # 交易时间
+            txn_time = ""
+            for key in ["交易创建时间", "交易时间", "付款时间"]:
+                if key in cleaned_row and cleaned_row[key].strip():
+                    txn_time = cleaned_row[key].strip()
+                    break
+
+            # 交易号
+            order_no = (cleaned_row.get("交易号", "") or "").strip()
+
             items.append({
-                "order_no": row.get("交易号", "").strip(),
-                "transaction_time": row.get("交易时间", "").strip(),
+                "order_no": order_no,
+                "transaction_time": txn_time,
                 "merchant": detected_merchant,
                 "description": description,
                 "amount": int(amount * 100),
                 "type": txn_type,
                 "platform": detected_platform,
-                "platform_raw": row.get("收/付款方式", "").strip(),
+                "platform_raw": (cleaned_row.get("交易来源地", "") or "").strip(),
                 "payment_method": payment_method,
-                "fund_status": row.get("资金状态", "").strip(),
-                "txn_method": row.get("交易方式", "").strip(),
+                "fund_status": (cleaned_row.get("资金状态", "") or "").strip(),
+                "txn_method": (cleaned_row.get("类型", "") or "").strip(),
             })
         except Exception:
             continue
