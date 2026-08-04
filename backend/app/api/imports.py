@@ -385,14 +385,23 @@ async def confirm_import(
                     )
                     platform_id = platform_result.scalar()
 
-        # 查找支付渠道ID
+        # 查找支付渠道ID（支持自动识别）
         channel_id = None
-        if imp.source == "alipay":
+        source_for_channel = imp.source
+        # 如果 source 是 auto，从 raw_data 的 platform 推断
+        if source_for_channel == "auto":
+            platform_name = raw.get("platform", "")
+            if platform_name == "微信" or "微信" in str(raw.get("payment_method", "")):
+                source_for_channel = "wechat"
+            elif platform_name == "支付宝":
+                source_for_channel = "alipay"
+
+        if source_for_channel == "alipay":
             channel_result = await db.execute(
                 select(PaymentChannel.id).where(PaymentChannel.name == "支付宝").limit(1)
             )
             channel_id = channel_result.scalar()
-        elif imp.source == "wechat":
+        elif source_for_channel == "wechat":
             channel_result = await db.execute(
                 select(PaymentChannel.id).where(PaymentChannel.name == "微信支付").limit(1)
             )
@@ -424,7 +433,63 @@ async def confirm_import(
             if auto_tags:
                 suggested_tags = auto_tags
 
-        # 双式记账
+        # === 去重合并：查找同日同金额的已有交易 ===
+        from sqlalchemy import and_, func as sa_func
+        txn_date = txn_time.date()
+        existing_txn = await db.execute(
+            select(Transaction).where(
+                Transaction.family_id == current_user.family_id,
+                Transaction.entry_side == "debit",
+                Transaction.is_deleted == False,
+                Transaction.amount == amount,
+                sa_func.date(Transaction.transaction_time) == txn_date,
+                # 如果有商户名，也要求匹配
+                *([Transaction.merchant_name == item.parsed_merchant] if item.parsed_merchant else []),
+            ).limit(1)
+        )
+        existing = existing_txn.scalar_one_or_none()
+
+        if existing:
+            # 合并：补充已有记录缺失的字段
+            updated = False
+            if channel_id and not existing.payment_channel_id:
+                existing.payment_channel_id = channel_id
+                updated = True
+            if account_id and not existing.payment_account_id:
+                existing.payment_account_id = account_id
+                updated = True
+            if platform_id and not existing.platform_id:
+                existing.platform_id = platform_id
+                updated = True
+            if category_id and not existing.category_id:
+                existing.category_id = category_id
+                updated = True
+            if not existing.import_id:
+                existing.import_id = imp.id
+                updated = True
+
+            # 同步更新 credit 行的 payment_account_id
+            if account_id and updated:
+                credit_result = await db.execute(
+                    select(Transaction).where(
+                        Transaction.entry_id == existing.entry_id,
+                        Transaction.entry_side == "credit",
+                    )
+                )
+                credit_row = credit_result.scalar_one_or_none()
+                if credit_row and not credit_row.payment_account_id:
+                    credit_row.payment_account_id = account_id
+
+            # 打标签
+            if suggested_tags:
+                await auto_assign_tags(db, current_user.family_id, existing.entry_id, suggested_tags)
+
+            item.action = "imported"
+            item.matched_txn_id = existing.entry_id
+            created += 1
+            continue
+
+        # 双式记账（无匹配，创建新记录）
         debit = Transaction(
             family_id=current_user.family_id,
             book_id=imp.book_id,

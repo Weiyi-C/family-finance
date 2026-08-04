@@ -77,8 +77,9 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
         (items, meta)
     """
     import openpyxl
+    from io import BytesIO
 
-    wb = openpyxl.load_workbook(content, read_only=True, data_only=True)
+    wb = openpyxl.load_workbook(BytesIO(content), read_only=True, data_only=True)
     ws = wb.active
 
     # 检测是否为微信账单（前10行包含"微信"）
