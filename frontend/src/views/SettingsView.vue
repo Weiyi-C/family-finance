@@ -6,6 +6,14 @@
 
     <el-card>
       <el-form :model="settings" label-width="120px" v-loading="loading">
+        <el-form-item label="昵称">
+          <el-input v-model="nickname" placeholder="请输入昵称" style="width: 200px;" />
+          <el-button type="primary" style="margin-left: 8px;" :loading="savingNickname" @click="handleSaveNickname">保存</el-button>
+        </el-form-item>
+        <el-form-item label="手机号">
+          <span>{{ auth.user?.phone || '-' }}</span>
+        </el-form-item>
+        <el-divider>偏好设置</el-divider>
         <el-form-item label="默认货币">
           <el-select v-model="settings.default_currency" style="width: 200px;">
             <el-option label="人民币 (CNY)" value="CNY" /><el-option label="美元 (USD)" value="USD" /><el-option label="欧元 (EUR)" value="EUR" />
@@ -108,14 +116,19 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getSettings, updateSettings } from '@/api/settings'
 import { getAIProviders, getAISettings, updateAISettings, testAIConnection } from '@/api/ai'
-import { changePassword } from '@/api/users'
+import { updateMe, changePassword } from '@/api/users'
+import { useAuthStore } from '@/stores/auth'
 import type { UserSettings } from '@/types'
 import type { AIProvider } from '@/api/ai'
 
+const auth = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const changingPwd = ref(false)
+
+const nickname = ref('')
+const savingNickname = ref(false)
 
 const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
 
@@ -156,6 +169,7 @@ function onProviderChange(providerId: string) {
 async function load() {
   loading.value = true
   try {
+    nickname.value = auth.user?.nickname || ''
     const [settingsRes, providersRes, aiRes] = await Promise.all([
       getSettings(),
       getAIProviders(),
@@ -206,6 +220,23 @@ async function handleSave() {
     Object.assign(aiSettings, aiRes.data)
   } catch { ElMessage.error('保存失败') }
   finally { saving.value = false }
+}
+
+async function handleSaveNickname() {
+  if (!nickname.value.trim()) {
+    ElMessage.warning('昵称不能为空')
+    return
+  }
+  savingNickname.value = true
+  try {
+    await updateMe({ nickname: nickname.value.trim() })
+    await auth.fetchUser()
+    ElMessage.success('昵称已更新')
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.detail || '更新失败')
+  } finally {
+    savingNickname.value = false
+  }
 }
 
 async function testConnection() {

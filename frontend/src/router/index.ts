@@ -44,7 +44,7 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
 
-  if (!auth.isLoggedIn && localStorage.getItem('access_token')) {
+  if (!auth.user && localStorage.getItem('access_token')) {
     await auth.init()
   }
 
