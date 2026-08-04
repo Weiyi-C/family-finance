@@ -50,7 +50,16 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
             direction = direction.strip()
 
             fund_status = (cleaned_row.get("资金状态", "") or "").strip()
-            if fund_status == "资金转移":
+            counterparty = (cleaned_row.get("交易对方", "") or "").strip()
+            description = (cleaned_row.get("商品名称", "") or "").strip()
+
+            # 小荷包、余额宝等内部转账识别（排除收益类收入）
+            is_internal_transfer = False
+            if not any(kw in description for kw in ["收益", "利息", "分红", "奖励"]):
+                is_internal_transfer = any(kw in counterparty or kw in description
+                                           for kw in ["小荷包", "自动攒", "转出到银行卡", "转入到"])
+
+            if fund_status == "资金转移" or is_internal_transfer:
                 txn_type = "transfer"
             elif "支出" in direction or fund_status == "已支出":
                 txn_type = "expense"
@@ -102,6 +111,12 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                     if known in platform_raw:
                         detected_platform = known
                         break
+
+                # 如果交易来源地没匹配到，用通用识别逻辑
+                if detected_platform == "支付宝":
+                    detected_platform, detected_merchant = identify_platform_and_merchant(
+                        counterparty, description, "alipay"
+                    )
 
                 # 尝试从描述中提取真实商户
                 if description and detected_platform != "支付宝":
