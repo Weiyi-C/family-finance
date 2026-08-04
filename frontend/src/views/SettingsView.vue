@@ -84,6 +84,20 @@
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="handleSave">保存设置</el-button>
         </el-form-item>
+
+        <el-divider>修改密码</el-divider>
+        <el-form-item label="原密码">
+          <el-input v-model="pwdForm.old_password" type="password" placeholder="输入原密码" show-password style="width: 280px;" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="pwdForm.new_password" type="password" placeholder="至少6位" show-password style="width: 280px;" />
+        </el-form-item>
+        <el-form-item label="确认密码">
+          <el-input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码" show-password style="width: 280px;" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="warning" :loading="changingPwd" @click="handleChangePassword">修改密码</el-button>
+        </el-form-item>
       </el-form>
     </el-card>
   </div>
@@ -94,12 +108,16 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getSettings, updateSettings } from '@/api/settings'
 import { getAIProviders, getAISettings, updateAISettings, testAIConnection } from '@/api/ai'
+import { changePassword } from '@/api/users'
 import type { UserSettings } from '@/types'
 import type { AIProvider } from '@/api/ai'
 
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
+const changingPwd = ref(false)
+
+const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
 
 const settings = reactive<UserSettings>({
   id: 0, user_id: 0, default_currency: 'CNY', month_start_day: 1, theme: 'light', language: 'zh-CN',
@@ -198,6 +216,33 @@ async function testConnection() {
   } catch (err: any) {
     ElMessage.error(err?.response?.data?.detail || '连接测试失败')
   } finally { testing.value = false }
+}
+
+async function handleChangePassword() {
+  if (!pwdForm.old_password || !pwdForm.new_password) {
+    ElMessage.warning('请填写原密码和新密码')
+    return
+  }
+  if (pwdForm.new_password.length < 6) {
+    ElMessage.warning('新密码至少6位')
+    return
+  }
+  if (pwdForm.new_password !== pwdForm.confirm_password) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  changingPwd.value = true
+  try {
+    await changePassword({ old_password: pwdForm.old_password, new_password: pwdForm.new_password })
+    ElMessage.success('密码修改成功')
+    pwdForm.old_password = ''
+    pwdForm.new_password = ''
+    pwdForm.confirm_password = ''
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.detail || '修改失败')
+  } finally {
+    changingPwd.value = false
+  }
 }
 
 onMounted(load)

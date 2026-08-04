@@ -37,3 +37,8 @@ class UserResponse(BaseModel):
 class RegisterResponse(BaseModel):
     user: UserResponse
     tokens: TokenResponse
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=128)

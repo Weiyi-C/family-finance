@@ -20,7 +20,11 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/transactions", tags=["记账"])
 
 
-def _to_response(txn: Transaction, tag_ids: list[int] = []) -> TransactionResponse:
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _to_response(txn: Transaction, tag_ids: list[int] | None = None) -> TransactionResponse:
     return TransactionResponse(
         id=txn.id,
         family_id=txn.family_id,
@@ -57,6 +61,20 @@ async def _get_tag_ids(db: AsyncSession, entry_id: str | None) -> list[int]:
         select(TransactionTag.tag_id).where(TransactionTag.transaction_id == entry_id)
     )
     return [row[0] for row in result.all()]
+
+
+async def _batch_get_tag_ids(db: AsyncSession, entry_ids: list[str | None]) -> dict[str, list[int]]:
+    valid_ids = [eid for eid in entry_ids if eid is not None]
+    if not valid_ids:
+        return {}
+    result = await db.execute(
+        select(TransactionTag.transaction_id, TransactionTag.tag_id)
+        .where(TransactionTag.transaction_id.in_(valid_ids))
+    )
+    mapping: dict[str, list[int]] = {eid: [] for eid in valid_ids}
+    for row in result.all():
+        mapping[row[0]].append(row[1])
+    return mapping
 
 
 async def _get_user_txn(db: AsyncSession, txn_id: int, family_id: int) -> Transaction | None:
@@ -158,9 +176,9 @@ async def list_transactions(
     if payment_account_id:
         conditions.append(Transaction.payment_account_id == payment_account_id)
     if merchant_name:
-        conditions.append(Transaction.merchant_name.ilike(f"%{merchant_name}%"))
+        conditions.append(Transaction.merchant_name.ilike(f"%{_escape_like(merchant_name)}%", escape="\\"))
     if keyword:
-        conditions.append(Transaction.description.ilike(f"%{keyword}%"))
+        conditions.append(Transaction.description.ilike(f"%{_escape_like(keyword)}%", escape="\\"))
     if start_date:
         # Convert string date to datetime for comparison
         try:
@@ -196,9 +214,9 @@ async def list_transactions(
     total = total_result.scalar() or 0
 
     responses = []
+    tag_map = await _batch_get_tag_ids(db, [txn.entry_id for txn in txns])
     for txn in txns:
-        tag_ids = await _get_tag_ids(db, txn.entry_id)
-        responses.append(_to_response(txn, tag_ids))
+        responses.append(_to_response(txn, tag_map.get(txn.entry_id, [])))
 
     return {
         "items": responses,

@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
+from app.core.security import hash_password, verify_password
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import UserResponse
+from app.schemas.auth import ChangePasswordRequest, UserResponse
 
 router = APIRouter(prefix="/api/users", tags=["用户"])
 
@@ -38,3 +39,17 @@ async def update_me(
     await db.commit()
     await db.refresh(current_user)
     return UserResponse.model_validate(current_user)
+
+
+@router.put("/me/password")
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """修改密码"""
+    if not current_user.password_hash or not verify_password(body.old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="原密码错误")
+    current_user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    return {"detail": "密码修改成功"}
