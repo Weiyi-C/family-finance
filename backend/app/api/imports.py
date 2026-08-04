@@ -498,28 +498,22 @@ async def confirm_import(
         category_id = raw.get("suggested_category_id")
         suggested_tags = raw.get("suggested_tags", [])
 
+        # 先检查批量AI分类结果
+        item_idx = items.index(item) if item in items else -1
+        if not category_id and item_idx in ai_results:
+            cat_name = ai_results[item_idx]
+            cat_id = _category_name_map.get(cat_name)
+            if cat_id:
+                category_id = cat_id
+
         if not category_id:
             merchant = raw.get("merchant", "")
             description = raw.get("description", "")
             platform = raw.get("platform", "")
             pm = raw.get("payment_method", "")
 
-            # 1. AI 优先分类
-            cat_name = None
-            if use_ai and (merchant or description):
-                try:
-                    cat_name = await ai_suggest_category(
-                        db, current_user, merchant, description,
-                        amount=amount, txn_type=txn_type
-                    )
-                except Exception:
-                    pass
-
-            # 2. AI 未返回结果时，使用本地规则
-            if not cat_name:
-                cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
-            else:
-                _, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+            # 本地规则分类（跳过单独AI调用，已使用批量结果）
+            cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
 
             if cat_name:
                 cat_id = _category_name_map.get(cat_name)
