@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, SmallInteger, String, UniqueConstraint
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, SmallInteger, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -13,8 +13,8 @@ class CreditCardBill(Base):
     family_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("families.id"), nullable=False)
     bill_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     bill_month: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    billing_date: Mapped[str] = mapped_column(DateTime(timezone=False), nullable=False)
-    due_date: Mapped[str] = mapped_column(DateTime(timezone=False), nullable=False)
+    billing_date: Mapped[str] = mapped_column(Date, nullable=False)
+    due_date: Mapped[str] = mapped_column(Date, nullable=False)
     total_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     paid_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     min_payment: Mapped[int] = mapped_column(BigInteger, default=0)

@@ -555,8 +555,10 @@ async def confirm_import(
                     suggested_tags = auto_tags
 
         # === 去重合并：查找同日同金额的已有交易 ===
-        from sqlalchemy import and_, func as sa_func
+        from sqlalchemy import and_, func as sa_func, or_
         txn_date = txn_time.date()
+
+        # 先尝试精确匹配商户名
         existing_txn = await db.execute(
             select(Transaction).where(
                 Transaction.family_id == current_user.family_id,
@@ -564,11 +566,27 @@ async def confirm_import(
                 Transaction.is_deleted == False,
                 Transaction.amount == amount,
                 sa_func.date(Transaction.transaction_time) == txn_date,
-                # 如果有商户名，也要求匹配
                 *([Transaction.merchant_name == item.parsed_merchant] if item.parsed_merchant else []),
             ).limit(1)
         )
         existing = existing_txn.scalar_one_or_none()
+
+        # 精确匹配失败，尝试模糊匹配（银行账单描述包含支付宝商户名）
+        if not existing and item.parsed_merchant:
+            fuzzy_txn = await db.execute(
+                select(Transaction).where(
+                    Transaction.family_id == current_user.family_id,
+                    Transaction.entry_side == "debit",
+                    Transaction.is_deleted == False,
+                    Transaction.amount == amount,
+                    sa_func.date(Transaction.transaction_time) == txn_date,
+                    or_(
+                        Transaction.merchant_name.ilike(f"%{item.parsed_merchant}%"),
+                        Transaction.description.ilike(f"%{item.parsed_merchant}%"),
+                    ),
+                ).limit(1)
+            )
+            existing = fuzzy_txn.scalar_one_or_none()
 
         if existing:
             # 合并：补充已有记录缺失的字段
