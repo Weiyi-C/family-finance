@@ -82,10 +82,17 @@
           </template>
         </el-table-column>
         <el-table-column prop="merchant_name" label="商户" width="120" show-overflow-tooltip />
-        <el-table-column label="资金来源" width="100">
+        <el-table-column label="资金来源" width="120">
           <template #default="{ row }">
-            <span v-if="row.payment_account_id">{{ getAccountName(row.payment_account_id) }}</span>
-            <span v-else style="color: #c0c4cc;">-</span>
+            <template v-if="row.type === 'transfer'">
+              <span style="color: #909399;">{{ getAccountName(row.source_account_id) || '未知' }}</span>
+              <span style="margin: 0 4px;">→</span>
+              <span>{{ getAccountName(row.payment_account_id) || '未知' }}</span>
+            </template>
+            <template v-else>
+              <span v-if="row.payment_account_id">{{ getAccountName(row.payment_account_id) }}</span>
+              <span v-else style="color: #c0c4cc;">-</span>
+            </template>
           </template>
         </el-table-column>
         <el-table-column label="支付渠道" width="90">
@@ -203,14 +210,19 @@
 
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="资金来源">
+            <el-form-item :label="form.type === 'transfer' ? '转出账户' : '资金来源'">
               <el-select v-model="form.payment_account_id" clearable filterable placeholder="选择账户" style="width: 100%;">
                 <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="支付渠道">
+            <el-form-item v-if="form.type === 'transfer'" label="转入账户">
+              <el-select v-model="form.destination_account_id" clearable filterable placeholder="选择目标账户" style="width: 100%;">
+                <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-else label="支付渠道">
               <el-select v-model="form.payment_channel_id" clearable filterable placeholder="选择渠道" style="width: 100%;">
                 <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
               </el-select>
@@ -331,6 +343,7 @@ const form = reactive({
   sub_category_id: null as number | null,
   detail_category_id: null as number | null,
   payment_account_id: null as number | null,
+  destination_account_id: null as number | null,
   payment_channel_id: null as number | null,
   platform_id: null as number | null,
   paid_by: null as number | null,
@@ -402,7 +415,8 @@ function openCreate() {
   form.type = 'expense'; form.amountYuan = 0; form.transaction_time = ''
   form.currency = 'CNY'
   form.category_id = null; form.sub_category_id = null; form.detail_category_id = null
-  form.payment_account_id = null; form.payment_channel_id = null; form.platform_id = null
+  form.payment_account_id = null; form.destination_account_id = null
+  form.payment_channel_id = null; form.platform_id = null
   form.paid_by = null; form.merchant_name = ''; form.description = ''; form.tag_ids = []
   const defaultBook = books.value.find((b) => b.is_default) || books.value[0]
   form.book_id = defaultBook?.id || 0
@@ -416,7 +430,9 @@ function editTxn(row: Transaction) {
   form.type = row.type; form.amountYuan = row.amount / 100; form.transaction_time = row.transaction_time
   form.currency = row.currency || 'CNY'
   form.category_id = row.category_id; form.sub_category_id = row.sub_category_id; form.detail_category_id = row.detail_category_id
-  form.payment_account_id = row.payment_account_id; form.payment_channel_id = row.payment_channel_id
+  form.payment_account_id = row.type === 'transfer' ? row.source_account_id : row.payment_account_id
+  form.destination_account_id = row.type === 'transfer' ? row.payment_account_id : null
+  form.payment_channel_id = row.payment_channel_id
   form.platform_id = row.platform_id; form.paid_by = row.paid_by
   form.merchant_name = row.merchant_name || ''; form.description = row.description || ''
   form.tag_ids = row.tag_ids || []; form.book_id = row.book_id
@@ -429,6 +445,7 @@ function editTxn(row: Transaction) {
 
 async function handleSave() {
   if (!form.amountYuan || !form.transaction_time) { ElMessage.warning('请填写金额和时间'); return }
+  if (form.type === 'transfer' && !form.destination_account_id) { ElMessage.warning('请选择转入账户'); return }
   saving.value = true
   try {
     const payload: Record<string, unknown> = {
@@ -438,12 +455,17 @@ async function handleSave() {
       currency: form.currency,
       book_id: form.book_id,
     }
+    if (form.type === 'transfer') {
+      payload.payment_account_id = form.payment_account_id
+      payload.destination_account_id = form.destination_account_id
+    } else {
+      if (form.payment_account_id) payload.payment_account_id = form.payment_account_id
+      if (form.payment_channel_id) payload.payment_channel_id = form.payment_channel_id
+      if (form.platform_id) payload.platform_id = form.platform_id
+    }
     if (form.category_id) payload.category_id = form.category_id
     if (form.sub_category_id) payload.sub_category_id = form.sub_category_id
     if (form.detail_category_id) payload.detail_category_id = form.detail_category_id
-    if (form.payment_account_id) payload.payment_account_id = form.payment_account_id
-    if (form.payment_channel_id) payload.payment_channel_id = form.payment_channel_id
-    if (form.platform_id) payload.platform_id = form.platform_id
     if (form.paid_by) payload.paid_by = form.paid_by
     if (form.merchant_name) payload.merchant_name = form.merchant_name
     if (form.description) payload.description = form.description

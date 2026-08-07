@@ -172,8 +172,8 @@ async def upload_import(
         if auto_tags:
             item["suggested_tags"] = auto_tags
 
-        # 5. 自动匹配账户
-        if pm and pm in method_matches:
+        # 5. 自动匹配账户（转账类型不匹配，由确认时处理目标账户）
+        if pm and pm in method_matches and txn_type != "transfer":
             item["suggested_account_id"] = method_matches[pm]
 
     # === 存储到数据库（此时 raw_data 已包含分类和标签） ===
@@ -426,15 +426,44 @@ async def confirm_import(
         from app.models.account import PaymentAccount
 
         account_id = None
+        txn_type = raw.get("type", "expense")
 
-        suggested_account_id = raw.get("suggested_account_id")
-        if suggested_account_id:
-            account_id = suggested_account_id
-        elif method_account_map:
-            pm = raw.get("payment_method", "")
-            account_id = method_account_map.get(pm)
-        elif default_account_id:
-            account_id = default_account_id
+        # 转账类型：识别目标账户
+        destination_account_id = None
+        if txn_type == "transfer":
+            counterparty = raw.get("merchant", "") or ""
+            description = raw.get("description", "") or ""
+            pm = raw.get("payment_method", "") or ""
+            search_text = f"{counterparty} {description} {pm}"
+
+            DESTINATION_PATTERNS = {
+                "花呗": "alipay_huabei",
+                "余额宝": "alipay_yuebao",
+                "小荷包": "alipay_xiaoheibao",
+                "零钱通": "wechat_lingqian",
+                "借呗": "alipay_jiebei",
+            }
+            for keyword, type_code in DESTINATION_PATTERNS.items():
+                if keyword in search_text:
+                    dest_result = await db.execute(
+                        select(PaymentAccount.id).where(
+                            PaymentAccount.family_id == current_user.family_id,
+                            PaymentAccount.type_code == type_code,
+                        ).limit(1)
+                    )
+                    destination_account_id = dest_result.scalar()
+                    if destination_account_id:
+                        break
+        else:
+            # 非转账类型：使用建议的账户
+            suggested_account_id = raw.get("suggested_account_id")
+            if suggested_account_id:
+                account_id = suggested_account_id
+            elif method_account_map:
+                pm = raw.get("payment_method", "")
+                account_id = method_account_map.get(pm)
+            elif default_account_id:
+                account_id = default_account_id
 
         # 查找平台ID
         platform_name = raw.get("platform", "")
@@ -491,8 +520,6 @@ async def confirm_import(
                 select(PaymentChannel.id).where(PaymentChannel.name == "银行转账").limit(1)
             )
             channel_id = channel_result.scalar()
-
-        txn_type = raw.get("type", "expense")
 
         # 使用自动分类建议，否则实时分类
         category_id = raw.get("suggested_category_id")
@@ -579,6 +606,13 @@ async def confirm_import(
             continue
 
         # 双式记账（无匹配，创建新记录）
+        if txn_type == "transfer":
+            debit_account = destination_account_id
+            credit_account = account_id
+        else:
+            debit_account = account_id
+            credit_account = account_id
+
         debit = Transaction(
             family_id=current_user.family_id,
             book_id=imp.book_id,
@@ -591,7 +625,7 @@ async def confirm_import(
             merchant_name=item.parsed_merchant or raw.get("merchant"),
             description=raw.get("description"),
             transaction_time=txn_time,
-            payment_account_id=account_id,
+            payment_account_id=debit_account,
             payment_channel_id=channel_id,
             platform_id=platform_id,
             recorded_by=current_user.id,
@@ -608,7 +642,7 @@ async def confirm_import(
             type=txn_type,
             amount=amount,
             currency="CNY",
-            payment_account_id=account_id,
+            payment_account_id=credit_account,
             transaction_time=txn_time,
             recorded_by=current_user.id,
             import_id=imp.id,

@@ -12,6 +12,7 @@ class TransactionCreate(BaseModel):
     sub_category_id: int | None = None
     detail_category_id: int | None = None
     payment_account_id: int | None = None
+    destination_account_id: int | None = None
     payment_channel_id: int | None = None
     platform_id: int | None = None
     merchant_name: str | None = None
@@ -31,6 +32,7 @@ class TransactionUpdate(BaseModel):
     sub_category_id: int | None = None
     detail_category_id: int | None = None
     payment_account_id: int | None = None
+    destination_account_id: int | None = None
     payment_channel_id: int | None = None
     platform_id: int | None = None
     merchant_name: str | None = None
@@ -56,6 +58,7 @@ class TransactionResponse(BaseModel):
     sub_category_id: int | None
     detail_category_id: int | None
     payment_account_id: int | None
+    source_account_id: int | None = None
     payment_channel_id: int | None
     platform_id: int | None
     merchant_name: str | None

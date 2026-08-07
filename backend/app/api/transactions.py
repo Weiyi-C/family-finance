@@ -24,7 +24,20 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _to_response(txn: Transaction, tag_ids: list[int] | None = None) -> TransactionResponse:
+async def _to_response(txn: Transaction, tag_ids: list[int] | None = None, db: AsyncSession | None = None) -> TransactionResponse:
+    source_account_id = None
+    if txn.type == "transfer" and txn.entry_id and db:
+        credit_result = await db.execute(
+            select(Transaction.payment_account_id).where(
+                Transaction.entry_id == txn.entry_id,
+                Transaction.entry_side == "credit",
+                Transaction.family_id == txn.family_id,
+                Transaction.is_deleted == False,
+            )
+        )
+        row = credit_result.first()
+        source_account_id = row[0] if row else None
+
     return TransactionResponse(
         id=txn.id,
         family_id=txn.family_id,
@@ -40,6 +53,7 @@ def _to_response(txn: Transaction, tag_ids: list[int] | None = None) -> Transact
         sub_category_id=txn.sub_category_id,
         detail_category_id=txn.detail_category_id,
         payment_account_id=txn.payment_account_id,
+        source_account_id=source_account_id,
         payment_channel_id=txn.payment_channel_id,
         platform_id=txn.platform_id,
         merchant_name=txn.merchant_name,
@@ -95,8 +109,21 @@ async def create_transaction(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if body.type == "transfer":
+        if not body.destination_account_id:
+            raise HTTPException(status_code=400, detail="转账必须指定目标账户")
+        if body.payment_account_id and body.payment_account_id == body.destination_account_id:
+            raise HTTPException(status_code=400, detail="源账户和目标账户不能相同")
+
     result = await db.execute(text("SELECT nextval('entry_id_seq')"))
     entry_id = result.scalar()
+
+    if body.type == "transfer":
+        debit_account = body.destination_account_id
+        credit_account = body.payment_account_id
+    else:
+        debit_account = body.payment_account_id
+        credit_account = body.payment_account_id
 
     debit = Transaction(
         family_id=current_user.family_id,
@@ -109,7 +136,7 @@ async def create_transaction(
         category_id=body.category_id,
         sub_category_id=body.sub_category_id,
         detail_category_id=body.detail_category_id,
-        payment_account_id=body.payment_account_id,
+        payment_account_id=debit_account,
         payment_channel_id=body.payment_channel_id,
         platform_id=body.platform_id,
         merchant_name=body.merchant_name,
@@ -128,7 +155,7 @@ async def create_transaction(
         type=body.type,
         amount=body.amount,
         currency=body.currency,
-        payment_account_id=body.payment_account_id,
+        payment_account_id=credit_account,
         transaction_time=body.transaction_time,
         recorded_by=current_user.id,
     )
@@ -142,7 +169,7 @@ async def create_transaction(
     await db.refresh(debit)
 
     logger.info("transaction_created", entry_id=entry_id, type=body.type, amount=body.amount)
-    return _to_response(debit, body.tag_ids)
+    return await _to_response(debit, body.tag_ids, db)
 
 
 @router.get("")
@@ -216,7 +243,7 @@ async def list_transactions(
     responses = []
     tag_map = await _batch_get_tag_ids(db, [txn.entry_id for txn in txns])
     for txn in txns:
-        responses.append(_to_response(txn, tag_map.get(txn.entry_id, [])))
+        responses.append(await _to_response(txn, tag_map.get(txn.entry_id, []), db))
 
     return {
         "items": responses,
@@ -237,7 +264,7 @@ async def get_transaction(
     if not txn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="交易不存在")
     tag_ids = await _get_tag_ids(db, txn.entry_id)
-    return _to_response(txn, tag_ids)
+    return await _to_response(txn, tag_ids, db)
 
 
 @router.put("/{txn_id}", response_model=TransactionResponse)
@@ -253,6 +280,23 @@ async def update_transaction(
 
     update_data = body.model_dump(exclude_unset=True)
     tag_ids = update_data.pop("tag_ids", None)
+    dest_account_id = update_data.pop("destination_account_id", None)
+
+    if txn.type == "transfer":
+        if dest_account_id is not None:
+            txn.payment_account_id = dest_account_id
+        if "payment_account_id" in update_data and txn.entry_id:
+            credit_result = await db.execute(
+                select(Transaction).where(
+                    Transaction.entry_id == txn.entry_id,
+                    Transaction.entry_side == "credit",
+                )
+            )
+            credit_row = credit_result.scalar_one_or_none()
+            if credit_row:
+                credit_row.payment_account_id = update_data["payment_account_id"]
+                credit_row.version += 1
+            del update_data["payment_account_id"]
 
     for field, value in update_data.items():
         setattr(txn, field, value)
@@ -269,7 +313,7 @@ async def update_transaction(
     await db.refresh(txn)
 
     logger.info("transaction_updated", txn_id=txn_id, version=txn.version)
-    return _to_response(txn, tag_ids or [])
+    return await _to_response(txn, tag_ids or [], db)
 
 
 @router.delete("/{txn_id}", status_code=status.HTTP_204_NO_CONTENT)

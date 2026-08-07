@@ -181,6 +181,7 @@ export interface Transaction {
   sub_category_id: number | null
   detail_category_id: number | null
   payment_account_id: number | null
+  source_account_id: number | null
   payment_channel_id: number | null
   platform_id: number | null
   merchant_name: string | null
@@ -203,6 +204,7 @@ export interface TransactionCreate {
   sub_category_id?: number
   detail_category_id?: number
   payment_account_id?: number
+  destination_account_id?: number
   payment_channel_id?: number
   platform_id?: number
   merchant_name?: string
@@ -218,6 +220,7 @@ export interface TransactionUpdate {
   category_id?: number
   sub_category_id?: number
   payment_account_id?: number
+  destination_account_id?: number
   payment_channel_id?: number
   platform_id?: number
   merchant_name?: string

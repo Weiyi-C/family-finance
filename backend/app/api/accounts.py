@@ -163,24 +163,17 @@ async def get_account_balance(
         # 信用卡：额度 - 已用
         balance = account.credit_limit - account.used_amount
     else:
-        # 非信用卡：初始余额 + 收入 - 支出
-        from sqlalchemy import func, case
+        # 非信用卡：初始余额 + 收入 - 支出 + 转入 - 转出
+        from sqlalchemy import func, case, and_, or_
         from app.models.transaction import Transaction
 
-        # 计算该账户的交易净额
-        income_sum = func.coalesce(
+        balance_adjustment = func.coalesce(
             func.sum(
                 case(
                     (Transaction.type == "income", Transaction.amount),
-                    else_=0,
-                )
-            ),
-            0,
-        )
-        expense_sum = func.coalesce(
-            func.sum(
-                case(
-                    (Transaction.type == "expense", Transaction.amount),
+                    (Transaction.type == "expense", -Transaction.amount),
+                    (and_(Transaction.type == "transfer", Transaction.entry_side == "debit"), Transaction.amount),
+                    (and_(Transaction.type == "transfer", Transaction.entry_side == "credit"), -Transaction.amount),
                     else_=0,
                 )
             ),
@@ -188,13 +181,14 @@ async def get_account_balance(
         )
 
         txn_result = await db.execute(
-            select(
-                (income_sum - expense_sum).label("net")
-            ).where(
+            select(balance_adjustment.label("net")).where(
                 Transaction.payment_account_id == account_id,
                 Transaction.family_id == current_user.family_id,
                 Transaction.is_deleted == False,
-                Transaction.entry_side == "debit",
+                or_(
+                    and_(Transaction.type.in_(["income", "expense"]), Transaction.entry_side == "debit"),
+                    Transaction.type == "transfer",
+                ),
             )
         )
         txn_sum = txn_result.scalar() or 0
