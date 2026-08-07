@@ -539,15 +539,20 @@ async def confirm_import(
             platform = raw.get("platform", "")
             pm = raw.get("payment_method", "")
 
-            # 本地规则分类（跳过单独AI调用，已使用批量结果）
-            cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+            # 转账类型不参与自动分类，只打"转账"标签
+            if txn_type == "transfer":
+                category_id = _category_name_map.get("转账")
+                suggested_tags = ["转账"]
+            else:
+                # 本地规则分类（跳过单独AI调用，已使用批量结果）
+                cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
 
-            if cat_name:
-                cat_id = _category_name_map.get(cat_name)
-                if cat_id:
-                    category_id = cat_id
-            if auto_tags:
-                suggested_tags = auto_tags
+                if cat_name:
+                    cat_id = _category_name_map.get(cat_name)
+                    if cat_id:
+                        category_id = cat_id
+                if auto_tags:
+                    suggested_tags = auto_tags
 
         # === 去重合并：查找同日同金额的已有交易 ===
         from sqlalchemy import and_, func as sa_func
