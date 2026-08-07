@@ -6,9 +6,28 @@
         <span class="summary-text" v-if="summary">待还总额: <b>{{ formatMoney(summary.total_due) }}</b> ({{ summary.bill_count }}笔)</span>
       </div>
     </div>
+
+    <!-- 生成账单 -->
+    <el-card style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 14px; color: #606266;">生成账单：</span>
+        <el-date-picker
+          v-model="genMonth"
+          type="month"
+          placeholder="选择月份"
+          value-format="YYYY-MM"
+          style="width: 160px;"
+        />
+        <el-button type="primary" :loading="generating" @click="handleGenerate">生成</el-button>
+      </div>
+    </el-card>
+
     <el-card>
       <el-table :data="bills" stripe v-loading="loading">
-        <el-table-column label="账期" width="120">
+        <el-table-column label="信用卡" width="200">
+          <template #default="{ row }">{{ getAccountName(row.account_id) }}</template>
+        </el-table-column>
+        <el-table-column label="账期" width="100">
           <template #default="{ row }">{{ row.bill_year }}-{{ String(row.bill_month).padStart(2, '0') }}</template>
         </el-table-column>
         <el-table-column prop="billing_date" label="出账日" width="110" />
@@ -19,8 +38,10 @@
         <el-table-column label="已还" align="right">
           <template #default="{ row }">{{ formatMoney(row.paid_amount) }}</template>
         </el-table-column>
-        <el-table-column label="最低还款" align="right">
-          <template #default="{ row }">{{ formatMoney(row.min_payment) }}</template>
+        <el-table-column label="待还" align="right">
+          <template #default="{ row }">
+            <span style="color: #f56c6c; font-weight: 600;">{{ formatMoney(row.total_amount - row.paid_amount) }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
@@ -50,27 +71,55 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getCreditBills, payCreditBill, getCreditBillSummary } from '@/api/creditBills'
+import { getCreditBills, payCreditBill, getCreditBillSummary, generateCreditBills } from '@/api/creditBills'
+import { getAccounts } from '@/api/accounts'
 import type { CreditBill } from '@/api/creditBills'
+import type { PaymentAccount } from '@/types'
 
 const loading = ref(false)
+const generating = ref(false)
 const bills = ref<CreditBill[]>([])
+const accounts = ref<PaymentAccount[]>([])
 const summary = ref<{ total_due: number; bill_count: number } | null>(null)
 const showPay = ref(false)
 const payBillId = ref(0)
 const payAmount = ref(0)
+const genMonth = ref('')
 
 const statusMap: Record<string, string> = { pending: '待还', partial: '部分', paid: '已还', overdue: '逾期' }
 const statusType: Record<string, string> = { pending: 'warning', partial: '', paid: 'success', overdue: 'danger' }
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
 
+function getAccountName(accountId: number) {
+  return accounts.value.find((a) => a.id === accountId)?.name || `账户${accountId}`
+}
+
 async function load() {
   loading.value = true
   try {
-    const [billsRes, summaryRes] = await Promise.all([getCreditBills(), getCreditBillSummary()])
-    bills.value = billsRes.data; summary.value = summaryRes.data
+    const [billsRes, summaryRes, accountsRes] = await Promise.all([
+      getCreditBills(),
+      getCreditBillSummary(),
+      getAccounts(),
+    ])
+    bills.value = billsRes.data
+    summary.value = summaryRes.data
+    accounts.value = accountsRes.data
   } finally { loading.value = false }
+}
+
+async function handleGenerate() {
+  if (!genMonth.value) { ElMessage.warning('请选择月份'); return }
+  const [year, month] = genMonth.value.split('-').map(Number)
+  generating.value = true
+  try {
+    const res = await generateCreditBills(year, month)
+    ElMessage.success(res.data.message)
+    await load()
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.detail || '生成失败')
+  } finally { generating.value = false }
 }
 
 function openPay(row: CreditBill) { payBillId.value = row.id; payAmount.value = row.total_amount - row.paid_amount; showPay.value = true }

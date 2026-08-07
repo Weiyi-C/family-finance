@@ -29,3 +29,7 @@ export function payCreditBill(billId: number, amount: number) {
 export function getCreditBillSummary() {
   return api.get<{ total_due: number; bill_count: number }>('/credit-bills/summary')
 }
+
+export function generateCreditBills(year: number, month: number) {
+  return api.post<{ message: string; generated: number }>('/credit-bills/generate', null, { params: { year, month } })
+}
