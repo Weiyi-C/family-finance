@@ -157,6 +157,10 @@ def _parse_icbc_fields(fields: list[str], card_number: str) -> dict | None:
     if venue in ("手机银行", "网上银行", "批量业务") and platform == "线下":
         platform = "工商银行"
 
+    # 识别支付宝小荷包转入（应为transfer类型）
+    if "支付宝-支付宝小荷包" in description or "支付宝-小荷包" in description:
+        txn_type = "transfer"
+
     return {
         "order_no": f"ICBC_{txn_date.replace('-', '')}_{amount}_{hash(f'{txn_date}{amount}{counterparty}') % 10000:04d}",
         "transaction_time": txn_date,

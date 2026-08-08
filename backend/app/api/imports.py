@@ -400,6 +400,7 @@ async def confirm_import(
 
     created = 0
     skipped = 0
+    unmatched_xiaohebao = set()  # 收集未匹配的小荷包名称
     for item in items:
         raw = item.raw_data
         amount = item.parsed_amount or raw.get("amount", 0)
@@ -436,24 +437,42 @@ async def confirm_import(
             pm = raw.get("payment_method", "") or ""
             search_text = f"{counterparty} {description} {pm}"
 
-            DESTINATION_PATTERNS = {
-                "花呗": "alipay_huabei",
-                "余额宝": "alipay_yuebao",
-                "小荷包": "alipay_xiaoheibao",
-                "零钱通": "wechat_lingqian",
-                "借呗": "alipay_jiebei",
-            }
-            for keyword, type_code in DESTINATION_PATTERNS.items():
-                if keyword in search_text:
-                    dest_result = await db.execute(
-                        select(PaymentAccount.id).where(
-                            PaymentAccount.family_id == current_user.family_id,
-                            PaymentAccount.type_code == type_code,
-                        ).limit(1)
-                    )
-                    destination_account_id = dest_result.scalar()
-                    if destination_account_id:
-                        break
+            # 小荷包特殊处理：提取括号中的名称，精确匹配账户
+            import re
+            xiaohebao_match = re.search(r'小荷包[（(]([^）)]+)[）)]', search_text)
+            if xiaohebao_match:
+                xiaohebao_name = xiaohebao_match.group(1)
+                # 查找名称包含小荷包名的账户
+                dest_result = await db.execute(
+                    select(PaymentAccount.id).where(
+                        PaymentAccount.family_id == current_user.family_id,
+                        PaymentAccount.type_code == "alipay_xiaoheibao",
+                        PaymentAccount.name.ilike(f"%{xiaohebao_name}%"),
+                    ).limit(1)
+                )
+                destination_account_id = dest_result.scalar()
+                # 如果没找到精确匹配，记录未匹配的小荷包名称
+                if not destination_account_id:
+                    unmatched_xiaohebao.add(xiaohebao_name)
+            else:
+                # 其他转账类型：花呗、余额宝、零钱通等
+                DESTINATION_PATTERNS = {
+                    "花呗": "alipay_huabei",
+                    "余额宝": "alipay_yuebao",
+                    "零钱通": "wechat_lingqian",
+                    "借呗": "alipay_jiebei",
+                }
+                for keyword, type_code in DESTINATION_PATTERNS.items():
+                    if keyword in search_text:
+                        dest_result = await db.execute(
+                            select(PaymentAccount.id).where(
+                                PaymentAccount.family_id == current_user.family_id,
+                                PaymentAccount.type_code == type_code,
+                            ).limit(1)
+                        )
+                        destination_account_id = dest_result.scalar()
+                        if destination_account_id:
+                            break
         else:
             # 非转账类型：使用建议的账户
             suggested_account_id = raw.get("suggested_account_id")
@@ -588,6 +607,14 @@ async def confirm_import(
             )
             existing = fuzzy_txn.scalar_one_or_none()
 
+        # 关键：如果已有记录是transfer类型，当前记录是expense类型，跳过合并
+        # 保留支付宝的transfer记录，不要用银行的expense记录覆盖
+        if existing and existing.type == "transfer" and txn_type == "expense":
+            item.action = "skipped"
+            item.matched_txn_id = existing.entry_id
+            skipped += 1
+            continue
+
         if existing:
             # 合并：补充已有记录缺失的字段
             updated = False
@@ -688,8 +715,12 @@ async def confirm_import(
 
     msg = f"成功导入 {created} 条交易"
     if skipped:
-        msg += f"，跳过 {skipped} 条(金额为0)"
-    return {"message": msg, "imported": created, "skipped": skipped}
+        msg += f"，跳过 {skipped} 条(金额为0或已存在transfer记录)"
+    result = {"message": msg, "imported": created, "skipped": skipped}
+    if unmatched_xiaohebao:
+        result["unmatched_xiaohebao"] = list(unmatched_xiaohebao)
+        result["message"] += f"，发现 {len(unmatched_xiaohebao)} 个小荷包账户未创建"
+    return result
 
 
 @router.delete("/api/imports/{import_id}", status_code=204)
