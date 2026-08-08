@@ -58,7 +58,7 @@
 
     <el-dialog v-model="showPay" title="信用卡还款" width="360px">
       <el-form label-width="80px">
-        <el-form-item label="还款金额(分)"><el-input-number v-model="payAmount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="还款金额(元)"><el-input-number v-model="payYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showPay = false">取消</el-button>
@@ -83,7 +83,7 @@ const accounts = ref<PaymentAccount[]>([])
 const summary = ref<{ total_due: number; bill_count: number } | null>(null)
 const showPay = ref(false)
 const payBillId = ref(0)
-const payAmount = ref(0)
+const payYuan = ref(0)
 const genMonth = ref('')
 
 const statusMap: Record<string, string> = { pending: '待还', partial: '部分', paid: '已还', overdue: '逾期' }
@@ -122,11 +122,11 @@ async function handleGenerate() {
   } finally { generating.value = false }
 }
 
-function openPay(row: CreditBill) { payBillId.value = row.id; payAmount.value = row.total_amount - row.paid_amount; showPay.value = true }
+function openPay(row: CreditBill) { payBillId.value = row.id; payYuan.value = (row.total_amount - row.paid_amount) / 100; showPay.value = true }
 
 async function handlePay() {
-  if (!payAmount.value) { ElMessage.warning('请填写金额'); return }
-  try { await payCreditBill(payBillId.value, payAmount.value); ElMessage.success('还款成功'); showPay.value = false; await load() }
+  if (!payYuan.value) { ElMessage.warning('请填写金额'); return }
+  try { await payCreditBill(payBillId.value, Math.round(payYuan.value * 100)); ElMessage.success('还款成功'); showPay.value = false; await load() }
   catch { ElMessage.error('还款失败') }
 }
 

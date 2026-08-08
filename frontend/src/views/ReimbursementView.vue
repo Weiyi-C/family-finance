@@ -93,7 +93,7 @@
     <!-- 到账对话框 -->
     <el-dialog v-model="showReceive" title="确认到账" width="360px">
       <el-form label-width="80px">
-        <el-form-item label="到账金额(分)"><el-input-number v-model="receiveAmount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="到账金额(元)"><el-input-number v-model="receiveYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showReceive = false">取消</el-button>
@@ -121,7 +121,7 @@ const showDetail = ref(false)
 const showReceive = ref(false)
 const detailItem = ref<Reimbursement | null>(null)
 const receiveId = ref(0)
-const receiveAmount = ref(0)
+const receiveYuan = ref(0)
 const searchKeyword = ref('')
 
 const statusMap: Record<string, string> = { draft: '草稿', submitted: '待审批', approved: '已审批', received: '已到账' }
@@ -200,11 +200,11 @@ async function handleApprove(id: number) {
   try { await approveReimbursement(id); ElMessage.success('已审批'); await load() } catch { ElMessage.error('审批失败') }
 }
 
-function openReceive(id: number) { receiveId.value = id; receiveAmount.value = 0; showReceive.value = true }
+function openReceive(id: number) { receiveId.value = id; receiveYuan.value = 0; showReceive.value = true }
 
 async function handleReceive() {
-  if (!receiveAmount.value) { ElMessage.warning('请填写金额'); return }
-  try { await receiveReimbursement(receiveId.value, { received_amount: receiveAmount.value }); ElMessage.success('已到账'); showReceive.value = false; await load() }
+  if (!receiveYuan.value) { ElMessage.warning('请填写金额'); return }
+  try { await receiveReimbursement(receiveId.value, { received_amount: Math.round(receiveYuan.value * 100) }); ElMessage.success('已到账'); showReceive.value = false; await load() }
   catch { ElMessage.error('操作失败') }
 }
 

@@ -36,7 +36,7 @@
         <el-form-item label="类型">
           <el-radio-group v-model="form.type"><el-radio-button value="expense">支出</el-radio-button><el-radio-button value="income">收入</el-radio-button></el-radio-group>
         </el-form-item>
-        <el-form-item label="金额(分)"><el-input-number v-model="form.amount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
         <el-form-item label="账本">
           <el-select v-model="form.book_id" style="width: 100%;">
             <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
@@ -75,7 +75,7 @@ const books = ref<AccountBook[]>([])
 const showDialog = ref(false)
 const editingId = ref<number | null>(null)
 const form = reactive({
-  type: 'expense', amount: 0, book_id: 0, frequency: 'monthly', start_date: '',
+  type: 'expense', amountYuan: 0, book_id: 0, frequency: 'monthly', start_date: '',
   merchant_name: '', description: '',
 })
 
@@ -88,24 +88,24 @@ async function load() {
 
 function openCreate() {
   editingId.value = null
-  form.type = 'expense'; form.amount = 0; form.book_id = books.value[0]?.id || 0
+  form.type = 'expense'; form.amountYuan = 0; form.book_id = books.value[0]?.id || 0
   form.frequency = 'monthly'; form.start_date = new Date().toISOString().slice(0, 10)
   form.merchant_name = ''; form.description = ''
   showDialog.value = true
 }
 
 function editItem(row: RecurringTransaction) {
-  editingId.value = row.id; form.type = row.type; form.amount = row.amount
+  editingId.value = row.id; form.type = row.type; form.amountYuan = row.amount / 100
   form.book_id = row.book_id; form.frequency = row.frequency; form.start_date = row.start_date
   form.merchant_name = row.merchant_name || ''; form.description = row.description || ''
   showDialog.value = true
 }
 
 async function handleSave() {
-  if (!form.amount || !form.start_date || !form.book_id) { ElMessage.warning('请填写金额、账本和开始日期'); return }
+  if (!form.amountYuan || !form.start_date || !form.book_id) { ElMessage.warning('请填写金额、账本和开始日期'); return }
   saving.value = true
   try {
-    const payload = { type: form.type, amount: form.amount, book_id: form.book_id, frequency: form.frequency,
+    const payload = { type: form.type, amount: Math.round(form.amountYuan * 100), book_id: form.book_id, frequency: form.frequency,
       start_date: form.start_date, merchant_name: form.merchant_name || undefined, description: form.description || undefined }
     if (editingId.value) { await updateRecurring(editingId.value, payload as any); ElMessage.success('更新成功') }
     else { await createRecurring(payload as any); ElMessage.success('创建成功') }
