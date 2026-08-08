@@ -118,7 +118,9 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getByMonth, getByCategory, getByDay, getMerchantRanking, getComparison, getCrossAnalysis } from '@/api/stats'
 import { getCategories } from '@/api/categories'
-import type { MerchantRank, ComparisonResult, CrossAnalysisItem, CategoryStats, Category } from '@/types'
+import { getAccounts } from '@/api/accounts'
+import { getChannels, getPlatforms } from '@/api/channels'
+import type { MerchantRank, ComparisonResult, CrossAnalysisItem, CategoryStats, Category, PaymentAccount, Channel, Platform } from '@/types'
 
 const monthlyRef = ref<HTMLElement>()
 const categoryRef = ref<HTMLElement>()
@@ -131,9 +133,30 @@ const merchantData = ref<MerchantRank[]>([])
 const categoryRankData = ref<CategoryStats[]>([])
 const categoryTotal = computed(() => categoryRankData.value.reduce((sum, d) => sum + d.total, 0))
 const categoriesFlat = ref<Category[]>([])
+const accounts = ref<PaymentAccount[]>([])
+const channels = ref<Channel[]>([])
+const platforms = ref<Platform[]>([])
 
 function getCategoryName(id: number): string {
   return categoriesFlat.value.find((c) => c.id === id)?.name || `分类${id}`
+}
+function getAccountName(id: number): string {
+  return accounts.value.find((a) => a.id === id)?.name || `账户${id}`
+}
+function getChannelName(id: number): string {
+  return channels.value.find((c) => c.id === id)?.name || `渠道${id}`
+}
+function getPlatformName(id: number): string {
+  return platforms.value.find((p) => p.id === id)?.name || `平台${id}`
+}
+function getDimName(dim: string, id: string): string {
+  const numId = Number(id)
+  if (dim === 'category') return getCategoryName(numId)
+  if (dim === 'account') return getAccountName(numId)
+  if (dim === 'channel') return getChannelName(numId)
+  if (dim === 'platform') return getPlatformName(numId)
+  if (dim === 'weekday') return weekdayNames[Number(id)] || id
+  return id
 }
 const comparison = ref<ComparisonResult | null>(null)
 const crossData = ref<CrossAnalysisItem[]>([])
@@ -185,11 +208,14 @@ async function loadComparison() {
   try {
     const now = new Date()
     const y = now.getFullYear()
-    const m = now.getMonth()
+    const m = now.getMonth() // 0-based
     const curStart = `${y}-${String(m + 1).padStart(2, '0')}-01`
     const curEnd = `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`
-    const prevStart = `${y}-${String(m).padStart(2, '0')}-01`
-    const prevEnd = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+
+    const prevY = m === 0 ? y - 1 : y
+    const prevM = m === 0 ? 12 : m
+    const prevStart = `${prevY}-${String(prevM).padStart(2, '0')}-01`
+    const prevEnd = `${prevY}-${String(prevM).padStart(2, '0')}-${String(new Date(prevY, prevM, 0).getDate()).padStart(2, '0')}`
 
     const res = await getComparison({
       current: `${curStart}:${curEnd}`,
@@ -236,17 +262,19 @@ function renderCrossChart() {
     tooltip: {
       formatter: (params: any) => {
         const d = params.data
-        return `${dim1Values[d[1]]} × ${dim2Values[d[0]]}<br/>金额: ¥${d[2].toFixed(2)}`
+        const name1 = getDimName(crossDim1.value, dim1Values[d[1]])
+        const name2 = getDimName(crossDim2.value, dim2Values[d[0]])
+        return `${name1} × ${name2}<br/>金额: ¥${d[2].toFixed(2)}`
       }
     },
     xAxis: {
       type: 'category',
-      data: dim2Values.map((v) => crossDim2.value === 'weekday' ? weekdayNames[Number(v)] || v : v),
+      data: dim2Values.map((v) => getDimName(crossDim2.value, v)),
       axisLabel: { rotate: dim2Values.length > 10 ? 45 : 0 },
     },
     yAxis: {
       type: 'category',
-      data: dim1Values,
+      data: dim1Values.map((v) => getDimName(crossDim1.value, v)),
     },
     visualMap: {
       min: 0,
@@ -263,24 +291,26 @@ function renderCrossChart() {
       label: { show: dim1Values.length * dim2Values.length < 60, formatter: (p: any) => p.data[2] > 0 ? `¥${p.data[2].toFixed(0)}` : '' },
       emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } },
     }],
-    grid: { left: 80, right: 20, top: 20, bottom: 60 },
+    grid: { left: 100, right: 20, top: 20, bottom: 60 },
   })
 }
 
 async function load() {
   const y = Number(year.value)
+  const start = `${y}-01-01`
+  const end = `${y}-12-31`
   const [monthRes, catRes, dayRes, merchantRes] = await Promise.all([
     getByMonth({ year: y, type: chartType.value }),
-    getByCategory({ type: chartType.value, limit: 10 }),
-    getByDay({ type: chartType.value }),
-    getMerchantRanking({ limit: 10 }),
+    getByCategory({ type: chartType.value, limit: 10, start, end }),
+    getByDay({ type: chartType.value, start, end }),
+    getMerchantRanking({ limit: 10, start, end }),
   ])
 
   await nextTick()
 
   if (monthlyRef.value) {
     echarts.init(monthlyRef.value).setOption({
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; return `${p.name}<br/>${p.marker} ¥${(p.value / 100).toFixed(2)}` } },
       xAxis: { type: 'category', data: monthRes.data.map((d) => d.month) },
       yAxis: { type: 'value', axisLabel: { formatter: (v: number) => `¥${v / 100}` } },
       series: [{ type: 'bar', data: monthRes.data.map((d) => chartType.value === 'expense' ? d.expense : d.income), itemStyle: { color: chartType.value === 'expense' ? '#f56c6c' : '#67c23a' } }],
@@ -289,14 +319,14 @@ async function load() {
 
   if (categoryRef.value) {
     echarts.init(categoryRef.value).setOption({
-      tooltip: { trigger: 'item' },
-      series: [{ type: 'pie', radius: ['40%', '70%'], data: catRes.data.map((d) => ({ name: `分类${d.category_id}`, value: d.total / 100 })) }],
+      tooltip: { trigger: 'item', formatter: (params: any) => `${params.name}: ¥${params.value.toFixed(2)} (${params.percent}%)` },
+      series: [{ type: 'pie', radius: ['40%', '70%'], data: catRes.data.map((d) => ({ name: getCategoryName(d.category_id), value: d.total / 100 })) }],
     })
   }
 
   if (dailyRef.value) {
     echarts.init(dailyRef.value).setOption({
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; return `${p.name}<br/>${p.marker} ¥${(p.value / 100).toFixed(2)}` } },
       xAxis: { type: 'category', data: dayRes.data.map((d) => d.date.slice(5)) },
       yAxis: { type: 'value', axisLabel: { formatter: (v: number) => `¥${v / 100}` } },
       series: [{ type: 'line', data: dayRes.data.map((d) => d.total), smooth: true, areaStyle: {} }],
@@ -307,26 +337,29 @@ async function load() {
   categoryRankData.value = catRes.data
 }
 
-async function loadCategories() {
+async function loadRefData() {
   try {
-    const res = await getCategories()
+    const [catRes, accRes, chRes, plRes] = await Promise.all([
+      getCategories(),
+      getAccounts(),
+      getChannels(),
+      getPlatforms(),
+    ])
     const flat: Category[] = []
-    function flatten(items: Category[]) {
-      for (const item of items) {
-        flat.push(item)
-        if (item.children) flatten(item.children)
-      }
-    }
-    flatten(res.data)
+    function flatten(items: Category[]) { for (const item of items) { flat.push(item); if (item.children) flatten(item.children) } }
+    flatten(catRes.data)
     categoriesFlat.value = flat
+    accounts.value = accRes.data
+    channels.value = chRes.data
+    platforms.value = plRes.data
   } catch { /* ignore */ }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadRefData()
   load()
   loadComparison()
   loadCross()
-  loadCategories()
 })
 </script>
 

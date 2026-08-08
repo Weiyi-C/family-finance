@@ -160,9 +160,10 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import * as echarts from 'echarts'
 import { getSummary, getByCategory, getByDay, getComparison } from '@/api/stats'
 import { getTransactions } from '@/api/transactions'
-import { getAccounts } from '@/api/accounts'
+import { getAccounts, getAccountBalance } from '@/api/accounts'
+import { getCategories } from '@/api/categories'
 import { getBudgets, getBudgetUsage } from '@/api/budgets'
-import type { StatsSummary, CategoryStats, DailyStats, Transaction, PaymentAccount, Budget, BudgetUsage, ComparisonResult } from '@/types'
+import type { StatsSummary, CategoryStats, DailyStats, Transaction, PaymentAccount, Category, Budget, BudgetUsage, ComparisonResult } from '@/types'
 
 const trendChartRef = ref<HTMLElement>()
 const categoryChartRef = ref<HTMLElement>()
@@ -177,9 +178,17 @@ const categoryData = ref<CategoryStats[]>([])
 const dailyData = ref<DailyStats[]>([])
 const recentTxns = ref<Transaction[]>([])
 
+// 分类名称映射
+const categoriesFlat = ref<Category[]>([])
+const categoryMap = computed(() => {
+  const map: Record<number, string> = {}
+  for (const c of categoriesFlat.value) map[c.id] = c.name
+  return map
+})
+
 // 资产总览
 const accounts = ref<PaymentAccount[]>([])
-const totalAssets = computed(() => accounts.value.reduce((sum, a) => sum + (a.initial_balance || 0), 0))
+const totalAssets = computed(() => accounts.value.reduce((sum, a) => sum + ((a as any).balance ?? a.initial_balance ?? 0), 0))
 const assetGroups = computed(() => {
   const groups: Record<string, { icon: string; label: string; total: number }> = {}
   for (const a of accounts.value) {
@@ -191,7 +200,7 @@ const assetGroups = computed(() => {
     else if (a.type_code?.includes('credit') || a.type_code === 'alipay_huabei' || a.type_code === 'jd_baitiao') { key = 'credit'; icon = '💳'; label = '信用账户' }
     else { key = 'other'; icon = '💰'; label = '其他' }
     if (!groups[key]) groups[key] = { icon, label, total: 0 }
-    groups[key].total += a.initial_balance || 0
+    groups[key].total += (a as any).balance ?? a.initial_balance ?? 0
   }
   return Object.values(groups)
 })
@@ -277,7 +286,26 @@ function onPeriodChange(val: string) {
 
 async function loadAccounts() {
   try {
-    accounts.value = (await getAccounts()).data
+    const res = await getAccounts()
+    accounts.value = res.data
+    // 批量获取余额
+    const balancePromises = accounts.value.map(async (a) => {
+      try {
+        const balRes = await getAccountBalance(a.id)
+        ;(a as any).balance = balRes.data.balance
+      } catch { /* ignore */ }
+    })
+    await Promise.all(balancePromises)
+  } catch { /* ignore */ }
+}
+
+async function loadCategories() {
+  try {
+    const res = await getCategories()
+    const flat: Category[] = []
+    function flatten(items: Category[]) { for (const c of items) { flat.push(c); if (c.children) flatten(c.children) } }
+    flatten(res.data)
+    categoriesFlat.value = flat
   } catch { /* ignore */ }
 }
 
@@ -292,7 +320,7 @@ async function loadBudgets() {
         const usageRes = await getBudgetUsage(b.id)
         usages.push({
           ...usageRes.data,
-          category_name: b.category_id ? `分类#${b.category_id}` : null,
+          category_name: b.category_id ? (categoryMap.value[b.category_id] || `分类${b.category_id}`) : null,
           alert_threshold: b.alert_threshold ?? 0.8,
         })
       } catch { /* skip */ }
@@ -305,11 +333,15 @@ async function loadComparison() {
   try {
     const now = new Date()
     const y = now.getFullYear()
-    const m = now.getMonth()
+    const m = now.getMonth() // 0-based
     const curStart = `${y}-${String(m + 1).padStart(2, '0')}-01`
     const curEnd = `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`
-    const prevStart = `${y}-${String(m).padStart(2, '0')}-01`
-    const prevEnd = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+
+    // 上月：1月时回退到去年12月
+    const prevY = m === 0 ? y - 1 : y
+    const prevM = m === 0 ? 12 : m
+    const prevStart = `${prevY}-${String(prevM).padStart(2, '0')}-01`
+    const prevEnd = `${prevY}-${String(prevM).padStart(2, '0')}-${String(new Date(prevY, prevM, 0).getDate()).padStart(2, '0')}`
 
     const res = await getComparison({
       current: `${curStart}:${curEnd}`,
@@ -384,13 +416,14 @@ function renderCategoryChart(data: CategoryStats[]) {
     series: [{
       type: 'pie',
       radius: ['40%', '70%'],
-      data: data.map((d) => ({ name: `分类${d.category_id}`, value: d.total / 100 })),
+      data: data.map((d) => ({ name: categoryMap.value[d.category_id] || `分类${d.category_id}`, value: d.total / 100 })),
       label: { formatter: '{b}: {d}%' },
     }],
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadCategories()
   loadData()
   loadAccounts()
   loadBudgets()

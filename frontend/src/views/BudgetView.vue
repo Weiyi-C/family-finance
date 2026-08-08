@@ -9,8 +9,8 @@
     </div>
     <el-card>
       <el-table :data="budgets" stripe v-loading="loading">
-        <el-table-column prop="category_id" label="分类" width="120">
-          <template #default="{ row }">{{ row.category_id ? `分类${row.category_id}` : '全部' }}</template>
+        <el-table-column label="分类" width="120">
+          <template #default="{ row }">{{ row.category_id ? getCategoryName(row.category_id) : '全部' }}</template>
         </el-table-column>
         <el-table-column prop="period" label="周期" width="80" />
         <el-table-column label="预算金额" align="right" width="130">
@@ -46,7 +46,7 @@
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="金额(分)"><el-input-number v-model="form.amount" :min="1" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
         <el-form-item label="周期">
           <el-select v-model="form.period" style="width: 100%;">
             <el-option label="月度" value="monthly" /><el-option label="每周" value="weekly" /><el-option label="年度" value="yearly" />
@@ -81,17 +81,19 @@ const loading = ref(false)
 const saving = ref(false)
 const budgets = ref<(Budget & { _usage?: { spent: number; usage_rate: number; is_over: boolean } })[]>([])
 const categories = ref<Category[]>([])
+const categoryMap = ref<Record<number, string>>({})
 const now = new Date()
 const month = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
 const showDialog = ref(false)
 const editingId = ref<number | null>(null)
 
 const form = reactive({
-  category_id: null as number | null, amount: 0, period: 'monthly',
+  category_id: null as number | null, amountYuan: 0, period: 'monthly',
   year: now.getFullYear(), month: now.getMonth() + 1, rollover: false, alertPct: 80,
 })
 
 function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
+function getCategoryName(id: number) { return categoryMap.value[id] || `分类${id}` }
 
 async function load() {
   loading.value = true
@@ -110,7 +112,7 @@ async function load() {
 
 function openCreate() {
   editingId.value = null
-  form.category_id = null; form.amount = 0; form.period = 'monthly'
+  form.category_id = null; form.amountYuan = 0; form.period = 'monthly'
   form.year = now.getFullYear(); form.month = now.getMonth() + 1
   form.rollover = false; form.alertPct = 80
   showDialog.value = true
@@ -118,18 +120,18 @@ function openCreate() {
 
 function editBudget(row: Budget) {
   editingId.value = row.id
-  form.category_id = row.category_id; form.amount = row.amount; form.period = row.period
+  form.category_id = row.category_id; form.amountYuan = row.amount / 100; form.period = row.period
   form.year = row.year; form.month = row.month || now.getMonth() + 1
   form.rollover = row.rollover; form.alertPct = Math.round(row.alert_threshold * 100)
   showDialog.value = true
 }
 
 async function handleSave() {
-  if (!form.amount) { ElMessage.warning('请填写金额'); return }
+  if (!form.amountYuan) { ElMessage.warning('请填写金额'); return }
   saving.value = true
   try {
     const payload = {
-      amount: form.amount, period: form.period, category_id: form.category_id || undefined,
+      amount: Math.round(form.amountYuan * 100), period: form.period, category_id: form.category_id || undefined,
       year: form.year, month: form.month, rollover: form.rollover, alert_threshold: form.alertPct / 100,
     }
     if (editingId.value) {
@@ -148,7 +150,9 @@ async function handleDelete(id: number) {
 }
 
 onMounted(async () => {
-  await Promise.all([load(), getCategoriesFlat().then((r) => { categories.value = r.data })])
+  const [_, catRes] = await Promise.all([load(), getCategoriesFlat()])
+  categories.value = catRes.data
+  categoryMap.value = Object.fromEntries(catRes.data.map((c: Category) => [c.id, c.name]))
 })
 </script>
 
