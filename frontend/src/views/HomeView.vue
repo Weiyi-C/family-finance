@@ -160,7 +160,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import * as echarts from 'echarts'
 import { getSummary, getByCategory, getByDay, getComparison } from '@/api/stats'
 import { getTransactions } from '@/api/transactions'
-import { getAccounts, getAccountBalance } from '@/api/accounts'
+import { getAccounts } from '@/api/accounts'
 import { getCategories } from '@/api/categories'
 import { getBudgets, getBudgetUsage } from '@/api/budgets'
 import type { StatsSummary, CategoryStats, DailyStats, Transaction, PaymentAccount, Category, Budget, BudgetUsage, ComparisonResult } from '@/types'
@@ -288,14 +288,6 @@ async function loadAccounts() {
   try {
     const res = await getAccounts()
     accounts.value = res.data
-    // 批量获取余额
-    const balancePromises = accounts.value.map(async (a) => {
-      try {
-        const balRes = await getAccountBalance(a.id)
-        ;(a as any).balance = balRes.data.balance
-      } catch { /* ignore */ }
-    })
-    await Promise.all(balancePromises)
   } catch { /* ignore */ }
 }
 

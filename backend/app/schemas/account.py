@@ -63,6 +63,7 @@ class AccountResponse(BaseModel):
     card_tail: str | None
     card_type: str | None
     initial_balance: int
+    balance: int | None = None
     credit_limit: int | None
     used_amount: int
     billing_day: int | None

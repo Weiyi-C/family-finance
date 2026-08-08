@@ -513,16 +513,10 @@ async function handleBatchDelete() {
 onMounted(async () => {
   await Promise.all([
     loadTransactions(),
-    getCategories().then((r) => { categoryTree.value = r.data }),
     getCategories().then((r) => {
-      // 构建扁平列表用于查找
+      categoryTree.value = r.data
       const flat: Category[] = []
-      function flatten(items: Category[]) {
-        for (const item of items) {
-          flat.push(item)
-          if (item.children) flatten(item.children)
-        }
-      }
+      function flatten(items: Category[]) { for (const item of items) { flat.push(item); if (item.children) flatten(item.children) } }
       flatten(r.data)
       categoriesFlat.value = flat
     }),

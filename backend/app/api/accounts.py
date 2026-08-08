@@ -1,11 +1,12 @@
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func, case, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.account import PaymentAccount
+from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.account import (
     AccountBalance,
@@ -16,6 +17,22 @@ from app.schemas.account import (
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/accounts", tags=["资金来源"])
+
+
+def _calc_balance_query():
+    """构建余额计算SQL表达式"""
+    return func.coalesce(
+        func.sum(
+            case(
+                (Transaction.type == "income", Transaction.amount),
+                (Transaction.type == "expense", -Transaction.amount),
+                (and_(Transaction.type == "transfer", Transaction.entry_side == "debit"), Transaction.amount),
+                (and_(Transaction.type == "transfer", Transaction.entry_side == "credit"), -Transaction.amount),
+                else_=0,
+            )
+        ),
+        0,
+    )
 
 
 @router.get("", response_model=list[AccountResponse])
@@ -32,7 +49,47 @@ async def list_accounts(
         stmt = stmt.where(PaymentAccount.is_hidden == False)
     stmt = stmt.order_by(PaymentAccount.sort_order, PaymentAccount.id)
     result = await db.execute(stmt)
-    return [AccountResponse.model_validate(a) for a in result.scalars()]
+    accounts = list(result.scalars())
+
+    # 批量计算余额
+    account_ids = [a.id for a in accounts]
+    balance_map: dict[int, int] = {}
+
+    if account_ids:
+        # 非信用卡账户余额
+        balance_expr = _calc_balance_query()
+        balance_result = await db.execute(
+            select(
+                Transaction.payment_account_id,
+                (PaymentAccount.initial_balance + balance_expr).label("balance"),
+            )
+            .join(PaymentAccount, Transaction.payment_account_id == PaymentAccount.id)
+            .where(
+                Transaction.payment_account_id.in_(account_ids),
+                Transaction.family_id == current_user.family_id,
+                Transaction.is_deleted == False,
+                PaymentAccount.credit_limit.is_(None),  # 非信用卡
+                or_(
+                    and_(Transaction.type.in_(["income", "expense"]), Transaction.entry_side == "debit"),
+                    Transaction.type == "transfer",
+                ),
+            )
+            .group_by(Transaction.payment_account_id, PaymentAccount.initial_balance)
+        )
+        for row in balance_result.all():
+            balance_map[row[0]] = row[1]
+
+    # 组装结果
+    responses = []
+    for a in accounts:
+        resp = AccountResponse.model_validate(a)
+        if a.credit_limit is not None:
+            resp.balance = int(a.credit_limit - a.used_amount)
+        else:
+            resp.balance = int(balance_map.get(a.id, a.initial_balance))
+        responses.append(resp)
+
+    return responses
 
 
 @router.post("", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
