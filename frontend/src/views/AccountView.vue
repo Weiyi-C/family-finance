@@ -182,7 +182,11 @@ const accountGroups = computed(() => {
     }
 
     if (!groups[key]) groups[key] = { icon, label, accounts: [], total: 0 }
-    groups[key].accounts.push(a)
+    // 有子账户的父账户只作为分组标题，不显示为表格行
+    const hasActiveChildren = accounts.value.some((c) => c.parent_id === a.id && c.is_active && !c.is_hidden)
+    if (!hasActiveChildren) {
+      groups[key].accounts.push(a)
+    }
   }
 
   // 处理子账户（归入父账户的分组）

@@ -459,14 +459,16 @@ watch(visible, (v) => {
           // 尝试匹配渠道
           const channel = props.channels.find((c) => method.includes(c.name))
           if (channel) {
+            // 不调用 onChannelChange()，避免重置 channel_id
             form.channel_id = channel.id
-            onChannelChange()
             // 尝试匹配具体产品（如小荷包、余额宝等）
-            const matchedProduct = channelProducts.value.find((p) => method.includes(p.name))
-            if (matchedProduct) {
-              form.type_code = matchedProduct.type_code
-              form.name = method
-            }
+            nextTick(() => {
+              const matchedProduct = channelProducts.value.find((p) => method.includes(p.name))
+              if (matchedProduct) {
+                form.type_code = matchedProduct.type_code
+                form.name = method
+              }
+            })
           }
         })
       }

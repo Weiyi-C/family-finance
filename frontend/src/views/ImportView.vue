@@ -94,7 +94,7 @@
             选择一个默认账户，用于没有明确支付方式的交易。
           </p>
           <el-select v-model="defaultAccountId" placeholder="选择默认账户" style="width: 100%;" clearable>
-            <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
+            <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
             <el-option :value="0" label="不指定账户（稍后手动分配）" />
           </el-select>
         </el-card>
@@ -112,7 +112,7 @@
           <div v-for="method in uploadResult.meta.detected_methods" :key="method" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
             <span style="width: 120px; font-weight: 500;">{{ method }}:</span>
             <el-select v-model="methodAccountMap[method]" placeholder="选择账户" style="flex: 1;" clearable>
-              <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
+              <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
             </el-select>
             <el-button size="small" type="primary" link @click="openCreateAccount(method)">新建账户</el-button>
           </div>
@@ -254,6 +254,11 @@ const imports = ref<BillImport[]>([])
 const items = ref<BillImportItem[]>([])
 const books = ref<AccountBook[]>([])
 const accounts = ref<PaymentAccount[]>([])
+// 只显示叶子账户（有 parent_id 的子账户，或没有子账户的独立账户）
+const leafAccounts = computed(() => {
+  const parentIds = new Set(accounts.value.filter(a => a.parent_id).map(a => a.parent_id))
+  return accounts.value.filter(a => !parentIds.has(a.id))
+})
 const banks = ref<BankItem[]>([])
 const templates = ref<TemplateItem[]>([])
 const channels = ref<Channel[]>([])
