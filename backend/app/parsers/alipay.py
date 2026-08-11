@@ -1,6 +1,7 @@
 """支付宝 CSV 账单解析器"""
 
 import csv
+import re
 from .utils import identify_platform_and_merchant
 
 
@@ -94,7 +95,13 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                 elif "借呗" in desc:
                     payment_method = "借呗"
                 elif "小荷包" in desc or "小荷包" in counterparty:
-                    payment_method = "小荷包"
+                    # 提取括号中的具体名称，如"小荷包(郑梁的零花钱)" → "小荷包(郑梁的零花钱)"
+                    source_text = desc if "小荷包" in desc else counterparty
+                    m = re.search(r'小荷包[（(]([^）)]+)[）)]', source_text)
+                    if m:
+                        payment_method = f"小荷包({m.group(1)})"
+                    else:
+                        payment_method = "小荷包"
             # 笔笔攒等转账：收/付款方式字段实际指向目标（如余额宝），不是来源，需清空
             if txn_type == "transfer" and payment_method:
                 if any(kw in (description or "") for kw in ["笔笔攒"]):
