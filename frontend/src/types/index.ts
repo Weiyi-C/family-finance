@@ -113,6 +113,7 @@ export interface PaymentAccount {
   used_amount: number | null
   billing_day: number | null
   due_day: number | null
+  billing_cycle_type: string | null
   grace_days: number | null
   bank_name: string | null
   bank_code: string | null
@@ -146,6 +147,7 @@ export interface AccountCreate {
   credit_limit?: number
   billing_day?: number
   due_day?: number
+  billing_cycle_type?: string
   grace_days?: number
   bank_name?: string
   bank_code?: string

@@ -42,7 +42,7 @@ async def list_account_templates(
             "id": t.id, "type_code": t.type_code, "name": t.name, "icon": t.icon,
             "group_name": t.group_name, "is_credit": t.is_credit,
             "has_credit_limit": t.has_credit_limit, "has_billing_day": t.has_billing_day,
-            "has_due_day": t.has_due_day,
+            "has_due_day": t.has_due_day, "has_natural_month": t.has_natural_month,
         }
         for t in rows
     ]

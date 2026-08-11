@@ -1,3 +1,4 @@
+import calendar
 import structlog
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,11 +30,12 @@ async def generate_bills(
         target_year = year or now.year
         target_month = month or now.month
 
-        # 查找所有信用卡账户
+        # 查找所有信用账户（银行信用卡 + 花呗 + 京东白条等）
+        CREDIT_TYPES = ["bank_credit", "alipay_huabei", "jd_baitiao"]
         accounts_result = await db.execute(
             select(PaymentAccount).where(
                 PaymentAccount.family_id == current_user.family_id,
-                PaymentAccount.type_code == "bank_credit",
+                PaymentAccount.type_code.in_(CREDIT_TYPES),
                 PaymentAccount.is_active == True,
             )
         )
@@ -55,27 +57,40 @@ async def generate_bills(
             if existing.scalar_one_or_none():
                 continue
 
-            # 计算账单周期（上月账单日到本月账单日）
-            billing_day = account.billing_day or 1
+            # 计算账单周期
             due_day = account.due_day or 20
 
-            # 账单开始日期：上月账单日+1
-            if target_month == 1:
-                bill_start = datetime(target_year - 1, 12, billing_day + 1)
-            else:
-                bill_start = datetime(target_year, target_month - 1, billing_day + 1)
+            if account.billing_cycle_type == 'natural_month':
+                # 自然月：账单周期为当月1号到月末最后一天
+                bill_start = datetime(target_year, target_month, 1)
+                last_day = calendar.monthrange(target_year, target_month)[1]
+                bill_end = datetime(target_year, target_month, last_day)
 
-            # 账单结束日期：本月账单日
-            bill_end = datetime(target_year, target_month, billing_day)
-
-            # 还款日：如果还款日 < 账单日，则还款日在下月
-            if due_day <= billing_day:
+                # 还款日：下月的due_day
                 if target_month == 12:
                     due_date = datetime(target_year + 1, 1, due_day)
                 else:
                     due_date = datetime(target_year, target_month + 1, due_day)
             else:
-                due_date = datetime(target_year, target_month, due_day)
+                billing_day = account.billing_day or 1
+
+                # 账单开始日期：上月账单日+1
+                if target_month == 1:
+                    bill_start = datetime(target_year - 1, 12, billing_day + 1)
+                else:
+                    bill_start = datetime(target_year, target_month - 1, billing_day + 1)
+
+                # 账单结束日期：本月账单日
+                bill_end = datetime(target_year, target_month, billing_day)
+
+                # 还款日：如果还款日 < 账单日，则还款日在下月
+                if due_day <= billing_day:
+                    if target_month == 12:
+                        due_date = datetime(target_year + 1, 1, due_day)
+                    else:
+                        due_date = datetime(target_year, target_month + 1, due_day)
+                else:
+                    due_date = datetime(target_year, target_month, due_day)
 
             # 查询该周期内的支出总额
             total_result = await db.execute(

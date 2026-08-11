@@ -50,7 +50,13 @@
         <!-- 信用类产品显示额度/账单日/还款日 -->
         <template v-if="isChannelCredit">
           <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
-          <el-form-item label="账单日">
+          <el-form-item label="账单周期" v-if="isNaturalMonthSupported">
+            <el-radio-group v-model="form.billing_cycle_type">
+              <el-radio-button value="fixed_day">固定账单日</el-radio-button>
+              <el-radio-button value="natural_month">自然月</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="账单日" v-if="form.billing_cycle_type === 'fixed_day'">
             <el-select v-model="form.billing_day" clearable placeholder="每月几号" style="width: 100%;">
               <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
             </el-select>
@@ -188,6 +194,7 @@ const form = reactive({
   credit_limit_yuan: 0,
   billing_day: null as number | null,
   due_day: null as number | null,
+  billing_cycle_type: 'fixed_day' as string,
   parent_id: null as number | null,
   existing_parent_id: null as number | null,
   account_identifier: '',
@@ -248,6 +255,9 @@ const dayOptions = Array.from({ length: 28 }, (_, i) => i + 1)
 // 当前渠道产品是否为信用类
 const creditTypeCodes = new Set(['alipay_huabei', 'alipay_jiebei', 'jd_baitiao'])
 const isChannelCredit = computed(() => creditTypeCodes.has(form.type_code))
+// 支持自然月账单周期的类型
+const naturalMonthTypes = new Set(['alipay_huabei'])
+const isNaturalMonthSupported = computed(() => naturalMonthTypes.has(form.type_code))
 
 // 银行卡名称占位符
 const bankNamePlaceholder = computed(() => {
@@ -301,6 +311,7 @@ function onProductChange(typeCode: string) {
   form.credit_limit_yuan = 0
   form.billing_day = null
   form.due_day = null
+  form.billing_cycle_type = 'fixed_day'
 }
 
 function onBankChange() {
@@ -350,7 +361,8 @@ async function handleCreate() {
       // 渠道信用类产品（花呗、借呗、白条）
       if (isChannelCredit.value) {
         payload.credit_limit = Math.round((form.credit_limit_yuan || 0) * 100)
-        if (form.billing_day) payload.billing_day = form.billing_day
+        payload.billing_cycle_type = form.billing_cycle_type
+        if (form.billing_cycle_type === 'fixed_day' && form.billing_day) payload.billing_day = form.billing_day
         if (form.due_day) payload.due_day = form.due_day
       }
     } else if (categoryType.value === 'bank') {

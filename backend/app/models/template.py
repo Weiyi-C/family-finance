@@ -17,6 +17,7 @@ class AccountTypeTemplate(Base):
     has_credit_limit: Mapped[bool] = mapped_column(Boolean, default=False)
     has_billing_day: Mapped[bool] = mapped_column(Boolean, default=False)
     has_due_day: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_natural_month: Mapped[bool] = mapped_column(Boolean, default=False)
     default_icon: Mapped[str | None] = mapped_column(String(50))
     default_color: Mapped[str | None] = mapped_column(String(20))
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0)

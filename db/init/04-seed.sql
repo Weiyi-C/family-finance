@@ -355,24 +355,24 @@ INSERT INTO banks (name, code, short_name, color, sort_order) VALUES
 -- ===================== 账户类型模板 =====================
 
 INSERT INTO account_type_templates
-    (type_code, name, icon, group_name, is_credit, has_credit_limit, has_billing_day, has_due_day, sort_order)
+    (type_code, name, icon, group_name, is_credit, has_credit_limit, has_billing_day, has_due_day, has_natural_month, sort_order)
 VALUES
-    ('cash',            '现金',          '💵', '资金',   FALSE, FALSE, FALSE, FALSE, 1),
-    ('bank_savings',    '银行储蓄卡',    '🏦', '资金',   FALSE, FALSE, FALSE, FALSE, 2),
-    ('alipay_balance',  '支付宝余额',    '📱', '资金',   FALSE, FALSE, FALSE, FALSE, 3),
-    ('alipay_yuebao',   '余额宝',        '📱', '资金',   FALSE, FALSE, FALSE, FALSE, 4),
-    ('wechat_balance',  '微信零钱',      '💬', '资金',   FALSE, FALSE, FALSE, FALSE, 5),
-    ('wechat_lingqian', '零钱通',        '💬', '资金',   FALSE, FALSE, FALSE, FALSE, 6),
-    ('meituan_pay',     '美团支付',      '🛵', '资金',   FALSE, FALSE, FALSE, FALSE, 7),
-    ('bank_credit',     '银行信用卡',    '💳', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  1),
-    ('alipay_huabei',   '花呗',          '🌸', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  2),
-    ('alipay_jiebei',   '借呗',          '🔶', '信用卡', TRUE,  TRUE,  FALSE, FALSE, 3),
-    ('jd_baitiao',      '京东白条',      '🏷️', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  4),
-    ('bus_card',        '公交卡',        '🚌', '充值',   FALSE, FALSE, FALSE, FALSE, 1),
-    ('meal_card',       '饭卡',          '🍱', '充值',   FALSE, FALSE, FALSE, FALSE, 2),
-    ('membership_card', '会员卡',        '🎫', '充值',   FALSE, FALSE, FALSE, FALSE, 3),
-    ('stock_account',   '股票账户',      '📈', '投资',   FALSE, FALSE, FALSE, FALSE, 1),
-    ('fund_account',    '基金账户',      '📊', '投资',   FALSE, FALSE, FALSE, FALSE, 2);
+    ('cash',            '现金',          '💵', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 1),
+    ('bank_savings',    '银行储蓄卡',    '🏦', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 2),
+    ('alipay_balance',  '支付宝余额',    '📱', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 3),
+    ('alipay_yuebao',   '余额宝',        '📱', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 4),
+    ('wechat_balance',  '微信零钱',      '💬', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 5),
+    ('wechat_lingqian', '零钱通',        '💬', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 6),
+    ('meituan_pay',     '美团支付',      '🛵', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 7),
+    ('bank_credit',     '银行信用卡',    '💳', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  FALSE, 1),
+    ('alipay_huabei',   '花呗',          '🌸', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  2),
+    ('alipay_jiebei',   '借呗',          '🔶', '信用卡', TRUE,  TRUE,  FALSE, FALSE, FALSE, 3),
+    ('jd_baitiao',      '京东白条',      '🏷️', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  FALSE, 4),
+    ('bus_card',        '公交卡',        '🚌', '充值',   FALSE, FALSE, FALSE, FALSE, FALSE, 1),
+    ('meal_card',       '饭卡',          '🍱', '充值',   FALSE, FALSE, FALSE, FALSE, FALSE, 2),
+    ('membership_card', '会员卡',        '🎫', '充值',   FALSE, FALSE, FALSE, FALSE, FALSE, 3),
+    ('stock_account',   '股票账户',      '📈', '投资',   FALSE, FALSE, FALSE, FALSE, FALSE, 1),
+    ('fund_account',    '基金账户',      '📊', '投资',   FALSE, FALSE, FALSE, FALSE, FALSE, 2);
 
 -- ===================== 币种 =====================
 

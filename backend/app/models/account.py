@@ -26,6 +26,7 @@ class PaymentAccount(Base):
     used_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     billing_day: Mapped[int | None] = mapped_column(SmallInteger)
     due_day: Mapped[int | None] = mapped_column(SmallInteger)
+    billing_cycle_type: Mapped[str] = mapped_column(String(20), default='fixed_day')
     grace_days: Mapped[int | None] = mapped_column(SmallInteger)
     is_shared: Mapped[bool] = mapped_column(Boolean, default=False)
     shared_with: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))

@@ -19,6 +19,7 @@ class AccountCreate(BaseModel):
     credit_limit: int | None = None
     billing_day: int | None = Field(None, ge=1, le=28)
     due_day: int | None = Field(None, ge=1, le=28)
+    billing_cycle_type: str = 'fixed_day'
     grace_days: int | None = None
     is_shared: bool = False
     shared_with: int | None = None
@@ -39,6 +40,7 @@ class AccountUpdate(BaseModel):
     credit_limit: int | None = None
     billing_day: int | None = Field(None, ge=1, le=28)
     due_day: int | None = Field(None, ge=1, le=28)
+    billing_cycle_type: str | None = None
     is_shared: bool | None = None
     shared_with: int | None = None
     share_type: str | None = None
@@ -68,6 +70,7 @@ class AccountResponse(BaseModel):
     used_amount: int
     billing_day: int | None
     due_day: int | None
+    billing_cycle_type: str | None = 'fixed_day'
     is_shared: bool
     shared_with: int | None
     share_type: str | None

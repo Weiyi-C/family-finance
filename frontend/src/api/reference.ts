@@ -18,6 +18,7 @@ export interface AccountTemplate {
   has_credit_limit: boolean
   has_billing_day: boolean
   has_due_day: boolean
+  has_natural_month: boolean
 }
 
 export function getBanks() {
