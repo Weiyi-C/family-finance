@@ -135,7 +135,6 @@ def suggest_account_type(method: str) -> dict:
 
     # 小荷包（支持"小荷包"和"小荷包(具体名称)"格式）
     if "小荷包" in method_clean:
-        import re
         m = re.search(r'小荷包[（(]([^）)]+)[）)]', method_clean)
         name = f"小荷包({m.group(1)})" if m else "小荷包"
         return {"type_code": "alipay_xiaoheibao", "name": name, "group": "支付宝"}
