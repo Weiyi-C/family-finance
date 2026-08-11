@@ -133,5 +133,9 @@ def suggest_account_type(method: str) -> dict:
     if "余额宝" in method_clean:
         return {"type_code": "alipay_yuebao", "name": "余额宝", "group": "支付宝"}
 
+    # 小荷包
+    if "小荷包" in method_clean:
+        return {"type_code": "alipay_xiaoheibao", "name": "小荷包", "group": "支付宝"}
+
     # 默认
     return {"type_code": "e_wallet", "name": method_clean, "group": "其他"}

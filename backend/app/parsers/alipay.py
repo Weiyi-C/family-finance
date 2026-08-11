@@ -57,7 +57,7 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
             is_internal_transfer = False
             if not any(kw in description for kw in ["收益", "利息", "分红", "奖励"]):
                 is_internal_transfer = any(kw in counterparty or kw in description
-                                           for kw in ["小荷包", "自动攒", "转出到银行卡", "转入到"])
+                                           for kw in ["小荷包", "自动攒", "转出到银行卡", "转入到", "笔笔攒"])
 
             if fund_status == "资金转移" or is_internal_transfer:
                 txn_type = "transfer"
@@ -93,6 +93,12 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                     payment_method = "余额宝"
                 elif "借呗" in desc:
                     payment_method = "借呗"
+                elif "小荷包" in desc or "小荷包" in counterparty:
+                    payment_method = "小荷包"
+            # 笔笔攒等转账：收/付款方式字段实际指向目标（如余额宝），不是来源，需清空
+            if txn_type == "transfer" and payment_method:
+                if any(kw in (description or "") for kw in ["笔笔攒"]):
+                    payment_method = ""
             if payment_method:
                 methods.add(payment_method)
 

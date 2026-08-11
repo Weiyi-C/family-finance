@@ -367,6 +367,7 @@ VALUES
     ('bank_credit',     '银行信用卡',    '💳', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  FALSE, 1),
     ('alipay_huabei',   '花呗',          '🌸', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  2),
     ('alipay_jiebei',   '借呗',          '🔶', '信用卡', TRUE,  TRUE,  FALSE, FALSE, FALSE, 3),
+    ('alipay_xiaoheibao','小荷包',       '👛', '资金',   FALSE, FALSE, FALSE, FALSE, FALSE, 8),
     ('jd_baitiao',      '京东白条',      '🏷️', '信用卡', TRUE,  TRUE,  TRUE,  TRUE,  FALSE, 4),
     ('bus_card',        '公交卡',        '🚌', '充值',   FALSE, FALSE, FALSE, FALSE, FALSE, 1),
     ('meal_card',       '饭卡',          '🍱', '充值',   FALSE, FALSE, FALSE, FALSE, FALSE, 2),
