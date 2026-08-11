@@ -95,9 +95,10 @@ def parse_alipay_csv(content: str) -> tuple[list[dict], dict]:
                 elif "借呗" in desc:
                     payment_method = "借呗"
                 elif "小荷包" in desc or "小荷包" in counterparty:
-                    # 提取括号中的具体名称，如"小荷包(郑梁的零花钱)" → "小荷包(郑梁的零花钱)"
-                    source_text = desc if "小荷包" in desc else counterparty
-                    m = re.search(r'小荷包[（(]([^）)]+)[）)]', source_text)
+                    # 优先从交易对方提取括号中的具体名称（如"支付宝小荷包(郑梁的零花钱)"）
+                    m = re.search(r'小荷包[（(]([^）)]+)[）)]', counterparty)
+                    if not m:
+                        m = re.search(r'小荷包[（(]([^）)]+)[）)]', desc)
                     if m:
                         payment_method = f"小荷包({m.group(1)})"
                     else:
