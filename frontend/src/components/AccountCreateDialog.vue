@@ -445,7 +445,7 @@ watch(visible, (v) => {
       // 判断是否为银行卡
       const isBank = method.includes('银行') || method.includes('储蓄卡') || method.includes('信用卡') || method.includes('借记卡')
       // 判断是否为微信/支付宝
-      const isChannel = method.includes('零钱') || method.includes('零钱通') || method.includes('余额') || method.includes('花呗') || method.includes('微信') || method.includes('支付宝')
+      const isChannel = method.includes('零钱') || method.includes('零钱通') || method.includes('余额') || method.includes('花呗') || method.includes('微信') || method.includes('支付宝') || method.includes('小荷包')
 
       if (isBank) {
         categoryType.value = 'bank'
@@ -461,6 +461,12 @@ watch(visible, (v) => {
           if (channel) {
             form.channel_id = channel.id
             onChannelChange()
+            // 尝试匹配具体产品（如小荷包、余额宝等）
+            const matchedProduct = channelProducts.value.find((p) => method.includes(p.name))
+            if (matchedProduct) {
+              form.type_code = matchedProduct.type_code
+              form.name = method
+            }
           }
         })
       }
