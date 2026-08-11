@@ -1,0 +1,123 @@
+/* ==================== 工具类 ==================== */
+
+/* 文本色 */
+.text-primary { color: var(--color-text-primary); }
+.text-regular { color: var(--color-text-regular); }
+.text-muted { color: var(--color-text-secondary); }
+.text-placeholder { color: var(--color-text-placeholder); }
+.text-expense { color: var(--color-expense); }
+.text-income { color: var(--color-income); }
+.text-transfer { color: var(--color-transfer); }
+
+/* 文本大小 */
+.text-sm { font-size: 12px; }
+.text-base { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-xl { font-size: 18px; }
+.text-2xl { font-size: 24px; }
+
+/* 文本粗细 */
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+
+/* Flex 布局 */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.flex-1 { flex: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+
+/* Gap */
+.gap-4 { gap: 4px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+.gap-24 { gap: 24px; }
+
+/* 间距 */
+.mb-4 { margin-bottom: 4px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mr-8 { margin-right: 8px; }
+.ml-8 { margin-left: 8px; }
+
+/* 页面布局 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.page-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* 卡片 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 统计卡片 */
+.stat-card {
+  text-align: center;
+  padding: 8px 0;
+}
+.stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.stat-card .stat-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: var(--color-text-secondary);
+}
+.empty-state p {
+  margin-top: 12px;
+}
+
+/* 背景色 */
+.bg-page { background-color: var(--color-bg-page); }
+.bg-card { background-color: var(--color-bg-card); }
+
+/* 溢出 */
+.overflow-hidden { overflow: hidden; }
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 过渡 */
+.transition-colors {
+  transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+}
+
+/* Element Plus 样式覆盖 */
+.el-card {
+  border-color: var(--color-border-light);
+  background-color: var(--color-bg-card);
+}

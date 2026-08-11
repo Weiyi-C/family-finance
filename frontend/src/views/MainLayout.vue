@@ -12,9 +12,6 @@
           :collapse="isCollapsed"
           router
           class="sidebar-menu"
-          background-color="#2b3a4a"
-          text-color="#ffffff"
-          active-text-color="#409eff"
         >
           <!-- 首页 -->
           <el-menu-item index="/">
@@ -200,7 +197,7 @@ onMounted(loadUnreadCount)
   height: 100vh;
 }
 .sidebar {
-  background: #2b3a4a;
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   transition: width 0.3s;
@@ -211,11 +208,11 @@ onMounted(loadUnreadCount)
   align-items: center;
   gap: 10px;
   padding: 18px 16px;
-  color: #fff;
+  color: var(--sidebar-text-active);
   cursor: pointer;
   flex-shrink: 0;
-  background: #1f2d3d;
-  border-bottom: 1px solid #3a4a5a;
+  background: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 .logo-text {
   font-size: 18px;
@@ -228,46 +225,54 @@ onMounted(loadUnreadCount)
 }
 .sidebar-menu {
   border-right: none;
+  background-color: transparent !important;
 }
 .sidebar-menu .el-menu-item {
-  color: #d4d7de !important;
+  color: var(--sidebar-text) !important;
   height: 44px;
   line-height: 44px;
   padding-left: 56px !important;
 }
 .sidebar-menu .el-menu-item:hover {
-  background: #354555 !important;
-  color: #fff !important;
+  background: var(--sidebar-bg-hover) !important;
+  color: var(--sidebar-text-active) !important;
 }
 .sidebar-menu .el-menu-item.is-active {
-  background: #409eff !important;
+  background: var(--color-primary) !important;
   color: #fff !important;
+}
+.sidebar-menu :deep(.el-sub-menu__title) {
+  color: var(--sidebar-text) !important;
+}
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background: var(--sidebar-bg-hover) !important;
+  color: var(--sidebar-text-active) !important;
 }
 .collapse-btn {
   padding: 14px;
   text-align: center;
-  color: #909399;
+  color: var(--sidebar-text);
   cursor: pointer;
-  border-top: 1px solid #3a4a5a;
+  border-top: 1px solid var(--sidebar-border);
   flex-shrink: 0;
 }
 .collapse-btn:hover {
-  color: #fff;
-  background: #354555;
+  color: var(--sidebar-text-active);
+  background: var(--sidebar-bg-hover);
 }
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #dcdfe6;
-  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-card);
   padding: 0 24px;
-  height: 56px;
+  height: var(--header-height);
 }
 .top-left h3 {
   margin: 0;
   font-size: 16px;
-  color: #303133;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 .top-right {
@@ -279,10 +284,10 @@ onMounted(loadUnreadCount)
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #606266;
+  color: var(--color-text-regular);
 }
 .user-info:hover {
-  color: #409eff;
+  color: var(--color-primary);
 }
 .user-name {
   font-size: 14px;
@@ -291,7 +296,7 @@ onMounted(loadUnreadCount)
   margin-right: 8px;
 }
 .content-area {
-  background: #f5f7fa;
+  background: var(--color-bg-page);
   padding: 20px;
   overflow-y: auto;
 }

@@ -22,23 +22,38 @@
         <el-form-item label="每月起始日">
           <el-input-number v-model="settings.month_start_day" :min="1" :max="28" />
         </el-form-item>
-        <el-form-item label="主题">
-          <el-radio-group v-model="settings.theme">
+        <el-divider>外观设置</el-divider>
+        <el-form-item label="主题模式">
+          <el-radio-group v-model="themeStore.mode">
             <el-radio-button value="light">浅色</el-radio-button>
             <el-radio-button value="dark">深色</el-radio-button>
             <el-radio-button value="auto">跟随系统</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="语言">
-          <el-select v-model="settings.language" style="width: 200px;">
-            <el-option label="中文" value="zh-CN" /><el-option label="English" value="en" />
-          </el-select>
+        <el-form-item label="侧边栏">
+          <el-radio-group v-model="themeStore.sidebarTheme">
+            <el-radio-button value="dark">深色</el-radio-button>
+            <el-radio-button value="light">浅色</el-radio-button>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="快捷记账">
-          <el-switch v-model="settings.quick_entry_mode" active-value="enabled" inactive-value="disabled" />
-        </el-form-item>
-        <el-form-item label="保存前确认">
-          <el-switch v-model="settings.confirm_before_save" />
+        <el-form-item label="主题色">
+          <div class="theme-color-row">
+            <div
+              v-for="t in themePresets"
+              :key="t.name"
+              class="color-dot"
+              :class="{ active: themeStore.preset === t.name && !themeStore.customPrimary }"
+              :style="{ backgroundColor: t.primary }"
+              :title="t.label"
+              @click="selectPreset(t.name)"
+            />
+            <el-color-picker
+              v-model="themeStore.customPrimary"
+              size="small"
+              show-alpha={false}
+              @change="onCustomColorChange"
+            />
+          </div>
         </el-form-item>
 
         <el-divider>通知设置</el-divider>
@@ -118,10 +133,24 @@ import { getSettings, updateSettings } from '@/api/settings'
 import { getAIProviders, getAISettings, updateAISettings, testAIConnection } from '@/api/ai'
 import { updateMe, changePassword } from '@/api/users'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore, themePresets } from '@/stores/theme'
 import type { UserSettings } from '@/types'
 import type { AIProvider } from '@/api/ai'
 
 const auth = useAuthStore()
+const themeStore = useThemeStore()
+
+function selectPreset(name: string) {
+  themeStore.customPrimary = ''
+  themeStore.preset = name
+}
+
+function onCustomColorChange(color: string | null) {
+  if (color) {
+    themeStore.customPrimary = color
+  }
+}
+
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
@@ -282,4 +311,37 @@ onMounted(load)
 <style scoped>
 .page-header { margin-bottom: 16px; }
 .page-header h3 { margin: 0; }
+
+.theme-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.color-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+}
+.color-dot:hover {
+  transform: scale(1.15);
+}
+.color-dot.active {
+  border-color: var(--color-text-primary);
+  box-shadow: 0 0 0 2px var(--color-bg-card), 0 0 0 4px var(--color-primary);
+}
+.color-dot.active::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
 </style>
