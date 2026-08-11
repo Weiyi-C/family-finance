@@ -464,6 +464,25 @@ async def confirm_import(
                 # 如果没找到精确匹配，记录未匹配的小荷包名称
                 if not destination_account_id:
                     unmatched_xiaohebao.add(xiaohebao_name)
+            elif "小荷包" in search_text:
+                # 有小荷包关键词但无具体名称（如"支付宝小荷包-自动攒"）
+                # 尝试匹配唯一的小荷包账户
+                dest_result = await db.execute(
+                    select(PaymentAccount.id).where(
+                        PaymentAccount.family_id == current_user.family_id,
+                        PaymentAccount.type_code == "alipay_xiaoheibao",
+                    )
+                )
+                xiaohebao_accounts = dest_result.scalars().all()
+                if len(xiaohebao_accounts) == 1:
+                    # 只有一个小荷包账户，直接匹配
+                    destination_account_id = xiaohebao_accounts[0]
+                elif len(xiaohebao_accounts) > 1:
+                    # 多个小荷包账户，无法确定，记录待匹配
+                    unmatched_xiaohebao.add("未知小荷包")
+                else:
+                    # 没有小荷包账户
+                    unmatched_xiaohebao.add("未知小荷包")
             else:
                 # 其他转账类型：花呗、余额宝、零钱通等
                 DESTINATION_PATTERNS = {
@@ -640,7 +659,8 @@ async def confirm_import(
                 updated = True
 
             # 同步更新 credit 行的 payment_account_id（来源账户）
-            if account_id and updated:
+            # 无论 updated 是否为 true，都需要检查 credit 侧
+            if account_id:
                 credit_result = await db.execute(
                     select(Transaction).where(
                         Transaction.entry_id == existing.entry_id,
@@ -650,6 +670,7 @@ async def confirm_import(
                 credit_row = credit_result.scalar_one_or_none()
                 if credit_row and not credit_row.payment_account_id:
                     credit_row.payment_account_id = account_id
+                    updated = True
 
             # 打标签
             if suggested_tags:
