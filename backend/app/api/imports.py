@@ -395,7 +395,7 @@ async def confirm_import(
             except Exception:
                 pass
 
-    seq_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
+    seq_result = await db.execute(text("SELECT nextval('transactions_id_seq')"))
     base_entry_id = seq_result.scalar()
 
     created = 0
@@ -428,6 +428,16 @@ async def confirm_import(
 
         account_id = None
         txn_type = raw.get("type", "expense")
+
+        # 非转账类型：使用建议的账户（转账也需要来源账户，提前解析）
+        suggested_account_id = raw.get("suggested_account_id")
+        if suggested_account_id:
+            account_id = suggested_account_id
+        elif method_account_map:
+            pm = raw.get("payment_method", "")
+            account_id = method_account_map.get(pm)
+        elif default_account_id:
+            account_id = default_account_id
 
         # 转账类型：识别目标账户
         destination_account_id = None
@@ -473,16 +483,6 @@ async def confirm_import(
                         destination_account_id = dest_result.scalar()
                         if destination_account_id:
                             break
-        else:
-            # 非转账类型：使用建议的账户
-            suggested_account_id = raw.get("suggested_account_id")
-            if suggested_account_id:
-                account_id = suggested_account_id
-            elif method_account_map:
-                pm = raw.get("payment_method", "")
-                account_id = method_account_map.get(pm)
-            elif default_account_id:
-                account_id = default_account_id
 
         # 查找平台ID
         platform_name = raw.get("platform", "")
@@ -621,9 +621,6 @@ async def confirm_import(
             if channel_id and not existing.payment_channel_id:
                 existing.payment_channel_id = channel_id
                 updated = True
-            if account_id and not existing.payment_account_id:
-                existing.payment_account_id = account_id
-                updated = True
             if platform_id and not existing.platform_id:
                 existing.platform_id = platform_id
                 updated = True
@@ -634,7 +631,15 @@ async def confirm_import(
                 existing.import_id = imp.id
                 updated = True
 
-            # 同步更新 credit 行的 payment_account_id
+            # 转账类型：更新目标账户（debit侧）
+            if txn_type == "transfer" and destination_account_id and not existing.payment_account_id:
+                existing.payment_account_id = destination_account_id
+                updated = True
+            elif account_id and not existing.payment_account_id:
+                existing.payment_account_id = account_id
+                updated = True
+
+            # 同步更新 credit 行的 payment_account_id（来源账户）
             if account_id and updated:
                 credit_result = await db.execute(
                     select(Transaction).where(

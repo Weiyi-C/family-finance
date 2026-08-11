@@ -115,7 +115,7 @@ async def create_transaction(
         if body.payment_account_id and body.payment_account_id == body.destination_account_id:
             raise HTTPException(status_code=400, detail="源账户和目标账户不能相同")
 
-    result = await db.execute(text("SELECT nextval('entry_id_seq')"))
+    result = await db.execute(text("SELECT nextval('transactions_id_seq')"))
     entry_id = result.scalar()
 
     if body.type == "transfer":
@@ -354,7 +354,7 @@ async def batch_create(
 
     created = []
     for item in items:
-        entry_id_result = await db.execute(text("SELECT nextval('entry_id_seq')"))
+        entry_id_result = await db.execute(text("SELECT nextval('transactions_id_seq')"))
         entry_id = entry_id_result.scalar()
 
         txn_type = item.get("type", "expense")

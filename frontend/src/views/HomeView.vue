@@ -145,7 +145,10 @@
         <el-table-column prop="description" label="备注" />
         <el-table-column prop="amount" label="金额" align="right" width="120">
           <template #default="{ row }">
-            <span :class="row.type === 'expense' ? 'text-expense' : 'text-income'">
+            <span v-if="row.type === 'transfer'" style="color: #909399;">
+              {{ formatMoney(row.amount) }}
+            </span>
+            <span v-else :class="row.type === 'expense' ? 'text-expense' : 'text-income'">
               {{ row.type === 'expense' ? '-' : '+' }}{{ formatMoney(row.amount) }}
             </span>
           </template>
