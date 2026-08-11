@@ -86,6 +86,7 @@
             <el-menu-item index="/backup">备份恢复</el-menu-item>
             <el-menu-item index="/sync">数据同步</el-menu-item>
             <el-menu-item index="/monitor">系统监控</el-menu-item>
+            <el-menu-item index="/ai-assistant">AI 助手</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-scrollbar>

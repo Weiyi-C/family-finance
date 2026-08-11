@@ -35,6 +35,7 @@ const router = createRouter({
         { path: 'import', name: 'import', component: () => import('@/views/ImportView.vue') },
         { path: 'sync', name: 'sync', component: () => import('@/views/SyncView.vue') },
         { path: 'monitor', name: 'monitor', component: () => import('@/views/MonitorView.vue') },
+        { path: 'ai-assistant', name: 'ai-assistant', component: () => import('@/views/AIAssistantView.vue') },
         { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
       ],
     },

@@ -1,6 +1,8 @@
+import asyncio
 import time
 
 import structlog
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,6 +13,7 @@ from app.api.aliases import router as aliases_router
 from app.api.ai import router as ai_router
 from app.api.ai_config import router as ai_config_router
 from app.api.ai_import import router as ai_import_router
+from app.api.ai_suggestions import router as ai_suggestions_router
 from app.api.attachments import router as attachments_router
 from app.api.auth import router as auth_router
 from app.api.backup import router as backup_router
@@ -58,13 +61,24 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
-app = FastAPI(title="Family Finance API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app):
+    from app.services.scheduler import start_scheduler, stop_scheduler
+    task = asyncio.create_task(start_scheduler())
+    yield
+    stop_scheduler()
+    task.cancel()
+
+
+app = FastAPI(title="Family Finance API", version="0.1.0", lifespan=lifespan)
 
 app.include_router(accounts_router)
 app.include_router(aliases_router)
 app.include_router(ai_router)
 app.include_router(ai_config_router)
 app.include_router(ai_import_router)
+app.include_router(ai_suggestions_router)
 app.include_router(attachments_router)
 app.include_router(auth_router)
 app.include_router(backup_router)

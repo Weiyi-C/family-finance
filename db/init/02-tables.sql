@@ -722,7 +722,25 @@ CREATE TABLE credit_card_bills (
     CONSTRAINT chk_cc_bill_status CHECK (status IN ('pending', 'partial', 'paid', 'overdue'))
 );
 
--- ===================== 25. 视图 =====================
+-- ===================== 25. AI 建议 =====================
+
+CREATE TABLE ai_suggestions (
+    id              BIGSERIAL PRIMARY KEY,
+    family_id       BIGINT NOT NULL REFERENCES families(id),
+    type            VARCHAR(30) NOT NULL,
+    status          VARCHAR(20) DEFAULT 'pending',
+    transaction_ids BIGINT[],
+    suggestion      JSONB NOT NULL,
+    reason          TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at     TIMESTAMPTZ,
+    CONSTRAINT chk_ai_suggestion_type CHECK (type IN ('tag', 'duplicate', 'periodic', 'category')),
+    CONSTRAINT chk_ai_suggestion_status CHECK (status IN ('pending', 'accepted', 'rejected'))
+);
+
+CREATE INDEX idx_ai_suggestions_family ON ai_suggestions(family_id, status);
+
+-- ===================== 26. 视图 =====================
 
 CREATE VIEW user_transactions AS
 SELECT
