@@ -456,10 +456,15 @@ watch(visible, (v) => {
         categoryType.value = 'channel'
         step.value = 2
         nextTick(() => {
-          // 尝试匹配渠道
-          const channel = props.channels.find((c) => method.includes(c.name))
+          // 尝试匹配渠道：方法名含渠道名，或通过产品类型推断（小荷包→支付宝）
+          let channel = props.channels.find((c) => method.includes(c.name))
+          if (!channel && method.includes('小荷包')) {
+            channel = props.channels.find((c) => c.name.includes('支付宝'))
+          }
+          if (!channel && (method.includes('零钱') || method.includes('零钱通'))) {
+            channel = props.channels.find((c) => c.name.includes('微信'))
+          }
           if (channel) {
-            // 不调用 onChannelChange()，避免重置 channel_id
             form.channel_id = channel.id
             // 尝试匹配具体产品（如小荷包、余额宝等）
             nextTick(() => {
