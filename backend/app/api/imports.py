@@ -415,12 +415,14 @@ async def confirm_import(
         entry_id = base_entry_id + created
 
         # 解析交易时间
+        from datetime import datetime, timezone, timedelta
         txn_time_str = raw.get("transaction_time", "")
-        txn_time = __import__("datetime").datetime.now()
+        tz_cst = timezone(timedelta(hours=8))
+        txn_time = datetime.now(tz_cst)
         if isinstance(txn_time_str, str) and txn_time_str:
             for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"]:
                 try:
-                    txn_time = __import__("datetime").datetime.strptime(txn_time_str.strip(), fmt)
+                    txn_time = datetime.strptime(txn_time_str.strip(), fmt).replace(tzinfo=tz_cst)
                     break
                 except ValueError:
                     continue
@@ -627,6 +629,28 @@ async def confirm_import(
             )
             existing = fuzzy_txn.scalar_one_or_none()
 
+        # 转账类型特殊匹配：同日同金额的 transfer 记录，描述都含关键词则匹配
+        if not existing and txn_type == "transfer":
+            desc = raw.get("description") or ""
+            transfer_keywords = ["小荷包", "自动攒", "余额宝", "零钱通", "花呗", "借呗"]
+            matched_keyword = next((kw for kw in transfer_keywords if kw in desc), None)
+            if matched_keyword:
+                fuzzy_txn = await db.execute(
+                    select(Transaction).where(
+                        Transaction.family_id == current_user.family_id,
+                        Transaction.entry_side == "debit",
+                        Transaction.is_deleted == False,
+                        Transaction.type == "transfer",
+                        Transaction.amount == amount,
+                        sa_func.date(Transaction.transaction_time) == txn_date,
+                        or_(
+                            Transaction.description.ilike(f"%{matched_keyword}%"),
+                            Transaction.merchant_name.ilike(f"%{matched_keyword}%"),
+                        ),
+                    ).limit(1)
+                )
+                existing = fuzzy_txn.scalar_one_or_none()
+
         # 关键：如果已有记录是transfer类型，当前记录是expense类型，跳过合并
         # 保留支付宝的transfer记录，不要用银行的expense记录覆盖
         if existing and existing.type == "transfer" and txn_type == "expense":
@@ -665,7 +689,11 @@ async def confirm_import(
 
             # 跨平台互补：用精确时间替换粗略时间（银行只有日期，时分秒为0）
             if txn_time and existing.transaction_time:
-                if existing.transaction_time.hour == 0 and existing.transaction_time.minute == 0:
+                from datetime import timezone, timedelta
+                tz_cst = timezone(timedelta(hours=8))
+                # 将已有时间转换为CST后再比较小时和分钟
+                existing_cst = existing.transaction_time.astimezone(tz_cst)
+                if existing_cst.hour == 0 and existing_cst.minute == 0:
                     if txn_time.hour != 0 or txn_time.minute != 0:
                         existing.transaction_time = txn_time
                         updated = True
