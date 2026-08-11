@@ -8,7 +8,7 @@
       <el-form :model="settings" label-width="120px" v-loading="loading">
         <el-form-item label="昵称">
           <el-input v-model="nickname" placeholder="请输入昵称" style="width: 200px;" />
-          <el-button type="primary" style="margin-left: 8px;" :loading="savingNickname" @click="handleSaveNickname">保存</el-button>
+          <el-button type="primary" class="ml-8" :loading="savingNickname" @click="handleSaveNickname">保存</el-button>
         </el-form-item>
         <el-form-item label="手机号">
           <span>{{ auth.user?.phone || '-' }}</span>
@@ -81,13 +81,13 @@
         </el-form-item>
         <template v-if="aiSettings.enabled">
           <el-form-item label="AI 提供商">
-            <el-select v-model="aiSettings.provider" style="width: 100%;" @change="onProviderChange">
+            <el-select v-model="aiSettings.provider" class="w-full" @change="onProviderChange">
               <el-option v-for="p in providers" :key="p.id" :label="p.name" :value="p.id" />
             </el-select>
           </el-form-item>
           <el-form-item label="API Key">
             <el-input v-model="aiSettings.api_key" placeholder="输入 API Key" show-password />
-            <div v-if="aiSettings.api_key_masked" style="color: #909399; font-size: 12px; margin-top: 4px;">
+            <div v-if="aiSettings.api_key_masked" class="text-sm text-muted mt-4">
               当前: {{ aiSettings.api_key_masked }}
             </div>
           </el-form-item>
@@ -95,7 +95,7 @@
             <el-input v-model="aiSettings.base_url" placeholder="https://api.example.com/v1" />
           </el-form-item>
           <el-form-item label="模型">
-            <el-select v-model="aiSettings.model" style="width: 100%;" filterable allow-create>
+            <el-select v-model="aiSettings.model" class="w-full" filterable allow-create>
               <el-option v-for="m in currentModels" :key="m" :label="m" :value="m" />
             </el-select>
           </el-form-item>
@@ -339,7 +339,7 @@ onMounted(load)
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #fff;
+  color: var(--color-bg-card);
   font-size: 14px;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);

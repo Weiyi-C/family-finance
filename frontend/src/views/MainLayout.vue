@@ -239,7 +239,7 @@ onMounted(loadUnreadCount)
 }
 .sidebar-menu .el-menu-item.is-active {
   background: var(--color-primary) !important;
-  color: #fff !important;
+  color: var(--color-bg-card) !important;
 }
 .sidebar-menu :deep(.el-sub-menu__title) {
   color: var(--sidebar-text) !important;

@@ -5,9 +5,9 @@
     </div>
 
     <!-- 家庭信息 -->
-    <el-card style="margin-bottom: 16px;">
+    <el-card class="mb-16">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="flex justify-between items-center">
           <span>家庭信息</span>
           <el-button size="small" @click="editFamilyName" v-if="isOwnerOrAdmin">修改名称</el-button>
         </div>
@@ -23,7 +23,7 @@
     <!-- 成员管理 -->
     <el-card>
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="flex justify-between items-center">
           <span>家庭成员</span>
           <el-button type="primary" size="small" @click="showAddDialog = true" v-if="isOwnerOrAdmin">
             <el-icon><Plus /></el-icon> 邀请成员
@@ -33,10 +33,10 @@
       <el-table :data="members" stripe>
         <el-table-column label="成员" min-width="150">
           <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="flex items-center gap-8">
               <el-avatar :size="32" :icon="UserFilled" />
               <div>
-                <div style="font-weight: 500;">{{ row.nickname }}</div>
+                <div class="font-medium">{{ row.nickname }}</div>
                 <div style="font-size: 12px; color: #909399;">{{ row.phone || '-' }}</div>
               </div>
             </div>
@@ -65,7 +65,7 @@
               @confirm="handleRemove(row.id)"
             >
               <template #reference>
-                <el-button link type="danger" size="small" style="margin-left: 8px;">移除</el-button>
+                <el-button link type="danger" size="small" class="ml-8">移除</el-button>
               </template>
             </el-popconfirm>
             <el-tag v-if="row.id === currentUserId" type="info" size="small">当前用户</el-tag>
@@ -81,7 +81,7 @@
           <el-input v-model="addForm.phone" placeholder="输入已注册用户的手机号" />
         </el-form-item>
         <el-form-item label="角色">
-          <el-select v-model="addForm.role" style="width: 100%;">
+          <el-select v-model="addForm.role" class="w-full">
             <el-option label="管理员" value="admin" />
             <el-option label="普通成员" value="member" />
           </el-select>

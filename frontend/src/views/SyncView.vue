@@ -4,7 +4,7 @@
       <h3>数据同步</h3>
       <div>
         <el-tag type="info">设备ID: {{ clientId }}</el-tag>
-        <el-tag type="success" style="margin-left: 8px;">序列号: {{ currentSeq }}</el-tag>
+        <el-tag type="success" class="ml-8">序列号: {{ currentSeq }}</el-tag>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
             <el-form-item label="起始序列"><el-input-number v-model="pullFrom" :min="0" /></el-form-item>
             <el-form-item><el-button type="primary" @click="handlePull" :loading="pulling">拉取</el-button></el-form-item>
           </el-form>
-          <el-table :data="pulledChanges" stripe size="small" style="margin-top: 12px;" max-height="400">
+          <el-table :data="pulledChanges" stripe size="small" class="mt-12" max-height="400">
             <el-table-column prop="seq" label="序列" width="60" />
             <el-table-column prop="table_name" label="表" width="120" />
             <el-table-column prop="operation" label="操作" width="70">
@@ -35,14 +35,14 @@
             <el-form-item label="表名"><el-input v-model="pushForm.table_name" placeholder="transactions" /></el-form-item>
             <el-form-item label="记录ID"><el-input-number v-model="pushForm.record_id" :min="1" /></el-form-item>
             <el-form-item label="操作">
-              <el-select v-model="pushForm.operation" style="width: 100%;">
+              <el-select v-model="pushForm.operation" class="w-full">
                 <el-option label="INSERT" value="INSERT" /><el-option label="UPDATE" value="UPDATE" /><el-option label="DELETE" value="DELETE" />
               </el-select>
             </el-form-item>
             <el-form-item label="数据(JSON)"><el-input v-model="pushForm.dataStr" type="textarea" :rows="3" placeholder="{}" /></el-form-item>
             <el-form-item><el-button type="primary" @click="handlePush" :loading="pushing">推送</el-button></el-form-item>
           </el-form>
-          <div v-if="pushResult" style="margin-top: 12px;">
+          <div v-if="pushResult" class="mt-12">
             <el-tag type="success">已应用 {{ pushResult.applied }} 条，当前序列 {{ pushResult.current_seq }}</el-tag>
           </div>
         </el-card>

@@ -25,7 +25,7 @@
                 {{ data.type === 'expense' ? '支出' : '收入' }}
               </el-tag>
               {{ data.name }}
-              <el-tag v-if="!data.family_id" size="small" type="info" style="margin-left: 8px;">系统</el-tag>
+              <el-tag v-if="!data.family_id" size="small" type="info" class="ml-8">系统</el-tag>
             </span>
             <span class="tree-actions">
               <el-button link type="primary" size="small" @click.stop="addChild(data)">添加子分类</el-button>
@@ -43,12 +43,12 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="form.type" style="width: 100%;">
+          <el-select v-model="form.type" class="w-full">
             <el-option label="支出" value="expense" /><el-option label="收入" value="income" />
           </el-select>
         </el-form-item>
         <el-form-item label="父分类">
-          <el-select v-model="form.parent_id" clearable placeholder="无（一级分类）" style="width: 100%;">
+          <el-select v-model="form.parent_id" clearable placeholder="无（一级分类）" class="w-full">
             <el-option v-for="c in flatCategories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>

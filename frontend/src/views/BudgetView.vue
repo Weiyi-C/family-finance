@@ -42,13 +42,13 @@
     <el-dialog v-model="showDialog" :title="editingId ? '编辑预算' : '新建预算'" width="460px" destroy-on-close>
       <el-form :model="form" label-width="80px">
         <el-form-item label="分类">
-          <el-select v-model="form.category_id" clearable placeholder="全部分类" style="width: 100%;">
+          <el-select v-model="form.category_id" clearable placeholder="全部分类" class="w-full">
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
         <el-form-item label="周期">
-          <el-select v-model="form.period" style="width: 100%;">
+          <el-select v-model="form.period" class="w-full">
             <el-option label="月度" value="monthly" /><el-option label="每周" value="weekly" /><el-option label="年度" value="yearly" />
           </el-select>
         </el-form-item>
@@ -159,5 +159,5 @@ onMounted(async () => {
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h3 { margin: 0; }
-.text-muted { color: #c0c4cc; }
+.text-muted { color: var(--color-text-placeholder); }
 </style>

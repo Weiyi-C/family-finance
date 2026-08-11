@@ -4,7 +4,7 @@
       <h3>账单导入</h3>
       <div>
         <el-button type="success" @click="showExportDialog = true"><el-icon><Upload /></el-icon> 导出数据</el-button>
-        <el-button type="primary" @click="showImportDialog = true" style="margin-left: 8px;"><el-icon><Plus /></el-icon> 导入账单</el-button>
+        <el-button type="primary" @click="showImportDialog = true" class="ml-8"><el-icon><Plus /></el-icon> 导入账单</el-button>
       </div>
     </div>
     <el-card>
@@ -39,13 +39,13 @@
       <div v-if="step === 1">
         <el-form label-width="80px">
           <el-form-item label="账本">
-            <el-select v-model="importForm.book_id" style="width: 100%;">
+            <el-select v-model="importForm.book_id" class="w-full">
               <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
               <el-option label="+ 新建账本" value="__new__" />
             </el-select>
           </el-form-item>
           <el-form-item label="来源">
-            <el-select v-model="importForm.source" style="width: 100%;">
+            <el-select v-model="importForm.source" class="w-full">
               <el-option label="自动识别" value="auto" />
               <el-option label="支付宝" value="alipay" />
               <el-option label="微信" value="wechat" />
@@ -61,16 +61,16 @@
               drag
             >
               <el-icon style="font-size: 40px; color: #c0c4cc;"><Upload /></el-icon>
-              <div style="color: #909399;">拖拽文件到此处，或<em style="color: #409eff;">点击上传</em></div>
+              <div class="text-muted">拖拽文件到此处，或<em style="color: #409eff;">点击上传</em></div>
               <template #tip>
-                <div style="color: #909399; font-size: 12px;">
+                <div class="text-sm text-muted">
                   支持 CSV、Excel、PDF、TXT 文件，或账单截图（JPG/PNG）
                 </div>
               </template>
             </el-upload>
           </el-form-item>
           <el-form-item v-if="isImageFile">
-            <el-alert title="图片导入" type="info" :closable="false" style="width: 100%;">
+            <el-alert title="图片导入" type="info" :closable="false" class="w-full">
               <template #default>
                 检测到图片文件，将使用 AI 识别账单内容。请确保图片清晰且包含完整的账单信息。
               </template>
@@ -81,37 +81,37 @@
 
       <!-- 第二步：配置账户映射 -->
       <div v-if="step === 2">
-        <el-alert :title="`解析完成：${uploadResult?.parsed_count}条记录`" type="success" show-icon style="margin-bottom: 16px;">
+        <el-alert :title="`解析完成：${uploadResult?.parsed_count}条记录`" type="success" show-icon class="mb-16">
           <template #default>
             <span v-if="uploadResult?.skipped_duplicate">，跳过 {{ uploadResult.skipped_duplicate }} 条重复记录</span>
           </template>
         </el-alert>
 
         <!-- 默认账户 -->
-        <el-card style="margin-bottom: 16px;">
+        <el-card class="mb-16">
           <template #header><span>默认资金来源</span></template>
-          <p style="color: #909399; font-size: 13px; margin-bottom: 12px;">
+          <p class="text-sm text-muted mb-12">
             选择一个默认账户，用于没有明确支付方式的交易。
           </p>
-          <el-select v-model="defaultAccountId" placeholder="选择默认账户" style="width: 100%;" clearable>
+          <el-select v-model="defaultAccountId" placeholder="选择默认账户" class="w-full" clearable>
             <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
             <el-option :value="0" label="不指定账户（稍后手动分配）" />
           </el-select>
         </el-card>
 
         <!-- 支付方式映射 -->
-        <el-card v-if="uploadResult?.meta?.detected_methods?.length" style="margin-bottom: 16px;">
+        <el-card v-if="uploadResult?.meta?.detected_methods?.length" class="mb-16">
           <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="flex justify-between items-center">
               <span>支付方式 → 账户映射</span>
             </div>
           </template>
-          <p style="color: #909399; font-size: 13px; margin-bottom: 12px;">
+          <p class="text-sm text-muted mb-12">
             系统检测到以下支付方式，请为每种方式选择对应的资金来源账户。
           </p>
-          <div v-for="method in uploadResult.meta.detected_methods" :key="method" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div v-for="method in uploadResult.meta.detected_methods" :key="method" class="flex items-center gap-12 mb-12">
             <span style="width: 120px; font-weight: 500;">{{ method }}:</span>
-            <el-select v-model="methodAccountMap[method]" placeholder="选择账户" style="flex: 1;" clearable>
+            <el-select v-model="methodAccountMap[method]" placeholder="选择账户" class="flex-1" clearable>
               <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
             </el-select>
             <el-button size="small" type="primary" link @click="openCreateAccount(method)">新建账户</el-button>
@@ -134,13 +134,13 @@
             <el-table-column label="支付方式" width="120">
               <template #default="{ row }">
                 <span v-if="row.payment_method">{{ row.payment_method }}</span>
-                <span v-else style="color: #c0c4cc;">{{ defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.name : '待分配' }}</span>
+                <span v-else class="text-placeholder">{{ defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.name : '待分配' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="自动分类" width="100">
               <template #default="{ row }">
                 <el-tag v-if="row.suggested_category_name" type="success" size="small">{{ row.suggested_category_name }}</el-tag>
-                <span v-else style="color: #c0c4cc;">-</span>
+                <span v-else class="text-placeholder">-</span>
               </template>
             </el-table-column>
           </el-table>

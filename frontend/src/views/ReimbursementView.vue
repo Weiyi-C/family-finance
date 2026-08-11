@@ -40,11 +40,11 @@
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.description" /></el-form-item>
         <el-divider>选择要报销的交易</el-divider>
-        <div style="margin-bottom: 12px;">
+        <div class="mb-12">
           <el-input v-model="searchKeyword" placeholder="搜索交易备注/商户" clearable style="width: 200px; margin-right: 8px;" />
           <el-button @click="searchTransactions">搜索</el-button>
         </div>
-        <el-table :data="availableTxns" stripe size="small" max-height="250" @selection-change="onTxnSelect" style="margin-bottom: 16px;">
+        <el-table :data="availableTxns" stripe size="small" max-height="250" @selection-change="onTxnSelect" class="mb-16">
           <el-table-column type="selection" width="50" />
           <el-table-column prop="transaction_time" label="时间" width="160">
             <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
@@ -57,11 +57,11 @@
         </el-table>
 
         <el-divider>已选交易</el-divider>
-        <div v-if="form.items.length === 0" style="color: #909399; padding: 20px; text-align: center;">
+        <div v-if="form.items.length === 0" class="text-muted text-center" style="padding: 20px;">
           请从上方表格中选择要报销的交易
         </div>
         <div v-for="(item, i) in form.items" :key="i" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-          <span style="flex: 1;">{{ item.description }}</span>
+          <span class="flex-1">{{ item.description }}</span>
           <span style="width: 100px; text-align: right;">{{ formatMoney(item.amount) }}</span>
           <el-button type="danger" :icon="Delete" circle size="small" @click="removeItem(i)" />
         </div>
@@ -83,7 +83,7 @@
         <el-descriptions-item label="总额">{{ formatMoney(detailItem.total_amount) }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detailItem.description }}</el-descriptions-item>
       </el-descriptions>
-      <el-table :data="detailItem?.items || []" style="margin-top: 12px;" stripe>
+      <el-table :data="detailItem?.items || []" class="mt-12" stripe>
         <el-table-column prop="transaction_id" label="交易ID" width="80" />
         <el-table-column prop="description" label="描述" />
         <el-table-column label="金额" align="right"><template #default="{ row }">{{ formatMoney(row.amount) }}</template></el-table-column>
@@ -93,7 +93,7 @@
     <!-- 到账对话框 -->
     <el-dialog v-model="showReceive" title="确认到账" width="360px">
       <el-form label-width="80px">
-        <el-form-item label="到账金额(元)"><el-input-number v-model="receiveYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+        <el-form-item label="到账金额(元)"><el-input-number v-model="receiveYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showReceive = false">取消</el-button>

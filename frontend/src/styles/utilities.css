@@ -8,6 +8,7 @@
 .text-expense { color: var(--color-expense); }
 .text-income { color: var(--color-income); }
 .text-transfer { color: var(--color-transfer); }
+.text-warning { color: var(--color-warning); }
 
 /* 文本大小 */
 .text-sm { font-size: 12px; }
@@ -19,6 +20,14 @@
 /* 文本粗细 */
 .font-medium { font-weight: 500; }
 .font-bold { font-weight: 700; }
+
+/* 宽度 */
+.w-full { width: 100%; }
+
+/* 文本对齐 */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
 
 /* Flex 布局 */
 .flex { display: flex; }
@@ -46,10 +55,15 @@
 .mb-12 { margin-bottom: 12px; }
 .mb-16 { margin-bottom: 16px; }
 .mb-24 { margin-bottom: 24px; }
+.mt-4 { margin-top: 4px; }
 .mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
 .mt-16 { margin-top: 16px; }
+.mr-4 { margin-right: 4px; }
 .mr-8 { margin-right: 8px; }
+.ml-4 { margin-left: 4px; }
 .ml-8 { margin-left: 8px; }
+.mr-12 { margin-right: 12px; }
 
 /* 页面布局 */
 .page-header {

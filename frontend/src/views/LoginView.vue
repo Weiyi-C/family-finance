@@ -15,7 +15,7 @@
               <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" show-password />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" style="width: 100%" :loading="loading" @click="handleLogin">
+              <el-button type="primary" class="w-full" :loading="loading" @click="handleLogin">
                 登录
               </el-button>
             </el-form-item>
@@ -37,7 +37,7 @@
               <el-input v-model="registerForm.family_name" placeholder="可选，如：我的家庭" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" style="width: 100%" :loading="loading" @click="handleRegister">
+              <el-button type="primary" class="w-full" :loading="loading" @click="handleRegister">
                 注册
               </el-button>
             </el-form-item>

@@ -1,8 +1,8 @@
 <template>
   <div>
     <!-- 时间范围选择器 -->
-    <el-card style="margin-bottom: 16px;">
-      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+    <el-card class="mb-16">
+      <div class="flex items-center gap-16 flex-wrap">
         <el-radio-group v-model="period" @change="onPeriodChange" size="small">
           <el-radio-button value="this_week">本周</el-radio-button>
           <el-radio-button value="this_month">本月</el-radio-button>
@@ -21,7 +21,7 @@
           @change="loadData"
           style="width: 260px;"
         />
-        <span style="color: #909399; font-size: 13px;">{{ periodLabel }}</span>
+        <span class="text-sm text-muted">{{ periodLabel }}</span>
       </div>
     </el-card>
 
@@ -70,36 +70,36 @@
     </el-row>
 
     <!-- 资产总览 + 预算进度 -->
-    <el-row :gutter="16" style="margin-top: 16px;">
+    <el-row :gutter="16" class="mt-16">
       <el-col :span="12">
         <el-card>
           <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="flex justify-between items-center">
               <span>资产总览</span>
-              <span style="font-size: 20px; font-weight: 600;" :class="totalAssets >= 0 ? 'income' : 'expense'">
+              <span class="text-xl font-bold" :class="totalAssets >= 0 ? 'income' : 'expense'">
                 {{ formatMoney(totalAssets) }}
               </span>
             </div>
           </template>
-          <div v-if="assetGroups.length === 0" style="text-align: center; color: #909399; padding: 20px;">
+          <div v-if="assetGroups.length === 0" class="text-center text-muted" style="padding: 20px;">
             暂无账户数据
           </div>
           <div v-for="group in assetGroups" :key="group.label" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
             <span>{{ group.icon }} {{ group.label }}</span>
-            <span style="font-weight: 500;" :class="group.total < 0 ? 'expense' : ''">{{ formatMoney(group.total) }}</span>
+            <span class="font-medium" :class="group.total < 0 ? 'expense' : ''">{{ formatMoney(group.total) }}</span>
           </div>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card>
           <template #header><span>本月预算</span></template>
-          <div v-if="budgetUsages.length === 0" style="text-align: center; color: #909399; padding: 20px;">
+          <div v-if="budgetUsages.length === 0" class="text-center text-muted" style="padding: 20px;">
             暂未设置预算
           </div>
-          <div v-for="bu in budgetUsages" :key="bu.budget_id" style="margin-bottom: 16px;">
+          <div v-for="bu in budgetUsages" :key="bu.budget_id" class="mb-16">
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
               <span style="font-size: 13px;">{{ bu.category_name || '总预算' }}</span>
-              <span style="font-size: 13px; color: #909399;">
+              <span class="text-sm text-muted">
                 {{ formatMoney(bu.spent) }} / {{ formatMoney(bu.amount) }}
               </span>
             </div>
@@ -114,7 +114,7 @@
     </el-row>
 
     <!-- 图表 -->
-    <el-row :gutter="16" style="margin-top: 16px;">
+    <el-row :gutter="16" class="mt-16">
       <el-col :span="12">
         <el-card>
           <template #header><span>趋势</span></template>
@@ -130,7 +130,7 @@
     </el-row>
 
     <!-- 最近交易 -->
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <template #header><span>最近交易</span></template>
       <el-table :data="recentTxns" stripe>
         <el-table-column prop="transaction_time" label="时间" width="170">
@@ -145,7 +145,7 @@
         <el-table-column prop="description" label="备注" />
         <el-table-column prop="amount" label="金额" align="right" width="120">
           <template #default="{ row }">
-            <span v-if="row.type === 'transfer'" style="color: #909399;">
+            <span v-if="row.type === 'transfer'" class="text-muted">
               {{ formatMoney(row.amount) }}
             </span>
             <span v-else :class="row.type === 'expense' ? 'text-expense' : 'text-income'">
@@ -428,11 +428,11 @@ onMounted(async () => {
 
 <style scoped>
 .summary-cards .summary-item { text-align: center; }
-.summary-label { font-size: 14px; color: #909399; margin-bottom: 8px; }
+.summary-label { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 8px; }
 .summary-value { font-size: 24px; font-weight: 600; }
 .summary-change { font-size: 12px; margin-top: 4px; }
-.income { color: #67c23a; }
-.expense { color: #f56c6c; }
-.text-expense { color: #f56c6c; }
-.text-income { color: #67c23a; }
+.income { color: var(--color-income); }
+.expense { color: var(--color-expense); }
+.text-expense { color: var(--color-expense); }
+.text-income { color: var(--color-income); }
 </style>

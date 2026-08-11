@@ -6,12 +6,12 @@
     </div>
 
     <!-- 按分组显示账户 -->
-    <div v-for="group in accountGroups" :key="group.label" style="margin-bottom: 16px;">
+    <div v-for="group in accountGroups" :key="group.label" class="mb-16">
       <el-card>
         <template #header>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="flex justify-between items-center">
             <span>{{ group.icon }} {{ group.label }} ({{ group.accounts.length }}个)</span>
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="flex items-center gap-12">
               <span style="font-weight: 600; font-size: 15px;" :class="group.total < 0 ? 'text-expense' : ''">
                 {{ group.accounts.length > 1 ? formatMoney(group.total) : '' }}
               </span>
@@ -23,7 +23,7 @@
           <el-table-column label="名称" min-width="150">
             <template #default="{ row }">
               <span>{{ row.icon || '' }} {{ row.name }}</span>
-              <el-tag v-if="row.linked_account_id" size="small" type="warning" style="margin-left: 8px;">代付</el-tag>
+              <el-tag v-if="row.linked_account_id" size="small" type="warning" class="ml-8">代付</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="类型" width="100">
@@ -31,7 +31,7 @@
           </el-table-column>
           <el-table-column label="余额" align="right" width="120">
             <template #default="{ row }">
-              <span v-if="hasChildren(row.id)" style="color: #909399;">—</span>
+              <span v-if="hasChildren(row.id)" class="text-muted">—</span>
               <span v-else :class="(row.balance ?? row.initial_balance) < 0 ? 'text-expense' : ''">{{ formatMoney(row.balance ?? row.initial_balance) }}</span>
             </template>
           </el-table-column>
@@ -66,17 +66,17 @@
           <el-input :model-value="getTemplateName(editForm.type_code)" disabled />
         </el-form-item>
         <el-form-item label="所属渠道" v-if="editForm.channel_id">
-          <el-select v-model="editForm.channel_id" style="width: 100%;">
+          <el-select v-model="editForm.channel_id" class="w-full">
             <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="所属银行" v-if="editForm.bank_id">
-          <el-select v-model="editForm.bank_id" filterable style="width: 100%;">
+          <el-select v-model="editForm.bank_id" filterable class="w-full">
             <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="父账户">
-          <el-select v-model="editForm.parent_id" clearable placeholder="无（顶级账户）" style="width: 100%;">
+          <el-select v-model="editForm.parent_id" clearable placeholder="无（顶级账户）" class="w-full">
             <el-option v-for="a in parentOptions" :key="a.id" :label="a.name" :value="a.id" />
           </el-select>
         </el-form-item>
@@ -84,10 +84,10 @@
           <el-input v-model="editForm.card_tail" maxlength="4" />
         </el-form-item>
         <el-form-item label="初始余额(元)">
-          <el-input-number v-model="editForm.initialBalanceYuan" :precision="2" style="width: 100%;" />
+          <el-input-number v-model="editForm.initialBalanceYuan" :precision="2" class="w-full" />
         </el-form-item>
         <el-form-item label="信用额度(元)" v-if="editForm.credit_limit !== null && editForm.credit_limit !== undefined">
-          <el-input-number v-model="editForm.creditLimitYuan" :min="0" :precision="2" style="width: 100%;" />
+          <el-input-number v-model="editForm.creditLimitYuan" :min="0" :precision="2" class="w-full" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="editForm.notes" type="textarea" :rows="2" />
@@ -284,5 +284,5 @@ onMounted(async () => {
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h3 { margin: 0; }
-.text-expense { color: #f56c6c; }
+.text-expense { color: var(--color-expense); }
 </style>

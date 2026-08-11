@@ -31,7 +31,7 @@
         <el-form-item label="原始名称"><el-input v-model="form.original_name" :disabled="!!editingId" /></el-form-item>
         <el-form-item label="别名"><el-input v-model="form.alias_name" /></el-form-item>
         <el-form-item label="分类">
-          <el-select v-model="form.category_id" clearable placeholder="选择分类" style="width: 100%;">
+          <el-select v-model="form.category_id" clearable placeholder="选择分类" class="w-full">
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>

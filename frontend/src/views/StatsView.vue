@@ -12,13 +12,13 @@
     </div>
 
     <!-- 环比对比 -->
-    <el-card style="margin-bottom: 16px;">
+    <el-card class="mb-16">
       <template #header><span>本月 vs 上月 环比</span></template>
       <el-row :gutter="20">
         <el-col :span="6" v-for="item in comparisonCards" :key="item.label">
           <div style="text-align: center; padding: 12px;">
-            <div style="font-size: 13px; color: #909399; margin-bottom: 8px;">{{ item.label }}</div>
-            <div style="font-size: 20px; font-weight: 600;">{{ item.value }}</div>
+            <div class="text-sm text-muted mb-8">{{ item.label }}</div>
+            <div class="text-xl font-bold">{{ item.value }}</div>
             <div style="font-size: 13px; margin-top: 4px;" :style="{ color: item.changeColor }">
               {{ item.changeText }}
             </div>
@@ -42,7 +42,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" style="margin-top: 16px;">
+    <el-row :gutter="16" class="mt-16">
       <el-col :span="12">
         <el-card>
           <template #header><span>日趋势</span></template>
@@ -65,7 +65,7 @@
     </el-row>
 
     <!-- 分类排行 -->
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <template #header><span>分类排行</span></template>
       <el-table :data="categoryRankData" stripe size="small">
         <el-table-column type="index" width="50" label="排名" />
@@ -89,11 +89,11 @@
     </el-card>
 
     <!-- 交叉分析 -->
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="flex justify-between items-center">
           <span>交叉分析</span>
-          <div style="display: flex; gap: 12px;">
+          <div class="flex gap-12">
             <el-select v-model="crossDim1" size="small" style="width: 120px;" @change="loadCross">
               <el-option label="按分类" value="category" />
               <el-option label="按账户" value="account" />

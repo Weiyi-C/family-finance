@@ -7,13 +7,13 @@
       </el-button>
     </div>
 
-    <el-alert v-if="!aiEnabled" title="AI 未配置" type="warning" :closable="false" style="margin-bottom: 16px;">
+    <el-alert v-if="!aiEnabled" title="AI 未配置" type="warning" :closable="false" class="mb-16">
       请先在设置中配置 AI 服务。
       <router-link to="/settings">前往设置</router-link>
     </el-alert>
 
     <!-- 摘要卡片 -->
-    <el-row :gutter="16" style="margin-bottom: 16px;">
+    <el-row :gutter="16" class="mb-16">
       <el-col :span="8">
         <el-card shadow="hover">
           <div class="stat-card">
@@ -50,7 +50,7 @@
         <el-radio-button value="category">分类建议</el-radio-button>
       </el-radio-group>
       <el-checkbox v-model="showResolved" @change="loadSuggestions">已处理</el-checkbox>
-      <div style="flex: 1;"></div>
+      <div class="flex-1"></div>
       <el-button
         v-if="selectedIds.length > 0"
         type="success"
@@ -69,12 +69,12 @@
     <!-- 建议列表 -->
     <div v-if="loading" style="text-align: center; padding: 40px;">
       <el-icon class="is-loading" :size="24"><Loading /></el-icon>
-      <p style="color: #909399; margin-top: 8px;">加载中...</p>
+      <p class="text-muted mt-8">加载中...</p>
     </div>
 
-    <div v-else-if="filteredSuggestions.length === 0" style="text-align: center; padding: 60px; color: #909399;">
+    <div v-else-if="filteredSuggestions.length === 0" class="text-center text-muted" style="padding: 60px;">
       <el-icon :size="48"><CircleCheck /></el-icon>
-      <p style="margin-top: 12px;">暂无建议，点击"开始分析"让 AI 检查你的交易</p>
+      <p class="mt-12">暂无建议，点击"开始分析"让 AI 检查你的交易</p>
     </div>
 
     <div v-else>
@@ -82,15 +82,15 @@
         v-for="s in filteredSuggestions"
         :key="s.id"
         :class="['suggestion-card', `type-${s.type}`, `status-${s.status}`]"
-        style="margin-bottom: 12px;"
+        class="mb-12"
       >
-        <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div class="flex items-start gap-12">
           <el-checkbox
             v-if="s.status === 'pending'"
             v-model="s._selected"
             @change="updateSelection"
           />
-          <div style="flex: 1;">
+          <div class="flex-1">
             <!-- 标签建议 -->
             <template v-if="s.type === 'tag'">
               <div class="suggestion-header">
@@ -139,7 +139,7 @@
               </div>
               <div class="suggestion-body">
                 <p>建议分类：<strong>{{ s.suggestion.category_name }}</strong>
-                  <span v-if="s.suggestion.confidence" style="color: #909399; margin-left: 8px;">
+                  <span v-if="s.suggestion.confidence" class="text-muted ml-8">
                     置信度 {{ Math.round((s.suggestion.confidence as number) * 100) }}%
                   </span>
                 </p>
@@ -156,7 +156,7 @@
           </div>
 
           <!-- 操作按钮 -->
-          <div v-if="s.status === 'pending'" style="display: flex; gap: 8px; flex-shrink: 0;">
+          <div v-if="s.status === 'pending'" class="flex gap-8 flex-shrink-0">
             <el-button type="success" size="small" @click="handleAccept(s)">接受</el-button>
             <el-button type="danger" size="small" plain @click="handleReject(s)">拒绝</el-button>
           </div>
@@ -299,18 +299,18 @@ onMounted(async () => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 .stat-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 .suggestion-card {
   transition: all 0.2s;
 }
 .suggestion-card.status-pending {
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--color-primary);
 }
 .suggestion-card.status-accepted {
   opacity: 0.6;
@@ -326,15 +326,15 @@ onMounted(async () => {
 }
 .suggestion-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-secondary);
 }
 .suggestion-body {
   font-size: 14px;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 .reason {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 </style>

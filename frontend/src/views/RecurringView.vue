@@ -36,19 +36,19 @@
         <el-form-item label="类型">
           <el-radio-group v-model="form.type"><el-radio-button value="expense">支出</el-radio-button><el-radio-button value="income">收入</el-radio-button></el-radio-group>
         </el-form-item>
-        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
         <el-form-item label="账本">
-          <el-select v-model="form.book_id" style="width: 100%;">
+          <el-select v-model="form.book_id" class="w-full">
             <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="频率">
-          <el-select v-model="form.frequency" style="width: 100%;">
+          <el-select v-model="form.frequency" class="w-full">
             <el-option label="每天" value="daily" /><el-option label="每周" value="weekly" />
             <el-option label="每月" value="monthly" /><el-option label="每年" value="yearly" />
           </el-select>
         </el-form-item>
-        <el-form-item label="开始日期"><el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="开始日期"><el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="商户"><el-input v-model="form.merchant_name" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.description" /></el-form-item>
       </el-form>

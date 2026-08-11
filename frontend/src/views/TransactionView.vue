@@ -49,15 +49,15 @@
       </el-form>
     </el-card>
 
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <!-- 批量操作栏 -->
       <div v-if="selectedIds.length > 0" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; background: #f0f9ff; border-radius: 4px;">
-        <span style="font-size: 13px; color: #606266;">已选 {{ selectedIds.length }} 条</span>
+        <span class="text-sm text-regular">已选 {{ selectedIds.length }} 条</span>
         <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
 
-      <el-table :data="transactions" stripe v-loading="loading" style="width: 100%;"
+      <el-table :data="transactions" stripe v-loading="loading" class="w-full"
         @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" fixed />
         <el-table-column prop="transaction_time" label="时间" width="160" fixed>
@@ -70,7 +70,7 @@
           <template #default="{ row }">
             <el-tag :type="typeTag[row.type]" size="small">{{ typeMap[row.type] }}</el-tag>
             <el-tag v-if="row.is_quick_entry" size="small" type="warning" style="margin-left: 4px;">快速</el-tag>
-            <span v-if="row.type === 'transfer' && row.payment_account_id" style="font-size: 11px; color: #909399; margin-left: 4px;">
+            <span v-if="row.type === 'transfer' && row.payment_account_id" class="text-sm text-muted ml-4">
               → {{ getAccountName(row.payment_account_id) }}
             </span>
           </template>
@@ -78,33 +78,33 @@
         <el-table-column label="分类" width="120">
           <template #default="{ row }">
             <span v-if="row.category_id">{{ getCategoryPath(row.category_id, row.sub_category_id) }}</span>
-            <span v-else style="color: #c0c4cc;">未分类</span>
+            <span v-else class="text-placeholder">未分类</span>
           </template>
         </el-table-column>
         <el-table-column prop="merchant_name" label="商户" width="120" show-overflow-tooltip />
         <el-table-column label="资金来源" width="120">
           <template #default="{ row }">
             <template v-if="row.type === 'transfer'">
-              <span style="color: #909399;">{{ getAccountName(row.source_account_id) || '未知' }}</span>
+              <span class="text-muted">{{ getAccountName(row.source_account_id) || '未知' }}</span>
               <span style="margin: 0 4px;">→</span>
               <span>{{ getAccountName(row.payment_account_id) || '未知' }}</span>
             </template>
             <template v-else>
               <span v-if="row.payment_account_id">{{ getAccountName(row.payment_account_id) }}</span>
-              <span v-else style="color: #c0c4cc;">-</span>
+              <span v-else class="text-placeholder">-</span>
             </template>
           </template>
         </el-table-column>
         <el-table-column label="支付渠道" width="90">
           <template #default="{ row }">
             <span v-if="row.payment_channel_id">{{ getChannelName(row.payment_channel_id) }}</span>
-            <span v-else style="color: #c0c4cc;">-</span>
+            <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="平台" width="80">
           <template #default="{ row }">
             <span v-if="row.platform_id">{{ getPlatformName(row.platform_id) }}</span>
-            <span v-else style="color: #c0c4cc;">-</span>
+            <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="币种" width="60">
@@ -120,7 +120,7 @@
         </el-table-column>
         <el-table-column prop="amount" label="金额" align="right" width="110" fixed="right">
           <template #default="{ row }">
-            <span v-if="row.type === 'transfer'" style="color: #909399;">
+            <span v-if="row.type === 'transfer'" class="text-muted">
               {{ formatMoney(row.amount) }}
             </span>
             <span v-else :class="row.type === 'expense' ? 'text-expense' : 'text-income'">
@@ -165,14 +165,14 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="账本">
-              <el-select v-model="form.book_id" style="width: 100%;">
+              <el-select v-model="form.book_id" class="w-full">
                 <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="币种">
-              <el-select v-model="form.currency" style="width: 100%;">
+              <el-select v-model="form.currency" class="w-full">
                 <el-option label="人民币 CNY" value="CNY" />
                 <el-option label="美元 USD" value="USD" />
                 <el-option label="欧元 EUR" value="EUR" />
@@ -186,13 +186,13 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="金额">
-              <el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" />
+              <el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" class="w-full" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="时间">
               <el-date-picker v-model="form.transaction_time" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss"
-                style="width: 100%;" />
+                class="w-full" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -206,7 +206,7 @@
             clearable
             filterable
             placeholder="选择分类"
-            style="width: 100%;"
+            class="w-full"
             @change="onCategoryChange"
           />
         </el-form-item>
@@ -214,19 +214,19 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="form.type === 'transfer' ? '转出账户' : '资金来源'">
-              <el-select v-model="form.payment_account_id" clearable filterable placeholder="选择账户" style="width: 100%;">
+              <el-select v-model="form.payment_account_id" clearable filterable placeholder="选择账户" class="w-full">
                 <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item v-if="form.type === 'transfer'" label="转入账户">
-              <el-select v-model="form.destination_account_id" clearable filterable placeholder="选择目标账户" style="width: 100%;">
+              <el-select v-model="form.destination_account_id" clearable filterable placeholder="选择目标账户" class="w-full">
                 <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
               </el-select>
             </el-form-item>
             <el-form-item v-else label="支付渠道">
-              <el-select v-model="form.payment_channel_id" clearable filterable placeholder="选择渠道" style="width: 100%;">
+              <el-select v-model="form.payment_channel_id" clearable filterable placeholder="选择渠道" class="w-full">
                 <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
               </el-select>
             </el-form-item>
@@ -236,14 +236,14 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="交易平台">
-              <el-select v-model="form.platform_id" clearable filterable placeholder="选择平台" style="width: 100%;">
+              <el-select v-model="form.platform_id" clearable filterable placeholder="选择平台" class="w-full">
                 <el-option v-for="p in platforms" :key="p.id" :label="p.name" :value="p.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="付款人">
-              <el-select v-model="form.paid_by" clearable filterable placeholder="选择付款人" style="width: 100%;">
+              <el-select v-model="form.paid_by" clearable filterable placeholder="选择付款人" class="w-full">
                 <el-option v-for="m in familyMembers" :key="m.id" :label="m.nickname" :value="m.id" />
               </el-select>
             </el-form-item>
@@ -257,7 +257,7 @@
           <el-input v-model="form.description" type="textarea" :rows="2" />
         </el-form-item>
         <el-form-item label="标签">
-          <el-select v-model="form.tag_ids" multiple clearable placeholder="选择标签" style="width: 100%;">
+          <el-select v-model="form.tag_ids" multiple clearable placeholder="选择标签" class="w-full">
             <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
         </el-form-item>
@@ -268,7 +268,7 @@
           <el-row :gutter="16">
             <el-col :span="8">
               <el-form-item label="原币金额">
-                <el-input-number v-model="form.originalAmountYuan" :min="0.01" :precision="2" style="width: 100%;" />
+                <el-input-number v-model="form.originalAmountYuan" :min="0.01" :precision="2" class="w-full" />
               </el-form-item>
             </el-col>
             <el-col :span="8">
@@ -278,7 +278,7 @@
             </el-col>
             <el-col :span="8">
               <el-form-item label="汇率">
-                <el-input-number v-model="form.exchange_rate" :min="0.000001" :precision="6" style="width: 100%;" />
+                <el-input-number v-model="form.exchange_rate" :min="0.000001" :precision="6" class="w-full" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -541,6 +541,6 @@ onMounted(async () => {
 }
 .page-header h3 { margin: 0; }
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
-.text-expense { color: #f56c6c; }
-.text-income { color: #67c23a; }
+.text-expense { color: var(--color-expense); }
+.text-income { color: var(--color-income); }
 </style>

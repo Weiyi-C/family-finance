@@ -31,7 +31,7 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="阶段">
-          <el-select v-model="form.stage" style="width: 100%;">
+          <el-select v-model="form.stage" class="w-full">
             <el-option label="分类" value="classify" /><el-option label="标记" value="tag" /><el-option label="通知" value="notify" />
           </el-select>
         </el-form-item>

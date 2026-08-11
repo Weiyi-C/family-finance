@@ -5,8 +5,8 @@
       <el-card v-for="cat in categories" :key="cat.value" shadow="hover" style="cursor: pointer; text-align: center;"
         @click="selectCategory(cat.value)">
         <div style="font-size: 36px; margin-bottom: 8px;">{{ cat.icon }}</div>
-        <div style="font-weight: 500;">{{ cat.label }}</div>
-        <div style="font-size: 12px; color: #909399; margin-top: 4px;">{{ cat.desc }}</div>
+        <div class="font-medium">{{ cat.label }}</div>
+        <div class="text-sm text-muted mt-4">{{ cat.desc }}</div>
       </el-card>
     </div>
 
@@ -14,14 +14,14 @@
     <div v-if="step === 2 && categoryType === 'channel'">
       <el-form label-width="80px">
         <el-form-item label="支付渠道">
-          <el-select v-model="form.channel_id" style="width: 100%;" @change="onChannelChange">
+          <el-select v-model="form.channel_id" class="w-full" @change="onChannelChange">
             <el-option v-for="c in channelOptions" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
 
         <!-- 选择已有账号或新建 -->
         <el-form-item label="账号" v-if="existingPlatformAccounts.length > 0">
-          <el-radio-group v-model="form.existing_parent_id" style="width: 100%;">
+          <el-radio-group v-model="form.existing_parent_id" class="w-full">
             <el-radio v-for="a in existingPlatformAccounts" :key="a.id" :value="a.id" style="display: block; margin-bottom: 8px;">
               {{ a.name }}
             </el-radio>
@@ -40,7 +40,7 @@
         </template>
 
         <el-form-item label="产品类型">
-          <el-select v-model="form.type_code" style="width: 100%;" @change="onProductChange">
+          <el-select v-model="form.type_code" class="w-full" @change="onProductChange">
             <el-option v-for="p in channelProducts" :key="p.type_code" :label="`${p.icon} ${p.name}`" :value="p.type_code" />
           </el-select>
         </el-form-item>
@@ -49,7 +49,7 @@
         </el-form-item>
         <!-- 信用类产品显示额度/账单日/还款日 -->
         <template v-if="isChannelCredit">
-          <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
+          <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" class="w-full" /></el-form-item>
           <el-form-item label="账单周期" v-if="isNaturalMonthSupported">
             <el-radio-group v-model="form.billing_cycle_type">
               <el-radio-button value="fixed_day">固定账单日</el-radio-button>
@@ -57,12 +57,12 @@
             </el-radio-group>
           </el-form-item>
           <el-form-item label="账单日" v-if="form.billing_cycle_type === 'fixed_day'">
-            <el-select v-model="form.billing_day" clearable placeholder="每月几号" style="width: 100%;">
+            <el-select v-model="form.billing_day" clearable placeholder="每月几号" class="w-full">
               <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
             </el-select>
           </el-form-item>
           <el-form-item label="还款日">
-            <el-select v-model="form.due_day" clearable placeholder="每月几号" style="width: 100%;">
+            <el-select v-model="form.due_day" clearable placeholder="每月几号" class="w-full">
               <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
             </el-select>
           </el-form-item>
@@ -74,7 +74,7 @@
     <div v-if="step === 2 && categoryType === 'bank'">
       <el-form label-width="80px">
         <el-form-item label="银行">
-          <el-select v-model="form.bank_id" filterable style="width: 100%;" @change="onBankChange">
+          <el-select v-model="form.bank_id" filterable class="w-full" @change="onBankChange">
             <el-option v-for="b in banks" :key="b.id" :label="b.name" :value="b.id" />
           </el-select>
         </el-form-item>
@@ -92,24 +92,24 @@
           <el-input v-model="form.name" :placeholder="bankNamePlaceholder" />
         </el-form-item>
         <template v-if="form.bank_type === 'credit'">
-          <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" style="width: 100%;" /></el-form-item>
+          <el-form-item label="信用额度(元)"><el-input-number v-model="form.credit_limit_yuan" :min="0" :precision="2" class="w-full" /></el-form-item>
           <el-form-item label="账单日">
-            <el-select v-model="form.billing_day" clearable placeholder="每月几号" style="width: 100%;">
+            <el-select v-model="form.billing_day" clearable placeholder="每月几号" class="w-full">
               <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
             </el-select>
           </el-form-item>
           <el-form-item label="还款日">
-            <el-select v-model="form.due_day" clearable placeholder="每月几号" style="width: 100%;">
+            <el-select v-model="form.due_day" clearable placeholder="每月几号" class="w-full">
               <el-option v-for="d in dayOptions" :key="d" :label="`每月 ${d} 号`" :value="d" />
             </el-select>
           </el-form-item>
         </template>
         <template v-if="form.bank_type === 'investment'">
           <el-form-item label="关联储蓄卡">
-            <el-select v-model="form.parent_id" clearable placeholder="可选，不关联则独立显示" style="width: 100%;">
+            <el-select v-model="form.parent_id" clearable placeholder="可选，不关联则独立显示" class="w-full">
               <el-option v-for="a in savingsAccounts" :key="a.id" :label="a.name" :value="a.id" />
             </el-select>
-            <div v-if="savingsAccounts.length === 0" style="color: #e6a23c; font-size: 12px; margin-top: 4px;">
+            <div v-if="savingsAccounts.length === 0" class="text-sm text-warning mt-4">
               暂无储蓄卡，请先创建
             </div>
           </el-form-item>
@@ -121,7 +121,7 @@
     <div v-if="step === 2 && categoryType === 'other'">
       <el-form label-width="80px">
         <el-form-item label="类型">
-          <el-select v-model="form.type_code" style="width: 100%;">
+          <el-select v-model="form.type_code" class="w-full">
             <el-option label="现金" value="cash" />
             <el-option label="公交卡" value="bus_card" />
             <el-option label="饭卡" value="meal_card" />

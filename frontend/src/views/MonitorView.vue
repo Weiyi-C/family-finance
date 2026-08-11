@@ -6,27 +6,27 @@
     </div>
 
     <!-- 摘要卡片 -->
-    <el-row :gutter="16" style="margin-bottom: 16px;">
+    <el-row :gutter="16" class="mb-16">
       <el-col :span="8">
         <el-card shadow="hover">
-          <div style="text-align: center;">
-            <div style="font-size: 13px; color: #909399;">今日错误</div>
+          <div class="text-center">
+            <div class="text-sm text-muted">今日错误</div>
             <div style="font-size: 28px; font-weight: 600; color: #f56c6c; margin: 8px 0;">{{ summary.today_errors }}</div>
           </div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover">
-          <div style="text-align: center;">
-            <div style="font-size: 13px; color: #909399;">本周慢查询</div>
+          <div class="text-center">
+            <div class="text-sm text-muted">本周慢查询</div>
             <div style="font-size: 28px; font-weight: 600; color: #e6a23c; margin: 8px 0;">{{ summary.week_slow_queries }}</div>
           </div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover">
-          <div style="text-align: center;">
-            <div style="font-size: 13px; color: #909399;">服务状态</div>
+          <div class="text-center">
+            <div class="text-sm text-muted">服务状态</div>
             <div style="font-size: 28px; font-weight: 600; color: #67c23a; margin: 8px 0;">正常</div>
           </div>
         </el-card>

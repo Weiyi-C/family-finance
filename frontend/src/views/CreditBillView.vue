@@ -8,9 +8,9 @@
     </div>
 
     <!-- 生成账单 -->
-    <el-card style="margin-bottom: 16px;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="font-size: 14px; color: #606266;">生成账单：</span>
+    <el-card class="mb-16">
+      <div class="flex items-center gap-12">
+        <span class="text-regular">生成账单：</span>
         <el-date-picker
           v-model="genMonth"
           type="month"
@@ -58,7 +58,7 @@
 
     <el-dialog v-model="showPay" title="信用卡还款" width="360px">
       <el-form label-width="80px">
-        <el-form-item label="还款金额(元)"><el-input-number v-model="payYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+        <el-form-item label="还款金额(元)"><el-input-number v-model="payYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showPay = false">取消</el-button>
@@ -136,6 +136,6 @@ onMounted(load)
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h3 { margin: 0; }
-.summary-text { font-size: 14px; color: #606266; }
-.summary-text b { color: #f56c6c; }
+.summary-text { font-size: 14px; color: var(--color-text-regular); }
+.summary-text b { color: var(--color-expense); }
 </style>

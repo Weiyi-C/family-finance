@@ -6,7 +6,7 @@
     </div>
     <el-row :gutter="16">
       <el-col :span="8" v-for="goal in goals" :key="goal.id">
-        <el-card shadow="hover" style="margin-bottom: 16px;">
+        <el-card shadow="hover" class="mb-16">
           <div class="goal-header">
             <h4>{{ goal.name }}</h4>
             <el-tag :type="goal.status === 'achieved' ? 'success' : goal.status === 'abandoned' ? 'info' : ''" size="small">
@@ -38,9 +38,9 @@
     <el-dialog v-model="showDialog" :title="editingId ? '编辑目标' : '新建目标'" width="400px" destroy-on-close>
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="目标金额(元)"><el-input-number v-model="form.targetYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="开始日期"><el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
-        <el-form-item label="截止日期"><el-date-picker v-model="form.target_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="目标金额(元)"><el-input-number v-model="form.targetYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
+        <el-form-item label="开始日期"><el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
+        <el-form-item label="截止日期"><el-date-picker v-model="form.target_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
@@ -50,7 +50,7 @@
 
     <el-dialog v-model="showDeposit" title="存款" width="320px">
       <el-form label-width="80px">
-        <el-form-item label="金额(元)"><el-input-number v-model="depositYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="depositYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDeposit = false">取消</el-button>
@@ -126,6 +126,6 @@ onMounted(load)
 .goal-header { display: flex; justify-content: space-between; align-items: center; }
 .goal-header h4 { margin: 0; }
 .goal-progress { margin: 16px 0; }
-.goal-detail { display: flex; justify-content: space-between; font-size: 13px; color: #909399; margin-bottom: 8px; }
+.goal-detail { display: flex; justify-content: space-between; font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
 .goal-actions { display: flex; gap: 8px; margin-top: 12px; }
 </style>

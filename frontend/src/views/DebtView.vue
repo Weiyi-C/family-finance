@@ -49,9 +49,9 @@
           <el-radio-group v-model="form.type"><el-radio-button value="lend">借出</el-radio-button><el-radio-button value="borrow">借入</el-radio-button></el-radio-group>
         </el-form-item>
         <el-form-item label="对方"><el-input v-model="form.counterparty" /></el-form-item>
-        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="日期"><el-date-picker v-model="form.debt_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
-        <el-form-item label="到期日"><el-date-picker v-model="form.due_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="form.amountYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
+        <el-form-item label="日期"><el-date-picker v-model="form.debt_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
+        <el-form-item label="到期日"><el-date-picker v-model="form.due_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.description" type="textarea" /></el-form-item>
       </el-form>
       <template #footer>
@@ -62,8 +62,8 @@
 
     <el-dialog v-model="showRepay" title="还款" width="360px">
       <el-form label-width="80px">
-        <el-form-item label="金额(元)"><el-input-number v-model="repayForm.amountYuan" :min="0.01" :precision="2" style="width: 100%;" /></el-form-item>
-        <el-form-item label="日期"><el-date-picker v-model="repayForm.repayment_date" type="date" value-format="YYYY-MM-DD" style="width: 100%;" /></el-form-item>
+        <el-form-item label="金额(元)"><el-input-number v-model="repayForm.amountYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
+        <el-form-item label="日期"><el-date-picker v-model="repayForm.repayment_date" type="date" value-format="YYYY-MM-DD" class="w-full" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="repayForm.description" /></el-form-item>
       </el-form>
       <template #footer>

@@ -9,7 +9,7 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>备份配置</span></template>
-          <el-button type="primary" size="small" @click="showConfigDialog = true" style="margin-bottom: 12px;">新建配置</el-button>
+          <el-button type="primary" size="small" @click="showConfigDialog = true" class="mb-12">新建配置</el-button>
           <el-table :data="configs" stripe size="small">
             <el-table-column prop="backup_type" label="类型" width="80" />
             <el-table-column prop="schedule" label="计划" />
@@ -52,13 +52,13 @@
     <el-dialog v-model="showConfigDialog" title="新建备份配置" width="460px" destroy-on-close>
       <el-form :model="configForm" label-width="80px">
         <el-form-item label="类型">
-          <el-select v-model="configForm.backup_type" style="width: 100%;">
+          <el-select v-model="configForm.backup_type" class="w-full">
             <el-option label="全量" value="full" /><el-option label="增量" value="incremental" />
           </el-select>
         </el-form-item>
         <el-form-item label="计划"><el-input v-model="configForm.schedule" placeholder="如: daily, weekly, 0 2 * * *" /></el-form-item>
         <el-form-item label="目标">
-          <el-select v-model="configForm.target" style="width: 100%;">
+          <el-select v-model="configForm.target" class="w-full">
             <el-option label="本地" value="local" /><el-option label="S3" value="s3" />
           </el-select>
         </el-form-item>
