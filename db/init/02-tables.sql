@@ -30,6 +30,7 @@ CREATE TABLE users (
     phone           VARCHAR(20) UNIQUE,
     password_hash   VARCHAR(255),
     role            VARCHAR(20) DEFAULT 'member',
+    settings        JSONB DEFAULT '{}'::jsonb,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT chk_user_role CHECK (role IN ('owner', 'admin', 'member'))

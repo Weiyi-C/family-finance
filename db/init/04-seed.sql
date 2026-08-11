@@ -30,12 +30,11 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 1, 2, '早饭',     '☀️', 'expense', 1),
 (NULL, 1, 2, '午饭',     '🌞', 'expense', 2),
 (NULL, 1, 2, '晚饭',     '🌙', 'expense', 3),
-(NULL, 1, 2, '下午茶',   '🫖', 'expense', 4),
-(NULL, 1, 2, '夜宵',     '🌃', 'expense', 5),
-(NULL, 1, 2, '饮品',     '🥤', 'expense', 6),
-(NULL, 1, 2, '甜点零食', '🍰', 'expense', 7),
-(NULL, 1, 2, '水果',     '🍎', 'expense', 8),
-(NULL, 1, 2, '食材采购', '🛒', 'expense', 9);
+(NULL, 1, 2, '夜宵',     '🌃', 'expense', 4),
+(NULL, 1, 2, '饮品',     '🥤', 'expense', 5),
+(NULL, 1, 2, '甜点零食', '🍰', 'expense', 6),
+(NULL, 1, 2, '水果',     '🍎', 'expense', 7),
+(NULL, 1, 2, '食材采购', '🛒', 'expense', 8);
 
 -- 餐饮-早饭 三级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -68,14 +67,6 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, (SELECT id FROM categories WHERE name='夜宵' AND level=2), 3, '外卖',   '🛵', 'expense', 2),
 (NULL, (SELECT id FROM categories WHERE name='夜宵' AND level=2), 3, '泡面',   '🍜', 'expense', 3),
 (NULL, (SELECT id FROM categories WHERE name='夜宵' AND level=2), 3, '便利店', '🏪', 'expense', 4);
-
--- 餐饮-下午茶 三级
-INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
-(NULL, (SELECT id FROM categories WHERE name='下午茶' AND level=2), 3, '奶茶', '🧋', 'expense', 1),
-(NULL, (SELECT id FROM categories WHERE name='下午茶' AND level=2), 3, '咖啡', '☕', 'expense', 2),
-(NULL, (SELECT id FROM categories WHERE name='下午茶' AND level=2), 3, '甜点', '🧁', 'expense', 3),
-(NULL, (SELECT id FROM categories WHERE name='下午茶' AND level=2), 3, '果汁', '🧃', 'expense', 4),
-(NULL, (SELECT id FROM categories WHERE name='下午茶' AND level=2), 3, '茶饮', '🍵', 'expense', 5);
 
 -- 餐饮-饮品 三级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -162,8 +153,7 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 3, 2, '包包',     '👜', 'expense', 4),
 (NULL, 3, 2, '饰品',     '💍', 'expense', 5),
 (NULL, 3, 2, '美妆护肤', '💄', 'expense', 6),
-(NULL, 3, 2, '美容美发', '💇', 'expense', 7),
-(NULL, 3, 2, '日用品',   '🧴', 'expense', 8);
+(NULL, 3, 2, '美容美发', '💇', 'expense', 7);
 
 -- 住房 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -174,7 +164,9 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 4, 2, '维修维护',   '🔧', 'expense', 5),
 (NULL, 4, 2, '家居用品',   '🛋️', 'expense', 6),
 (NULL, 4, 2, '家政服务',   '🧹', 'expense', 7),
-(NULL, 4, 2, '装修',       '🏗️', 'expense', 8);
+(NULL, 4, 2, '装修',       '🏗️', 'expense', 8),
+(NULL, 4, 2, '日用品',     '🧴', 'expense', 9),
+(NULL, 4, 2, '家电',       '📺', 'expense', 10);
 
 -- 休闲娱乐 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -188,6 +180,13 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 5, 2, '摄影',     '📷', 'expense', 8),
 (NULL, 5, 2, '兴趣爱好', '🎨', 'expense', 9);
 
+-- 休闲娱乐-运动健身 三级
+INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
+(NULL, (SELECT id FROM categories WHERE name='运动健身' AND level=2), 3, '健身器材', '🏋️', 'expense', 1),
+(NULL, (SELECT id FROM categories WHERE name='运动健身' AND level=2), 3, '运动装备', '👟', 'expense', 2),
+(NULL, (SELECT id FROM categories WHERE name='运动健身' AND level=2), 3, '健身课程', '🧘', 'expense', 3),
+(NULL, (SELECT id FROM categories WHERE name='运动健身' AND level=2), 3, '场馆场地', '🏟️', 'expense', 4);
+
 -- 医疗健康 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
 (NULL, 6, 2, '就医',     '🏥', 'expense', 1),
@@ -195,8 +194,7 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 6, 2, '口腔',     '🦷', 'expense', 3),
 (NULL, 6, 2, '眼科',     '👁️', 'expense', 4),
 (NULL, 6, 2, '疫苗体检', '💉', 'expense', 5),
-(NULL, 6, 2, '保健调理', '🧘', 'expense', 6),
-(NULL, 6, 2, '健身器材', '🏋️', 'expense', 7);
+(NULL, 6, 2, '保健调理', '🧘', 'expense', 6);
 
 -- 教育学习 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -240,8 +238,7 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 11, 2, '电脑',     '💻', 'expense', 2),
 (NULL, 11, 2, '数码配件', '🎧', 'expense', 3),
 (NULL, 11, 2, '办公设备', '🖨️', 'expense', 4),
-(NULL, 11, 2, '家电',     '📺', 'expense', 5),
-(NULL, 11, 2, '游戏设备', '🎮', 'expense', 6);
+(NULL, 11, 2, '游戏设备', '🎮', 'expense', 5);
 
 -- 金融理财 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -255,9 +252,7 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 -- 差旅 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
 (NULL, 13, 2, '住宿',     '🏨', 'expense', 1),
-(NULL, 13, 2, '差旅餐饮', '🍽️', 'expense', 2),
-(NULL, 13, 2, '差旅交通', '🚕', 'expense', 3),
-(NULL, 13, 2, '差旅其他', '📋', 'expense', 4);
+(NULL, 13, 2, '差旅其他', '📋', 'expense', 2);
 
 -- 工作办公 二级
 INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_order) VALUES
@@ -299,7 +294,7 @@ INSERT INTO categories (family_id, parent_id, level, name, icon, type, sort_orde
 (NULL, 10000, 2, '加班费',    '⏰', 'income', 4),
 (NULL, 10000, 2, '补贴津贴',  '📋', 'income', 5),
 (NULL, 10001, 2, '兼职',      '💼', 'income', 1),
-(NULL, 10001, 2, 'freelance', '💻', 'income', 2),
+(NULL, 10001, 2, '自由职业', '💻', 'income', 2),
 (NULL, 10001, 2, '稿费',      '📝', 'income', 3),
 (NULL, 10001, 2, '咨询费',    '🗣️', 'income', 4);
 
