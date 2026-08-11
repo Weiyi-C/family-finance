@@ -32,10 +32,21 @@ def parse_wechat_csv(content: str) -> tuple[list[dict], dict]:
             direction = row.get("收/支", "").strip()
             if "不计收支" in direction:
                 continue
-            txn_type = "expense" if "支出" in direction else "income"
             status = row.get("当前状态", "").strip()
             if "已退款" in status or "退款" in status:
                 continue
+
+            # 识别 transfer 类型
+            counterparty = row.get("交易对方", "").strip()
+            description = row.get("商品", "").strip()
+            transfer_keywords = ["零钱通", "零钱提现", "转入零钱通", "零钱转入", "理财通"]
+            is_transfer = any(kw in counterparty or kw in description for kw in transfer_keywords)
+            if is_transfer:
+                txn_type = "transfer"
+            elif "支出" in direction:
+                txn_type = "expense"
+            else:
+                txn_type = "income"
 
             # 微信账单有明确的"支付方式"列
             payment_method = row.get("支付方式", "").strip()
@@ -43,10 +54,8 @@ def parse_wechat_csv(content: str) -> tuple[list[dict], dict]:
                 methods.add(payment_method)
 
             # 智能识别平台和商户
-            merchant = row.get("交易对方", "").strip()
-            description = row.get("商品", "").strip()
             detected_platform, detected_merchant = identify_platform_and_merchant(
-                merchant, description, "wechat"
+                counterparty, description, "wechat"
             )
 
             items.append({
@@ -125,12 +134,21 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
             direction = str(row_dict.get("收/支", "")).strip()
             if "不计收支" in direction:
                 continue
-            txn_type = "expense" if "支出" in direction else "income"
-
-            # 状态过滤
             status = str(row_dict.get("当前状态", "")).strip()
             if "退款" in status:
                 continue
+
+            # 识别 transfer 类型
+            merchant = str(row_dict.get("交易对方", "")).strip()
+            description = str(row_dict.get("商品", "")).strip()
+            transfer_keywords = ["零钱通", "零钱提现", "转入零钱通", "零钱转入", "理财通"]
+            is_transfer = any(kw in merchant or kw in description for kw in transfer_keywords)
+            if is_transfer:
+                txn_type = "transfer"
+            elif "支出" in direction:
+                txn_type = "expense"
+            else:
+                txn_type = "income"
 
             # 支付方式
             payment_method = str(row_dict.get("支付方式", "")).strip()
@@ -148,8 +166,6 @@ def parse_excel(content: bytes) -> tuple[list[dict], dict]:
             order_no = row_dict.get("交易单号") or row_dict.get("交易号") or ""
 
             # 智能识别平台和商户
-            merchant = str(row_dict.get("交易对方", "")).strip()
-            description = str(row_dict.get("商品", "")).strip()
             source = "wechat" if is_wechat else "unknown"
             detected_platform, detected_merchant = identify_platform_and_merchant(
                 merchant, description, source

@@ -1,5 +1,7 @@
 """账单导入 API 端点"""
 
+import re
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy import select
@@ -448,7 +450,6 @@ async def confirm_import(
             search_text = f"{counterparty} {description} {pm}"
 
             # 小荷包特殊处理：提取括号中的名称，精确匹配账户
-            import re
             xiaohebao_match = re.search(r'小荷包[（(]([^）)]+)[）)]', search_text)
             if xiaohebao_match:
                 xiaohebao_name = xiaohebao_match.group(1)
@@ -649,6 +650,25 @@ async def confirm_import(
             if not existing.import_id:
                 existing.import_id = imp.id
                 updated = True
+
+            # 跨平台互补：用更详细的描述替换模糊描述
+            new_desc = raw.get("description") or ""
+            if new_desc and existing.description:
+                old_desc = existing.description
+                if len(new_desc) > len(old_desc) or re.match(r'^消费\s*[-—]', old_desc):
+                    existing.description = new_desc
+                    updated = True
+            new_merchant = item.parsed_merchant or raw.get("merchant") or ""
+            if new_merchant and existing.merchant_name and len(new_merchant) > len(existing.merchant_name):
+                existing.merchant_name = new_merchant
+                updated = True
+
+            # 跨平台互补：用精确时间替换粗略时间（银行只有日期，时分秒为0）
+            if txn_time and existing.transaction_time:
+                if existing.transaction_time.hour == 0 and existing.transaction_time.minute == 0:
+                    if txn_time.hour != 0 or txn_time.minute != 0:
+                        existing.transaction_time = txn_time
+                        updated = True
 
             # 转账类型：更新目标账户（debit侧）
             if txn_type == "transfer" and destination_account_id and not existing.payment_account_id:

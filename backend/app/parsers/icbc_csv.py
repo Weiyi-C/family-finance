@@ -157,8 +157,13 @@ def _parse_icbc_fields(fields: list[str], card_number: str) -> dict | None:
     if venue in ("手机银行", "网上银行", "批量业务") and platform == "线下":
         platform = "工商银行"
 
-    # 识别支付宝小荷包转入（应为transfer类型）
-    if "支付宝-支付宝小荷包" in description or "支付宝-小荷包" in description:
+    # 识别内部转账（应为transfer类型）
+    transfer_venues = ["支付宝-支付宝小荷包", "支付宝-小荷包", "支付宝-余额宝",
+                       "财付通-零钱通", "财付通-零钱提现"]
+    if any(tv in venue for tv in transfer_venues):
+        txn_type = "transfer"
+    elif summary in ("预约转账",) and counterparty and not venue:
+        # 银行间转账（无交易场所，摘要为预约转账）
         txn_type = "transfer"
 
     return {
