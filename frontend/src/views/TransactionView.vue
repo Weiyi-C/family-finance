@@ -90,20 +90,20 @@
               <span>{{ getAccountName(row.payment_account_id) || '未知' }}</span>
             </template>
             <template v-else>
-              <span v-if="row.payment_account_id">{{ getAccountName(row.payment_account_id) }}</span>
+              <span v-if="row.payment_account_id" class="clickable-cell" @click="quickFilter('payment_account_id', row.payment_account_id)">{{ getAccountName(row.payment_account_id) }}</span>
               <span v-else class="text-placeholder">-</span>
             </template>
           </template>
         </el-table-column>
         <el-table-column label="支付渠道" width="90">
           <template #default="{ row }">
-            <span v-if="row.payment_channel_id">{{ getChannelName(row.payment_channel_id) }}</span>
+            <span v-if="row.payment_channel_id" class="clickable-cell" @click="quickFilter('payment_channel_id', row.payment_channel_id)">{{ getChannelName(row.payment_channel_id) }}</span>
             <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="平台" width="80">
           <template #default="{ row }">
-            <span v-if="row.platform_id">{{ getPlatformName(row.platform_id) }}</span>
+            <span v-if="row.platform_id" class="clickable-cell" @click="quickFilter('platform_id', row.platform_id)">{{ getPlatformName(row.platform_id) }}</span>
             <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
@@ -399,6 +399,13 @@ function onCategoryChange(val: number[]) {
   form.detail_category_id = val[2] || null
 }
 
+// 快捷筛选：点击表格中的账户、渠道、平台等字段直接筛选
+function quickFilter(field: string, value: number) {
+  (filters as Record<string, unknown>)[field] = value
+  page.value = 1
+  loadTransactions()
+}
+
 async function loadTransactions() {
   loading.value = true
   try {
@@ -547,4 +554,13 @@ onMounted(async () => {
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
 .text-expense { color: var(--color-expense); }
 .text-income { color: var(--color-income); }
+.clickable-cell {
+  cursor: pointer;
+  color: var(--color-primary);
+  transition: opacity 0.2s;
+}
+.clickable-cell:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
 </style>
