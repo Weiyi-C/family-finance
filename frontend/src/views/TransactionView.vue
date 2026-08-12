@@ -293,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '@/api/transactions'
@@ -442,9 +442,11 @@ function editTxn(row: Transaction) {
   form.tag_ids = row.tag_ids || []; form.book_id = row.book_id
   form.originalAmountYuan = (row.original_amount || 0) / 100
   form.original_currency = row.original_currency || ''; form.exchange_rate = row.exchange_rate || 1
-  // 构建分类路径
-  categoryPath.value = [form.category_id, form.sub_category_id, form.detail_category_id].filter(Boolean) as number[]
+  // 先打开对话框，再设置分类路径（确保 cascader 已渲染）
   showCreateDialog.value = true
+  nextTick(() => {
+    categoryPath.value = [form.category_id, form.sub_category_id, form.detail_category_id].filter(Boolean) as number[]
+  })
 }
 
 async function handleSave() {
