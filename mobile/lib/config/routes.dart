@@ -9,6 +9,11 @@ import '../features/sync/screens/sync_status_screen.dart';
 import '../features/sync/screens/conflict_resolution_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/recurring/screens/recurring_screen.dart';
+import '../features/debt/screens/debt_screen.dart';
+import '../features/savings/screens/savings_screen.dart';
+import '../features/reimbursement/screens/reimbursement_screen.dart';
+import '../features/credit_bill/screens/credit_bill_screen.dart';
 import 'main_layout.dart';
 
 final appRouter = GoRouter(
@@ -58,6 +63,26 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/conflict-resolution',
       builder: (context, state) => const ConflictResolutionScreen(),
+    ),
+    GoRoute(
+      path: '/recurring',
+      builder: (context, state) => const RecurringScreen(),
+    ),
+    GoRoute(
+      path: '/debts',
+      builder: (context, state) => const DebtScreen(),
+    ),
+    GoRoute(
+      path: '/savings',
+      builder: (context, state) => const SavingsScreen(),
+    ),
+    GoRoute(
+      path: '/reimbursements',
+      builder: (context, state) => const ReimbursementScreen(),
+    ),
+    GoRoute(
+      path: '/credit-bills',
+      builder: (context, state) => const CreditBillScreen(),
     ),
   ],
 );

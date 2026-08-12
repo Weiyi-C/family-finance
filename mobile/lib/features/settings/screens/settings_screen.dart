@@ -120,13 +120,13 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildFunctionGrid(BuildContext context) {
     final functions = [
-      ('资金账户', Icons.account_balance_wallet, () {}),
-      ('信用账单', Icons.credit_card, () {}),
-      ('预算管理', Icons.savings, () {}),
-      ('借贷管理', Icons.money, () {}),
-      ('储蓄目标', Icons.flag, () {}),
-      ('周期交易', Icons.repeat, () {}),
-      ('报销管理', Icons.receipt, () {}),
+      ('资金账户', Icons.account_balance_wallet, () => context.push('/accounts')),
+      ('信用账单', Icons.credit_card, () => context.push('/credit-bills')),
+      ('预算管理', Icons.savings, () => context.push('/budgets')),
+      ('借贷管理', Icons.money, () => context.push('/debts')),
+      ('储蓄目标', Icons.flag, () => context.push('/savings')),
+      ('周期交易', Icons.repeat, () => context.push('/recurring')),
+      ('报销管理', Icons.receipt, () => context.push('/reimbursements')),
       ('规则引擎', Icons.settings, () {}),
       ('AI助手', Icons.smart_toy, () {}),
       ('家庭管理', Icons.family_restroom, () {}),
