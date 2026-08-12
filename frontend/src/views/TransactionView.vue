@@ -40,11 +40,19 @@
             <el-option v-for="p in platforms" :key="p.id" :label="p.name" :value="p.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="币种">
+          <el-select v-model="filters.currency" clearable placeholder="全部" class="w-80">
+            <el-option label="CNY" value="CNY" /><el-option label="USD" value="USD" />
+            <el-option label="EUR" value="EUR" /><el-option label="JPY" value="JPY" />
+            <el-option label="HKD" value="HKD" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="搜索备注/商户" clearable class="w-140" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadTransactions">查询</el-button>
+          <el-button @click="clearFilters">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -115,7 +123,9 @@
           </template>
         </el-table-column>
         <el-table-column label="币种" width="60">
-          <template #default="{ row }">{{ row.currency || 'CNY' }}</template>
+          <template #default="{ row }">
+            <span class="clickable-cell" @click="quickFilter('currency', row.currency || 'CNY')">{{ row.currency || 'CNY' }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="description" label="备注" min-width="120" show-overflow-tooltip />
         <el-table-column label="标签" width="120">
@@ -345,6 +355,7 @@ const filters = reactive({
   platform_id: null as number | null,
   category_id: null as number | null,
   merchant_name: '',
+  currency: '',
 })
 
 const form = reactive({
@@ -411,6 +422,18 @@ function onCategoryChange(val: number[]) {
 // 快捷筛选：点击表格中的账户、渠道、平台等字段直接筛选
 function quickFilter(field: string, value: string | number) {
   (filters as Record<string, unknown>)[field] = value
+  page.value = 1
+  loadTransactions()
+}
+
+// 重置所有筛选条件
+function clearFilters() {
+  filters.book_id = null; filters.type = ''; filters.keyword = ''
+  filters.start_date = ''; filters.end_date = ''
+  filters.payment_account_id = null; filters.payment_channel_id = null
+  filters.platform_id = null; filters.category_id = null
+  filters.merchant_name = ''; filters.currency = ''
+  dateRange.value = null
   page.value = 1
   loadTransactions()
 }

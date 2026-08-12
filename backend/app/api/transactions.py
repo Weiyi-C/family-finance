@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, func, select, text, update
+from sqlalchemy import and_, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -224,6 +224,7 @@ async def list_transactions(
     payment_account_id: int | None = None,
     merchant_name: str | None = None,
     keyword: str | None = None,
+    currency: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
     min_amount: int | None = None,
@@ -249,7 +250,13 @@ async def list_transactions(
     if merchant_name:
         conditions.append(Transaction.merchant_name.ilike(f"%{_escape_like(merchant_name)}%", escape="\\"))
     if keyword:
-        conditions.append(Transaction.description.ilike(f"%{_escape_like(keyword)}%", escape="\\"))
+        # 关键词同时搜索备注和商户名
+        conditions.append(or_(
+            Transaction.description.ilike(f"%{_escape_like(keyword)}%", escape="\\"),
+            Transaction.merchant_name.ilike(f"%{_escape_like(keyword)}%", escape="\\"),
+        ))
+    if currency:
+        conditions.append(Transaction.currency == currency)
     if start_date:
         # Convert string date to datetime for comparison
         try:
