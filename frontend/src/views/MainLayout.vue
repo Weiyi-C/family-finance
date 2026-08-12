@@ -63,29 +63,11 @@
             </el-menu-item>
           </el-sub-menu>
 
-          <!-- 预算与统计 -->
-          <el-sub-menu index="analysis">
-            <template #title>
-              <el-icon><DataAnalysis /></el-icon>
-              <span>分析</span>
-            </template>
-            <el-menu-item index="/budgets">
-              <el-icon><Aim /></el-icon>
-              <template #title>预算管理</template>
-            </el-menu-item>
-            <el-menu-item index="/stats">
-              <el-icon><TrendCharts /></el-icon>
-              <template #title>统计报表</template>
-            </el-menu-item>
-            <el-menu-item index="/reports">
-              <el-icon><DataBoard /></el-icon>
-              <template #title>报表中心</template>
-            </el-menu-item>
-            <el-menu-item index="/insights">
-              <el-icon><TrendCharts /></el-icon>
-              <template #title>分析洞察</template>
-            </el-menu-item>
-          </el-sub-menu>
+          <!-- 预算 -->
+          <el-menu-item index="/budgets">
+            <el-icon><Aim /></el-icon>
+            <template #title>预算管理</template>
+          </el-menu-item>
 
           <!-- 报销 -->
           <el-menu-item index="/reimbursements">
@@ -215,19 +197,16 @@ const auth = useAuthStore()
 const isCollapsed = ref(false)
 const unreadCount = ref(0)
 
-const openedMenus = ref(['accounting', 'assets', 'analysis', 'settings', 'system'])
+const openedMenus = ref(['accounting', 'assets', 'settings', 'system'])
 
 const activeMenu = computed(() => route.path)
 
 const titleMap: Record<string, string> = {
-  '/': '首页',
+  '/': '数据分析',
   '/transactions': '交易记录',
   '/accounts': '资金账户',
   '/categories': '分类管理',
   '/budgets': '预算管理',
-  '/stats': '统计报表',
-  '/reports': '报表中心',
-  '/insights': '分析洞察',
   '/debts': '借贷管理',
   '/savings': '储蓄目标',
   '/credit-bills': '信用账单',
