@@ -46,11 +46,19 @@ export const useThemeStore = defineStore('theme', () => {
 
     // 主色调
     html.style.setProperty('--color-primary', effectivePrimary.value)
-    // 计算浅色变体（混入白色）
     html.style.setProperty('--color-primary-light', lightenColor(effectivePrimary.value, 0.2))
     html.style.setProperty('--color-primary-dark', darkenColor(effectivePrimary.value, 0.1))
-    // Element Plus 主色覆盖
+    // Element Plus 主色覆盖（含派生色）
     html.style.setProperty('--el-color-primary', effectivePrimary.value)
+    html.style.setProperty('--el-color-primary-light-3', lightenColor(effectivePrimary.value, 0.3))
+    html.style.setProperty('--el-color-primary-light-5', lightenColor(effectivePrimary.value, 0.5))
+    html.style.setProperty('--el-color-primary-light-7', lightenColor(effectivePrimary.value, 0.7))
+    html.style.setProperty('--el-color-primary-light-8', lightenColor(effectivePrimary.value, 0.8))
+    html.style.setProperty('--el-color-primary-light-9', lightenColor(effectivePrimary.value, 0.9))
+    html.style.setProperty('--el-color-primary-dark-2', darkenColor(effectivePrimary.value, 0.2))
+    // 菜单颜色
+    html.style.setProperty('--el-menu-active-color', effectivePrimary.value)
+    html.style.setProperty('--el-menu-hover-text-color', effectivePrimary.value)
   }
 
   function init() {

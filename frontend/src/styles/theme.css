@@ -103,3 +103,8 @@ html.dark[data-sidebar-theme="light"] {
 
 /* ==================== 自定义主色调覆盖 ==================== */
 /* 通过 JS 设置 --color-primary 等变量即可覆盖 */
+/* Element Plus 菜单/组件颜色跟随主色 */
+:root {
+  --el-menu-active-color: var(--color-primary, #409eff);
+  --el-menu-hover-text-color: var(--color-primary, #409eff);
+}
