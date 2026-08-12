@@ -64,11 +64,13 @@
           <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
         </el-table-column>
         <el-table-column label="账本" width="80">
-          <template #default="{ row }">{{ getBookName(row.book_id) }}</template>
+          <template #default="{ row }">
+            <span v-if="row.book_id" class="clickable-cell" @click="quickFilter('book_id', row.book_id)">{{ getBookName(row.book_id) }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="type" label="类型" width="120">
           <template #default="{ row }">
-            <el-tag :type="typeTag[row.type]" size="small">{{ typeMap[row.type] }}</el-tag>
+            <el-tag :type="typeTag[row.type]" size="small" class="clickable-cell" @click="quickFilter('type', row.type)">{{ typeMap[row.type] }}</el-tag>
             <el-tag v-if="row.is_quick_entry" size="small" type="warning" class="ml-4">快速</el-tag>
             <span v-if="row.type === 'transfer' && row.payment_account_id" class="text-sm text-muted ml-4">
               → {{ getAccountName(row.payment_account_id) }}
@@ -77,11 +79,16 @@
         </el-table-column>
         <el-table-column label="分类" width="120">
           <template #default="{ row }">
-            <span v-if="row.category_id">{{ getCategoryPath(row.category_id, row.sub_category_id) }}</span>
+            <span v-if="row.category_id" class="clickable-cell" @click="quickFilter('category_id', row.category_id)">{{ getCategoryPath(row.category_id, row.sub_category_id) }}</span>
             <span v-else class="text-placeholder">未分类</span>
           </template>
         </el-table-column>
-        <el-table-column prop="merchant_name" label="商户" width="120" show-overflow-tooltip />
+        <el-table-column prop="merchant_name" label="商户" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.merchant_name" class="clickable-cell" @click="quickFilter('merchant_name', row.merchant_name)">{{ row.merchant_name }}</span>
+            <span v-else class="text-placeholder">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="资金来源" width="120">
           <template #default="{ row }">
             <template v-if="row.type === 'transfer'">
@@ -336,6 +343,8 @@ const filters = reactive({
   payment_account_id: null as number | null,
   payment_channel_id: null as number | null,
   platform_id: null as number | null,
+  category_id: null as number | null,
+  merchant_name: '',
 })
 
 const form = reactive({
@@ -400,7 +409,7 @@ function onCategoryChange(val: number[]) {
 }
 
 // 快捷筛选：点击表格中的账户、渠道、平台等字段直接筛选
-function quickFilter(field: string, value: number) {
+function quickFilter(field: string, value: string | number) {
   (filters as Record<string, unknown>)[field] = value
   page.value = 1
   loadTransactions()
@@ -556,7 +565,6 @@ onMounted(async () => {
 .text-income { color: var(--color-income); }
 .clickable-cell {
   cursor: pointer;
-  color: var(--color-primary);
   transition: opacity 0.2s;
 }
 .clickable-cell:hover {
