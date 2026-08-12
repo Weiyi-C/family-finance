@@ -1,15 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../core/network/network_status.dart';
 
-class MainLayout extends StatelessWidget {
+class MainLayout extends ConsumerWidget {
   final Widget child;
   
   const MainLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final networkStatus = ref.watch(networkStatusProvider);
+    final isOffline = networkStatus == NetworkStatus.offline;
+
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          // 离线状态栏
+          if (isOffline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              color: Colors.orange,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                  const SizedBox(width: 8),
+                  Text(
+                    '离线模式',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _getCurrentIndex(context),
         onTap: (index) => _onTap(context, index),
@@ -43,7 +72,7 @@ class MainLayout extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: 打开记账页面
+          context.push('/create-transaction');
         },
         child: const Icon(Icons.add),
       ),
@@ -69,7 +98,7 @@ class MainLayout extends StatelessWidget {
         context.go('/transactions');
         break;
       case 2:
-        // TODO: 打开记账页面
+        context.push('/create-transaction');
         break;
       case 3:
         context.go('/statistics');

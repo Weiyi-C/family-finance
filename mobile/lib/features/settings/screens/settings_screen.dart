@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -201,7 +202,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('http://192.168.1.100:8080'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: 打开服务器配置
+              context.push('/server-config');
             },
           ),
           const Divider(height: 1),
@@ -211,7 +212,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('最后同步：2026-08-13 16:30'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: 打开同步设置
+              context.push('/sync-status');
             },
           ),
           const Divider(height: 1),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../../core/network/network_status.dart';
+import '../providers/offline_transaction_provider.dart';
 
 class CreateTransactionScreen extends ConsumerStatefulWidget {
   const CreateTransactionScreen({super.key});
@@ -17,6 +19,7 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
   int? _categoryId;
   int? _accountId;
   DateTime _transactionTime = DateTime.now();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -28,13 +31,39 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
 
   @override
   Widget build(BuildContext context) {
+    final networkStatus = ref.watch(networkStatusProvider);
+    final isOffline = networkStatus == NetworkStatus.offline;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('记一笔'),
         actions: [
+          if (isOffline)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                  SizedBox(width: 4),
+                  Text('离线', style: TextStyle(color: Colors.white, fontSize: 12)),
+                ],
+              ),
+            ),
           TextButton(
-            onPressed: _handleSubmit,
-            child: const Text('保存'),
+            onPressed: _isSubmitting ? null : _handleSubmit,
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('保存'),
           ),
         ],
       ),
@@ -43,6 +72,29 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 离线提示
+            if (isOffline)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '当前处于离线模式，交易将保存在本地，联网后自动同步',
+                        style: TextStyle(color: Colors.orange[700], fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // 类型选择
             _buildTypeSelector(),
             const SizedBox(height: 24),
@@ -75,6 +127,28 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
                 labelText: '备注',
                 prefixIcon: Icon(Icons.note),
               ),
+            ),
+            const SizedBox(height: 24),
+            // 保存按钮
+            ElevatedButton(
+              onPressed: _isSubmitting ? null : _handleSubmit,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isSubmitting
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 12),
+                        Text('保存中...'),
+                      ],
+                    )
+                  : const Text('保存'),
             ),
           ],
         ),
@@ -173,15 +247,62 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入金额')),
       );
       return;
     }
-    
-    // TODO: 调用创建交易API
-    Navigator.pop(context);
+
+    final amount = double.tryParse(_amountController.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入有效金额')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final data = {
+        'type': _type,
+        'amount': (amount * 100).toInt(), // 转为分
+        'merchant_name': _merchantController.text.isNotEmpty ? _merchantController.text : null,
+        'description': _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+        'category_id': _categoryId,
+        'payment_account_id': _accountId,
+        'transaction_time': _transactionTime.toIso8601String(),
+        'book_id': 1, // TODO: 从用户设置获取
+      };
+
+      await ref.read(offlineTransactionProvider.notifier).createTransaction(data);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(networkStatusProvider) == NetworkStatus.online
+                ? '交易已保存并同步'
+                : '交易已保存，将在联网后同步'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 }
