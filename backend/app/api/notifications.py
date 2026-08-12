@@ -99,4 +99,15 @@ async def trigger_notification_check(
     results = await process_notifications(db, current_user.family_id, current_user.id)
     total = sum(results.values())
     return {"message": f"检查完成，发现 {total} 条提醒", "results": results}
-    return {"message": "全部已读"}
+
+
+@router.post("/api/notifications/clean-check")
+async def trigger_clean_check(
+    window_days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """手动触发数据质量检查"""
+    from app.services.clean_service import run_clean_checks
+    results = await run_clean_checks(db, current_user.family_id, current_user.id, window_days)
+    return {"message": "数据质量检查完成", "results": results}
