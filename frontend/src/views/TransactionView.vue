@@ -98,8 +98,8 @@
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
 
-      <el-table :data="transactions" stripe v-loading="loading" class="w-full"
-        @selection-change="handleSelectionChange">
+      <el-table :data="transactions" stripe v-loading="loading" class="w-full" resizable
+        :max-height="tableMaxHeight" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="45" fixed />
         <el-table-column prop="transaction_time" label="时间" width="160" fixed>
           <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
@@ -192,10 +192,12 @@
       <div class="pagination">
         <el-pagination
           v-model:current-page="page"
-          :page-size="pageSize"
+          v-model:page-size="pageSize"
+          :page-sizes="[20, 50, 100, 200]"
           :total="total"
-          layout="prev, pager, next, total"
+          layout="sizes, prev, pager, next, total"
           @current-change="loadTransactions"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
@@ -370,7 +372,7 @@ const tags = ref<Tag[]>([])
 const books = ref<AccountBook[]>([])
 const familyMembers = ref<FamilyMember[]>([])
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const total = ref(0)
 const dateRange = ref<[string, string] | null>(null)
 const showCreateDialog = ref(false)
@@ -379,6 +381,11 @@ const categoryPath = ref<number[]>([])
 
 const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '资金转移' }
 const typeTag: Record<string, string> = { expense: 'danger', income: 'success', transfer: 'info' }
+
+// 表格最大高度（视口高度减去筛选栏等区域），实现固定表头
+const tableMaxHeight = computed(() => {
+  return window.innerHeight - 320
+})
 
 const filters = reactive({
   book_id: null as number | null,
@@ -481,7 +488,7 @@ function clearFilters() {
 async function loadTransactions() {
   loading.value = true
   try {
-    const params: Record<string, unknown> = { ...filters, page: page.value, page_size: pageSize }
+    const params: Record<string, unknown> = { ...filters, page: page.value, page_size: pageSize.value }
     Object.keys(params).forEach((k) => {
       if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k]
     })
@@ -491,6 +498,11 @@ async function loadTransactions() {
     total.value = data.total || (Array.isArray(data) ? data.length : 0)
   } catch { ElMessage.error('加载交易失败') }
   finally { loading.value = false }
+}
+
+function onPageSizeChange() {
+  page.value = 1
+  loadTransactions()
 }
 
 function openCreate() {
