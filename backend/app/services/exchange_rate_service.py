@@ -3,7 +3,6 @@
 import httpx
 import structlog
 from datetime import date
-from sqlalchemy import select, and_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models.monitoring import ExchangeRate
@@ -68,7 +67,7 @@ async def update_exchange_rates() -> int:
                     base_currency="CNY",
                     target_currency=target_currency,
                     rate=rate,
-                    rate_type="spot",
+                    rate_type="market",
                     source="open.er-api.com",
                     rate_date=today,
                 ).on_conflict_do_update(

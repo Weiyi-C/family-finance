@@ -21,11 +21,11 @@ class ExchangeRate(Base):
     __tablename__ = "exchange_rates"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    base_currency: Mapped[str] = mapped_column(String(10), nullable=False)
-    target_currency: Mapped[str] = mapped_column(String(10), nullable=False)
-    rate: Mapped[float] = mapped_column(Numeric(15, 6), nullable=False)
-    rate_type: Mapped[str] = mapped_column(String(20), default="spot")
-    source: Mapped[str | None] = mapped_column(String(50))
+    base_currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    target_currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    rate: Mapped[float] = mapped_column(Numeric(12, 6), nullable=False)
+    rate_type: Mapped[str] = mapped_column(String(20), default="market")
+    source: Mapped[str | None] = mapped_column(String(30))
     rate_date: Mapped[str] = mapped_column(Date, nullable=False)
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

@@ -66,7 +66,7 @@ async def create_rate(
         base_currency=base,
         target_currency=target,
         rate=rate,
-        rate_type=body.get("rate_type", "spot"),
+        rate_type=body.get("rate_type", "market"),
         source=body.get("source", "manual"),
         rate_date=date.fromisoformat(rate_date),
     )
