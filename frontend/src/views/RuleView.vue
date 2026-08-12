@@ -44,6 +44,7 @@
           <el-select v-model="form.stage" class="w-full">
             <el-option label="自动分类" value="classify" />
             <el-option label="自动标记" value="tag" />
+            <el-option label="后处理" value="process" />
             <el-option label="提醒通知" value="notify" disabled />
           </el-select>
         </el-form-item>
@@ -122,7 +123,7 @@ import { getCategoriesFlat } from '@/api/categories'
 import type { AutomationRule } from '@/api/rules'
 import type { Category } from '@/types'
 
-const stageMap: Record<string, string> = { classify: '自动分类', tag: '自动标记', notify: '提醒通知' }
+const stageMap: Record<string, string> = { classify: '自动分类', tag: '自动标记', notify: '提醒通知', process: '后处理' }
 
 const loading = ref(false)
 const saving = ref(false)

@@ -212,10 +212,14 @@ async def create_transaction(
     await db.commit()
     await db.refresh(debit)
 
-    # 自动更新信用账单
-    if body.type == "expense" and actual_account:
-        from app.api.credit_bills import auto_update_credit_bill
-        await auto_update_credit_bill(db, current_user.family_id, actual_account, body.transaction_time)
+    # 后处理流水线（信用账单更新、预算检查、规则执行）
+    from app.services.process_service import run_process_pipeline
+    await run_process_pipeline(
+        db, current_user.family_id, current_user.id,
+        event="created", txn_type=body.type,
+        account_id=actual_account, category_id=body.category_id,
+        amount=body.amount, txn_time=body.transaction_time,
+    )
 
     logger.info("transaction_created", entry_id=entry_id, type=body.type, amount=body.amount)
     return await _to_response(debit, body.tag_ids, db)
@@ -392,10 +396,14 @@ async def delete_transaction(
         txn.is_deleted = True
     await db.commit()
 
-    # 自动更新信用账单
-    if txn.type == "expense" and txn.payment_account_id:
-        from app.api.credit_bills import auto_update_credit_bill
-        await auto_update_credit_bill(db, current_user.family_id, txn.payment_account_id, txn.transaction_time)
+    # 后处理流水线
+    from app.services.process_service import run_process_pipeline
+    await run_process_pipeline(
+        db, current_user.family_id, current_user.id,
+        event="deleted", txn_type=txn.type,
+        account_id=txn.payment_account_id, category_id=txn.category_id,
+        amount=txn.amount, txn_time=txn.transaction_time,
+    )
 
     logger.info("transaction_deleted", txn_id=txn_id)
 
@@ -471,10 +479,14 @@ async def batch_create(
         db.add(debit_txn)
         created.append(entry_id)
 
-        # 自动更新信用账单
-        if txn_type == "expense" and actual_account:
-            from app.api.credit_bills import auto_update_credit_bill
-            await auto_update_credit_bill(db, current_user.family_id, actual_account, txn_time)
+        # 后处理流水线
+        from app.services.process_service import run_process_pipeline
+        await run_process_pipeline(
+            db, current_user.family_id, current_user.id,
+            event="created", txn_type=txn_type,
+            account_id=actual_account, category_id=item.get("category_id"),
+            amount=item.get("amount", 0), txn_time=txn_time,
+        )
 
     await db.commit()
     return {"created": len(created), "entry_ids": created}
