@@ -1,6 +1,6 @@
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -20,8 +20,8 @@ async def list_aliases(
 ):
     result = await db.execute(
         select(MerchantAlias)
-        .where(MerchantAlias.family_id == current_user.family_id)
-        .order_by(MerchantAlias.hit_count.desc())
+        .where(or_(MerchantAlias.family_id == current_user.family_id, MerchantAlias.family_id.is_(None)))
+        .order_by(MerchantAlias.hit_count.desc(), MerchantAlias.family_id.nulls_last())
     )
     return [AliasResponse.model_validate(a) for a in result.scalars()]
 

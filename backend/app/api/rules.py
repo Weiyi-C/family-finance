@@ -1,6 +1,6 @@
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -20,8 +20,8 @@ async def list_rules(
 ):
     result = await db.execute(
         select(AutomationRule)
-        .where(AutomationRule.family_id == current_user.family_id)
-        .order_by(AutomationRule.priority.desc())
+        .where(or_(AutomationRule.family_id == current_user.family_id, AutomationRule.family_id.is_(None)))
+        .order_by(AutomationRule.priority.desc(), AutomationRule.family_id.nulls_last())
     )
     return [RuleResponse.model_validate(r) for r in result.scalars()]
 
