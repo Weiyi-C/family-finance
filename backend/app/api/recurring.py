@@ -17,26 +17,20 @@ from app.schemas.recurring import (
     RecurringResponse,
     RecurringUpdate,
 )
+from app.services.recurring_service import calc_next_generate, process_recurring
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/recurring", tags=["周期性交易"])
 
 
-def _calc_next_generate(frequency: str, from_date: date, day_of_month: int | None,
-                        day_of_week: int | None, interval_value: int) -> date:
-    if frequency == "daily":
-        return from_date + timedelta(days=interval_value)
-    if frequency == "weekly":
-        return from_date + timedelta(weeks=interval_value)
-    if frequency == "monthly":
-        m = from_date.month + interval_value
-        y = from_date.year + (m - 1) // 12
-        m = (m - 1) % 12 + 1
-        d = min(day_of_month or from_date.day, monthrange(y, m)[1])
-        return date(y, m, d)
-    if frequency == "yearly":
-        return date(from_date.year + interval_value, day_of_month or from_date.month, from_date.day)
-    return from_date + timedelta(days=1)
+@router.post("/process")
+async def trigger_process(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """手动触发周期交易处理"""
+    count = await process_recurring(db, current_user.family_id)
+    return {"message": f"处理完成，生成 {count} 笔交易", "processed": count}
 
 
 @router.get("", response_model=list[RecurringResponse])
@@ -200,7 +194,7 @@ async def generate_transaction(
 
     recurring.last_generated = today
     recurring.total_generated += 1
-    recurring.next_generate = _calc_next_generate(
+    recurring.next_generate = calc_next_generate(
         recurring.frequency, scheduled,
         recurring.day_of_month, recurring.day_of_week,
         recurring.interval_value,
