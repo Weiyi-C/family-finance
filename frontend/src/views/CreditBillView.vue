@@ -4,6 +4,10 @@
       <h3>信用账单</h3>
       <div>
         <span class="summary-text" v-if="summary">待还总额: <b>{{ formatMoney(summary.total_due) }}</b> ({{ summary.bill_count }}笔)</span>
+        <el-button type="primary" class="ml-16" :loading="generating" @click="handleGenerate">
+          <el-icon><Refresh /></el-icon>
+          刷新账单
+        </el-button>
       </div>
     </div>
 
@@ -56,12 +60,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getCreditBills, payCreditBill, getCreditBillSummary } from '@/api/creditBills'
+import { Refresh } from '@element-plus/icons-vue'
+import { getCreditBills, payCreditBill, getCreditBillSummary, generateCreditBills } from '@/api/creditBills'
 import { getAccounts } from '@/api/accounts'
 import type { CreditBill } from '@/api/creditBills'
 import type { PaymentAccount } from '@/types'
 
 const loading = ref(false)
+const generating = ref(false)
 const bills = ref<CreditBill[]>([])
 const accounts = ref<PaymentAccount[]>([])
 const summary = ref<{ total_due: number; bill_count: number } | null>(null)
@@ -98,6 +104,17 @@ async function handlePay() {
   if (!payYuan.value) { ElMessage.warning('请填写金额'); return }
   try { await payCreditBill(payBillId.value, Math.round(payYuan.value * 100)); ElMessage.success('还款成功'); showPay.value = false; await load() }
   catch { ElMessage.error('还款失败') }
+}
+
+async function handleGenerate() {
+  const now = new Date()
+  generating.value = true
+  try {
+    const res = await generateCreditBills(now.getFullYear(), now.getMonth() + 1)
+    ElMessage.success(res.data.message)
+    await load()
+  } catch { ElMessage.error('刷新账单失败') }
+  finally { generating.value = false }
 }
 
 onMounted(load)

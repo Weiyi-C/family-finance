@@ -219,6 +219,7 @@ async def create_transaction(
         event="created", txn_type=body.type,
         account_id=actual_account, category_id=body.category_id,
         amount=body.amount, txn_time=body.transaction_time,
+        destination_account_id=actual_dest if body.type == "transfer" else None,
     )
 
     logger.info("transaction_created", entry_id=entry_id, type=body.type, amount=body.amount)

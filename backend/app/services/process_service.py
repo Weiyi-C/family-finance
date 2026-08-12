@@ -38,6 +38,7 @@ async def run_process_pipeline(
     category_id: int | None,
     amount: int,
     txn_time: datetime,
+    destination_account_id: int | None = None,
 ):
     """交易后处理流水线
 
@@ -47,26 +48,33 @@ async def run_process_pipeline(
         user_id: 操作用户ID
         event: 事件类型 (created/deleted)
         txn_type: 交易类型 (expense/income/transfer)
-        account_id: 账户ID
+        account_id: 账户ID（源账户）
         category_id: 分类ID
         amount: 金额（分）
         txn_time: 交易时间
+        destination_account_id: 目标账户ID（转账时使用）
     """
     results = {}
 
-    # 1. 信用账单更新
+    # 1. 信用账单更新（支出时更新账单金额）
     if txn_type == "expense" and account_id:
         bill_updated = await _update_credit_bill(db, family_id, account_id, txn_time)
         if bill_updated:
             results["credit_bill"] = True
 
-    # 2. 预算检查（仅支出交易创建时）
+    # 2. 转账还款识别（转账到信用账户时自动更新还款状态）
+    if txn_type == "transfer" and destination_account_id:
+        repay_updated = await _process_transfer_repay(db, family_id, destination_account_id, amount, txn_time)
+        if repay_updated:
+            results["credit_repay"] = True
+
+    # 3. 预算检查（仅支出交易创建时）
     if event == "created" and txn_type == "expense":
         budget_alert = await _check_budget_after_expense(db, family_id, user_id, category_id, amount, txn_time)
         if budget_alert:
             results["budget_alert"] = True
 
-    # 3. 自动化规则执行（process 阶段）
+    # 4. 自动化规则执行（process 阶段）
     rule_results = await _execute_process_rules(db, family_id, event, txn_type, account_id, category_id, amount)
     if rule_results:
         results["rules"] = rule_results
@@ -86,6 +94,76 @@ async def _update_credit_bill(db: AsyncSession, family_id: int, account_id: int,
     except Exception as e:
         logger.error("process_credit_bill_error", error=str(e))
         return False
+
+
+async def _process_transfer_repay(
+    db: AsyncSession, family_id: int, destination_account_id: int, amount: int, txn_time: datetime
+) -> bool:
+    """处理转账还款：转账到信用账户时自动更新账单还款状态
+    
+    当用户从储蓄卡转账到信用卡/花呗等信用账户时，视为还款操作。
+    自动更新对应月份的信用账单的已还金额。
+    """
+    # 查询目标账户是否是信用账户
+    account_result = await db.execute(
+        select(PaymentAccount).where(
+            PaymentAccount.id == destination_account_id,
+            PaymentAccount.type_code.in_(CREDIT_TYPES),
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    if not account:
+        return False  # 非信用账户，不是还款操作
+
+    # 确定账单月份（根据交易时间）
+    target_year = txn_time.year
+    target_month = txn_time.month
+
+    # 查找该月的信用账单
+    bill_result = await db.execute(
+        select(CreditCardBill).where(
+            CreditCardBill.account_id == destination_account_id,
+            CreditCardBill.family_id == family_id,
+            CreditCardBill.bill_year == target_year,
+            CreditCardBill.bill_month == target_month,
+        )
+    )
+    bill = bill_result.scalar_one_or_none()
+
+    if not bill:
+        # 没有找到对应账单，可能是新月份，尝试生成
+        await auto_update_credit_bill(db, family_id, destination_account_id, txn_time)
+        # 重新查找
+        bill_result = await db.execute(
+            select(CreditCardBill).where(
+                CreditCardBill.account_id == destination_account_id,
+                CreditCardBill.family_id == family_id,
+                CreditCardBill.bill_year == target_year,
+                CreditCardBill.bill_month == target_month,
+            )
+        )
+        bill = bill_result.scalar_one_or_none()
+
+    if bill:
+        # 更新已还金额
+        bill.paid_amount += amount
+        # 更新状态
+        if bill.paid_amount >= bill.total_amount:
+            bill.status = "paid"
+        elif bill.paid_amount > 0:
+            bill.status = "partial"
+        
+        logger.info(
+            "credit_repay_detected",
+            account_id=destination_account_id,
+            amount=amount,
+            bill_year=target_year,
+            bill_month=target_month,
+            new_paid=bill.paid_amount,
+        )
+        return True
+
+    return False
 
 
 async def _check_budget_after_expense(

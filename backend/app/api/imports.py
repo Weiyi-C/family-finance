@@ -750,6 +750,16 @@ async def confirm_import(
         if suggested_tags:
             await auto_assign_tags(db, current_user.family_id, entry_id, suggested_tags)
 
+        # 后处理流水线（信用账单更新、预算检查等）
+        from app.services.process_service import run_process_pipeline
+        await run_process_pipeline(
+            db, current_user.family_id, current_user.id,
+            event="created", txn_type=txn_type,
+            account_id=account_id, category_id=category_id,
+            amount=amount, txn_time=txn_time,
+            destination_account_id=destination_account_id if txn_type == "transfer" else None,
+        )
+
         item.action = "imported"
         item.matched_txn_id = entry_id
         created += 1
