@@ -25,9 +25,18 @@
               <el-icon><List /></el-icon>
               <span>记账</span>
             </template>
-            <el-menu-item index="/transactions">交易记录</el-menu-item>
-            <el-menu-item index="/recurring">周期交易</el-menu-item>
-            <el-menu-item index="/import">导入/导出</el-menu-item>
+            <el-menu-item index="/transactions">
+              <el-icon><Tickets /></el-icon>
+              <template #title>交易记录</template>
+            </el-menu-item>
+            <el-menu-item index="/recurring">
+              <el-icon><Clock /></el-icon>
+              <template #title>周期交易</template>
+            </el-menu-item>
+            <el-menu-item index="/import">
+              <el-icon><Upload /></el-icon>
+              <template #title>导入/导出</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 账户管理 -->
@@ -36,10 +45,22 @@
               <el-icon><CreditCard /></el-icon>
               <span>账户</span>
             </template>
-            <el-menu-item index="/accounts">资金账户</el-menu-item>
-            <el-menu-item index="/credit-bills">信用卡账单</el-menu-item>
-            <el-menu-item index="/debts">借贷管理</el-menu-item>
-            <el-menu-item index="/savings">储蓄目标</el-menu-item>
+            <el-menu-item index="/accounts">
+              <el-icon><Wallet /></el-icon>
+              <template #title>资金账户</template>
+            </el-menu-item>
+            <el-menu-item index="/credit-bills">
+              <el-icon><Document /></el-icon>
+              <template #title>信用卡账单</template>
+            </el-menu-item>
+            <el-menu-item index="/debts">
+              <el-icon><Money /></el-icon>
+              <template #title>借贷管理</template>
+            </el-menu-item>
+            <el-menu-item index="/savings">
+              <el-icon><Coin /></el-icon>
+              <template #title>储蓄目标</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 预算与统计 -->
@@ -48,8 +69,14 @@
               <el-icon><DataAnalysis /></el-icon>
               <span>分析</span>
             </template>
-            <el-menu-item index="/budgets">预算管理</el-menu-item>
-            <el-menu-item index="/stats">统计报表</el-menu-item>
+            <el-menu-item index="/budgets">
+              <el-icon><Aim /></el-icon>
+              <template #title>预算管理</template>
+            </el-menu-item>
+            <el-menu-item index="/stats">
+              <el-icon><TrendCharts /></el-icon>
+              <template #title>统计报表</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 报销 -->
@@ -64,11 +91,26 @@
               <el-icon><Setting /></el-icon>
               <span>设置</span>
             </template>
-            <el-menu-item index="/books">账本管理</el-menu-item>
-            <el-menu-item index="/categories">分类管理</el-menu-item>
-            <el-menu-item index="/tags">标签管理</el-menu-item>
-            <el-menu-item index="/aliases">商户别名</el-menu-item>
-            <el-menu-item index="/rules">规则引擎</el-menu-item>
+            <el-menu-item index="/books">
+              <el-icon><Notebook /></el-icon>
+              <template #title>账本管理</template>
+            </el-menu-item>
+            <el-menu-item index="/categories">
+              <el-icon><Menu /></el-icon>
+              <template #title>分类管理</template>
+            </el-menu-item>
+            <el-menu-item index="/tags">
+              <el-icon><PriceTag /></el-icon>
+              <template #title>标签管理</template>
+            </el-menu-item>
+            <el-menu-item index="/aliases">
+              <el-icon><Connection /></el-icon>
+              <template #title>商户别名</template>
+            </el-menu-item>
+            <el-menu-item index="/rules">
+              <el-icon><Operation /></el-icon>
+              <template #title>规则引擎</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 系统 -->
@@ -77,13 +119,34 @@
               <el-icon><SetUp /></el-icon>
               <span>系统</span>
             </template>
-            <el-menu-item index="/family">家庭管理</el-menu-item>
-            <el-menu-item index="/settings">个人设置</el-menu-item>
-            <el-menu-item index="/notifications">通知</el-menu-item>
-            <el-menu-item index="/backup">备份恢复</el-menu-item>
-            <el-menu-item index="/sync">数据同步</el-menu-item>
-            <el-menu-item index="/monitor">系统监控</el-menu-item>
-            <el-menu-item index="/ai-assistant">AI 助手</el-menu-item>
+            <el-menu-item index="/family">
+              <el-icon><User /></el-icon>
+              <template #title>家庭管理</template>
+            </el-menu-item>
+            <el-menu-item index="/settings">
+              <el-icon><UserFilled /></el-icon>
+              <template #title>个人设置</template>
+            </el-menu-item>
+            <el-menu-item index="/notifications">
+              <el-icon><Bell /></el-icon>
+              <template #title>通知</template>
+            </el-menu-item>
+            <el-menu-item index="/backup">
+              <el-icon><FolderOpened /></el-icon>
+              <template #title>备份恢复</template>
+            </el-menu-item>
+            <el-menu-item index="/sync">
+              <el-icon><Refresh /></el-icon>
+              <template #title>数据同步</template>
+            </el-menu-item>
+            <el-menu-item index="/monitor">
+              <el-icon><Monitor /></el-icon>
+              <template #title>系统监控</template>
+            </el-menu-item>
+            <el-menu-item index="/ai-assistant">
+              <el-icon><MagicStick /></el-icon>
+              <template #title>AI 助手</template>
+            </el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-scrollbar>
@@ -134,6 +197,8 @@ import { getUnreadCount } from '@/api/notifications'
 import {
   HomeFilled, List, CreditCard, DataAnalysis, Document, Setting, SetUp,
   Fold, Expand, ArrowDown, UserFilled, Wallet, Bell,
+  Tickets, Clock, Upload, Money, Coin, Aim, TrendCharts,
+  Notebook, Menu, PriceTag, Connection, Operation, User, Refresh, Monitor, MagicStick,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -231,7 +296,6 @@ onMounted(loadUnreadCount)
   color: var(--sidebar-text) !important;
   height: 44px;
   line-height: 44px;
-  padding-left: 56px !important;
 }
 .sidebar-menu .el-menu-item:hover {
   background: var(--sidebar-bg-hover) !important;
@@ -243,10 +307,18 @@ onMounted(loadUnreadCount)
 }
 .sidebar-menu :deep(.el-sub-menu__title) {
   color: var(--sidebar-text) !important;
+  background: transparent !important;
 }
 .sidebar-menu :deep(.el-sub-menu__title:hover) {
   background: var(--sidebar-bg-hover) !important;
   color: var(--sidebar-text-active) !important;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu) {
+  background: transparent !important;
+}
+.sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item) {
+  padding-left: 56px !important;
+  min-width: auto;
 }
 .collapse-btn {
   padding: 14px;
