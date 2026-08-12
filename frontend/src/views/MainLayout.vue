@@ -61,6 +61,10 @@
               <el-icon><Coin /></el-icon>
               <template #title>储蓄目标</template>
             </el-menu-item>
+            <el-menu-item index="/exchange-rates">
+              <el-icon><TrendCharts /></el-icon>
+              <template #title>汇率管理</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 预算 -->
@@ -74,6 +78,26 @@
             <el-icon><Document /></el-icon>
             <template #title>报销</template>
           </el-menu-item>
+
+          <!-- 分析 -->
+          <el-sub-menu index="analysis">
+            <template #title>
+              <el-icon><DataAnalysis /></el-icon>
+              <span>分析</span>
+            </template>
+            <el-menu-item index="/reports">
+              <el-icon><TrendCharts /></el-icon>
+              <template #title>报表分析</template>
+            </el-menu-item>
+            <el-menu-item index="/ai-assistant">
+              <el-icon><MagicStick /></el-icon>
+              <template #title>AI 助手</template>
+            </el-menu-item>
+            <el-menu-item index="/rules">
+              <el-icon><Operation /></el-icon>
+              <template #title>规则引擎</template>
+            </el-menu-item>
+          </el-sub-menu>
 
           <!-- 基础设置 -->
           <el-sub-menu index="settings">
@@ -97,10 +121,6 @@
               <el-icon><Connection /></el-icon>
               <template #title>商户别名</template>
             </el-menu-item>
-            <el-menu-item index="/rules">
-              <el-icon><Operation /></el-icon>
-              <template #title>规则引擎</template>
-            </el-menu-item>
           </el-sub-menu>
 
           <!-- 系统 -->
@@ -109,18 +129,6 @@
               <el-icon><SetUp /></el-icon>
               <span>系统</span>
             </template>
-            <el-menu-item index="/family">
-              <el-icon><User /></el-icon>
-              <template #title>家庭管理</template>
-            </el-menu-item>
-            <el-menu-item index="/settings">
-              <el-icon><UserFilled /></el-icon>
-              <template #title>个人设置</template>
-            </el-menu-item>
-            <el-menu-item index="/notifications">
-              <el-icon><Bell /></el-icon>
-              <template #title>通知</template>
-            </el-menu-item>
             <el-menu-item index="/backup">
               <el-icon><FolderOpened /></el-icon>
               <template #title>备份恢复</template>
@@ -132,10 +140,6 @@
             <el-menu-item index="/monitor">
               <el-icon><Monitor /></el-icon>
               <template #title>系统监控</template>
-            </el-menu-item>
-            <el-menu-item index="/ai-assistant">
-              <el-icon><MagicStick /></el-icon>
-              <template #title>AI 助手</template>
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -166,6 +170,8 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="settings">个人设置</el-dropdown-item>
+                <el-dropdown-item command="family">家庭管理</el-dropdown-item>
+                <el-dropdown-item command="notifications">通知</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -197,7 +203,7 @@ const auth = useAuthStore()
 const isCollapsed = ref(false)
 const unreadCount = ref(0)
 
-const openedMenus = ref(['accounting', 'assets', 'settings', 'system'])
+const openedMenus = ref(['accounting', 'assets', 'settings', 'system', 'analysis'])
 
 const activeMenu = computed(() => route.path)
 
@@ -223,6 +229,9 @@ const titleMap: Record<string, string> = {
   '/books': '账本管理',
   '/tags': '标签管理',
   '/settings': '个人设置',
+  '/reports': '报表分析',
+  '/ai-assistant': 'AI 助手',
+  '/exchange-rates': '汇率管理',
 }
 
 const routeTitle = computed(() => titleMap[route.path] || '家庭记账')
@@ -233,6 +242,10 @@ async function handleCommand(cmd: string) {
     router.push('/login')
   } else if (cmd === 'settings') {
     router.push('/settings')
+  } else if (cmd === 'family') {
+    router.push('/family')
+  } else if (cmd === 'notifications') {
+    router.push('/notifications')
   }
 }
 

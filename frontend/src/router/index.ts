@@ -37,6 +37,8 @@ const router = createRouter({
         { path: 'monitor', name: 'monitor', component: () => import('@/views/MonitorView.vue') },
         { path: 'ai-assistant', name: 'ai-assistant', component: () => import('@/views/AIAssistantView.vue') },
         { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
+        { path: 'exchange-rates', name: 'exchange-rates', component: () => import('@/views/ExchangeRateView.vue') },
+        { path: 'reports', name: 'reports', component: () => import('@/views/ReportView.vue') },
       ],
     },
   ],
