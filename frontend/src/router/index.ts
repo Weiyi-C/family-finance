@@ -20,6 +20,7 @@ const router = createRouter({
         { path: 'categories', name: 'categories', component: () => import('@/views/CategoryView.vue') },
         { path: 'budgets', name: 'budgets', component: () => import('@/views/BudgetView.vue') },
         { path: 'stats', name: 'stats', component: () => import('@/views/StatsView.vue') },
+        { path: 'reports', name: 'reports', component: () => import('@/views/ReportView.vue') },
         { path: 'books', name: 'books', component: () => import('@/views/BookView.vue') },
         { path: 'tags', name: 'tags', component: () => import('@/views/TagView.vue') },
         { path: 'debts', name: 'debts', component: () => import('@/views/DebtView.vue') },

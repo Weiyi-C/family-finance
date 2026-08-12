@@ -32,6 +32,7 @@ from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
 from app.api.reference import router as reference_router
 from app.api.reimbursements import router as reimbursements_router
+from app.api.reports import router as reports_router
 from app.api.refunds import router as refunds_router
 from app.api.rules import router as rules_router
 from app.api.savings import router as savings_router
@@ -97,6 +98,7 @@ app.include_router(notifications_router)
 app.include_router(recurring_router)
 app.include_router(reference_router)
 app.include_router(reimbursements_router)
+app.include_router(reports_router)
 app.include_router(refunds_router)
 app.include_router(rules_router)
 app.include_router(savings_router)
