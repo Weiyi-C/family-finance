@@ -25,6 +25,8 @@ async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: 
     
     根据交易时间确定账单月份，重新计算该月账单金额。
     如果账单不存在则创建，已存在则更新金额。
+    
+    支持套卡：子卡的交易计入父账户的账单。
     """
     # 查询账户信息
     account_result = await db.execute(
@@ -36,6 +38,20 @@ async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: 
     account = account_result.scalar_one_or_none()
     if not account:
         return  # 非信用账户，不需要处理
+
+    # 如果是子卡（有parent_id），将交易计入父账户的账单
+    bill_account_id = account_id
+    if account.parent_id:
+        parent_result = await db.execute(
+            select(PaymentAccount).where(
+                PaymentAccount.id == account.parent_id,
+                PaymentAccount.type_code.in_(CREDIT_TYPES),
+            )
+        )
+        parent_account = parent_result.scalar_one_or_none()
+        if parent_account:
+            bill_account_id = parent_account.id
+            account = parent_account  # 使用父账户的账单日、还款日等配置
 
     target_year = txn_time.year
     target_month = txn_time.month
@@ -65,10 +81,21 @@ async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: 
         else:
             due_date = datetime(target_year, target_month, due_day)
 
-    # 查询该周期内的支出总额
+    # 获取所有需要统计的账户ID（父账户+所有子卡）
+    account_ids = [bill_account_id]
+    children_result = await db.execute(
+        select(PaymentAccount.id).where(
+            PaymentAccount.parent_id == bill_account_id,
+            PaymentAccount.type_code.in_(CREDIT_TYPES),
+        )
+    )
+    child_ids = [row[0] for row in children_result.all()]
+    account_ids.extend(child_ids)
+
+    # 查询该周期内的支出总额（包含所有子卡）
     total_result = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-            Transaction.payment_account_id == account_id,
+            Transaction.payment_account_id.in_(account_ids),
             Transaction.family_id == family_id,
             Transaction.entry_side == "debit",
             Transaction.type == "expense",
@@ -79,10 +106,10 @@ async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: 
     )
     total_amount = int(total_result.scalar() or 0)
 
-    # 查找已有账单
+    # 查找已有账单（基于父账户）
     existing_result = await db.execute(
         select(CreditCardBill).where(
-            CreditCardBill.account_id == account_id,
+            CreditCardBill.account_id == bill_account_id,
             CreditCardBill.bill_year == target_year,
             CreditCardBill.bill_month == target_month,
         )
@@ -102,7 +129,7 @@ async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: 
                 existing_bill.status = "pending"
         else:
             bill = CreditCardBill(
-                account_id=account_id,
+                account_id=bill_account_id,  # 使用父账户ID
                 family_id=family_id,
                 bill_year=target_year,
                 bill_month=target_month,
