@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.models.user import Family
 from app.services.ai_analyzer import AIAnalyzer
 from app.services.recurring_service import run_recurring_job
+from app.services.notify_service import run_notify_job
 from app.database import async_session
 
 logger = structlog.get_logger()
@@ -59,11 +60,14 @@ async def start_scheduler():
         try:
             from datetime import datetime
             now = datetime.now()
-            # 每天凌晨2点执行周期交易和AI分析
+            # 每天凌晨2点执行周期交易
             if now.hour == 2:
                 await run_recurring_job()
                 await run_ai_analysis_job()
-                # 等待1小时避免重复执行
+                await asyncio.sleep(3600)
+            # 每天早上8点执行提醒通知
+            elif now.hour == 8:
+                await run_notify_job()
                 await asyncio.sleep(3600)
             else:
                 await asyncio.sleep(300)  # 每5分钟检查一次

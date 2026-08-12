@@ -87,4 +87,16 @@ async def mark_all_read(
         .values(is_read=True, read_at=datetime.now(timezone.utc))
     )
     await db.commit()
+
+
+@router.post("/api/notifications/check")
+async def trigger_notification_check(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """手动触发提醒通知检查"""
+    from app.services.notify_service import process_notifications
+    results = await process_notifications(db, current_user.family_id, current_user.id)
+    total = sum(results.values())
+    return {"message": f"检查完成，发现 {total} 条提醒", "results": results}
     return {"message": "全部已读"}
