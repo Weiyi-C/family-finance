@@ -108,6 +108,26 @@
           <el-button type="primary" :loading="saving" @click="handleSave">保存设置</el-button>
         </el-form-item>
 
+        <el-divider>汇率信息</el-divider>
+        <el-form-item label="当前汇率">
+          <div class="exchange-rates-info">
+            <div v-if="loadingRates" class="loading-text">加载中...</div>
+            <div v-else-if="exchangeRates.length === 0" class="empty-text">暂无汇率数据</div>
+            <div v-else class="rates-grid">
+              <div v-for="rate in exchangeRates" :key="rate.id" class="rate-item">
+                <span class="currency">{{ rate.base_currency }} → {{ rate.target_currency }}</span>
+                <span class="rate">{{ rate.rate.toFixed(4) }}</span>
+              </div>
+            </div>
+            <div class="rate-meta">
+              <span v-if="lastUpdate">最后更新: {{ lastUpdate }}</span>
+              <el-button type="primary" link :loading="refreshingRates" @click="refreshExchangeRates">
+                刷新汇率
+              </el-button>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-divider>修改密码</el-divider>
         <el-form-item label="原密码">
           <el-input v-model="pwdForm.old_password" type="password" placeholder="输入原密码" show-password class="w-280" />
@@ -132,10 +152,12 @@ import { ElMessage } from 'element-plus'
 import { getSettings, updateSettings } from '@/api/settings'
 import { getAIProviders, getAISettings, updateAISettings, testAIConnection } from '@/api/ai'
 import { updateMe, changePassword } from '@/api/users'
+import { getExchangeRates } from '@/api/exchange'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, themePresets } from '@/stores/theme'
 import type { UserSettings } from '@/types'
 import type { AIProvider } from '@/api/ai'
+import type { ExchangeRate } from '@/api/exchange'
 
 const auth = useAuthStore()
 const themeStore = useThemeStore()
@@ -155,11 +177,16 @@ const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
 const changingPwd = ref(false)
+const refreshingRates = ref(false)
 
 const nickname = ref('')
 const savingNickname = ref(false)
 
 const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
+
+// 汇率数据
+const exchangeRates = ref<ExchangeRate[]>([])
+const lastUpdate = ref('')
 
 const settings = reactive<UserSettings>({
   id: 0, user_id: 0, default_currency: 'CNY', month_start_day: 1, theme: 'light', language: 'zh-CN',
@@ -208,6 +235,33 @@ async function load() {
     providers.value = providersRes.data
     Object.assign(aiSettings, aiRes.data)
   } finally { loading.value = false }
+
+  // 加载汇率数据
+  await loadExchangeRates()
+}
+
+async function loadExchangeRates() {
+  try {
+    const res = await getExchangeRates()
+    exchangeRates.value = res.data
+    if (res.data.length > 0) {
+      lastUpdate.value = res.data[0].rate_date
+    }
+  } catch (err) {
+    console.error('加载汇率失败', err)
+  }
+}
+
+async function refreshExchangeRates() {
+  refreshingRates.value = true
+  try {
+    await loadExchangeRates()
+    ElMessage.success('汇率已刷新')
+  } catch (err) {
+    ElMessage.error('刷新失败')
+  } finally {
+    refreshingRates.value = false
+  }
 }
 
 async function handleSave() {
@@ -343,5 +397,43 @@ onMounted(load)
   font-size: 14px;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.exchange-rates-info {
+  width: 100%;
+}
+.loading-text, .empty-text {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  padding: 8px 0;
+}
+.rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rate-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.rate-item .currency {
+  color: var(--color-text-secondary);
+}
+.rate-item .rate {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.rate-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 </style>
