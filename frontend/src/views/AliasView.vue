@@ -8,6 +8,11 @@
       <el-table :data="aliases" stripe v-loading="loading">
         <el-table-column prop="original_name" label="原始名称" />
         <el-table-column prop="alias_name" label="别名" />
+        <el-table-column label="来源" width="70">
+          <template #default="{ row }">
+            <el-tag :type="row.family_id ? 'primary' : 'info'" size="small">{{ row.family_id ? '用户' : '系统' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="category_id" label="分类" width="100">
           <template #default="{ row }">{{ row.category_id ? `分类${row.category_id}` : '-' }}</template>
         </el-table-column>
@@ -18,9 +23,12 @@
         <el-table-column label="操作" width="140">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="editAlias(row)">编辑</el-button>
-            <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
+            <el-popconfirm v-if="row.family_id" title="确定删除？" @confirm="handleDelete(row.id)">
               <template #reference><el-button link type="danger" size="small">删除</el-button></template>
             </el-popconfirm>
+            <el-tooltip v-else content="系统别名不可删除，可停用后创建自定义别名覆盖" placement="top">
+              <el-button link type="danger" size="small" disabled>删除</el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>

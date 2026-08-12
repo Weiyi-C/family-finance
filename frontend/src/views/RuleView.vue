@@ -7,6 +7,11 @@
     <el-card>
       <el-table :data="rules" stripe v-loading="loading">
         <el-table-column prop="name" label="规则名称" />
+        <el-table-column label="来源" width="70">
+          <template #default="{ row }">
+            <el-tag :type="row.family_id ? 'primary' : 'info'" size="small">{{ row.family_id ? '用户' : '系统' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="stage" label="阶段" width="100" />
         <el-table-column prop="priority" label="优先级" width="80" />
         <el-table-column prop="hit_count" label="命中次数" width="90" />
@@ -19,9 +24,12 @@
             <el-button link :type="row.is_active ? 'warning' : 'success'" size="small" @click="toggleActive(row)">
               {{ row.is_active ? '停用' : '启用' }}
             </el-button>
-            <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
+            <el-popconfirm v-if="row.family_id" title="确定删除？" @confirm="handleDelete(row.id)">
               <template #reference><el-button link type="danger" size="small">删除</el-button></template>
             </el-popconfirm>
+            <el-tooltip v-else content="系统规则不可删除，可停用后创建自定义规则覆盖" placement="top">
+              <el-button link type="danger" size="small" disabled>删除</el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
