@@ -282,6 +282,8 @@ const channelProducts = computed(() => {
 
 const savingsAccounts = computed(() => props.accounts.filter((a) => a.type_code === 'bank_savings' && a.is_active))
 
+const bankTypeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
+
 // 日期选项 1-28
 const dayOptions = Array.from({ length: 28 }, (_, i) => i + 1)
 
@@ -298,9 +300,8 @@ const isFamilyCard = computed(() => form.type_code === 'alipay_family_card')
 const bankNamePlaceholder = computed(() => {
   const bank = props.banks.find((b) => b.id === form.bank_id)
   const bankName = bank?.name || '银行'
-  const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
   const tail = form.card_tail ? `(尾号${form.card_tail})` : ''
-  return `${bankName}${typeMap[form.bank_type] || ''}${tail}`
+  return `${bankName}${bankTypeMap[form.bank_type] || ''}${tail}`
 })
 
 function selectCategory(cat: string) {
@@ -362,17 +363,15 @@ function onBankChange() {
   const bank = props.banks.find((b) => b.id === form.bank_id)
   if (bank) {
     form.bank_name = bank.name
-    const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
-    form.name = `${bank.name}${typeMap[form.bank_type] || '储蓄卡'}`
+    form.name = `${bank.name}${bankTypeMap[form.bank_type] || '储蓄卡'}`
   }
 }
 
 function onBankTypeChange(bankType: string) {
   const bank = props.banks.find((b) => b.id === form.bank_id)
   if (bank) {
-    const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
     const tail = form.card_tail ? `(尾号${form.card_tail})` : ''
-    form.name = `${bank.name}${typeMap[bankType] || '储蓄卡'}${tail}`
+    form.name = `${bank.name}${bankTypeMap[bankType] || '储蓄卡'}${tail}`
   }
 }
 
@@ -477,8 +476,7 @@ function tryFillFromMethod() {
     form.bank_name = parsed.matchedBank.name
     form.bank_type = parsed.bankType
     form.card_tail = parsed.tail
-    const typeMap: Record<string, string> = { savings: '储蓄卡', credit: '信用卡', investment: '投资' }
-    form.name = `${parsed.matchedBank.name}${typeMap[parsed.bankType] || '储蓄卡'}${parsed.tail ? `(尾号${parsed.tail})` : ''}`
+    form.name = `${parsed.matchedBank.name}${bankTypeMap[parsed.bankType] || '储蓄卡'}${parsed.tail ? `(尾号${parsed.tail})` : ''}`
   }
 }
 

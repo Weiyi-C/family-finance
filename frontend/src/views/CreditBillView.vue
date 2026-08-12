@@ -9,7 +9,7 @@
 
     <el-card>
       <el-table :data="bills" stripe v-loading="loading">
-        <el-table-column label="信用卡" width="200">
+        <el-table-column label="信用账户" width="200">
           <template #default="{ row }">{{ getAccountName(row.account_id) }}</template>
         </el-table-column>
         <el-table-column label="账期" width="100">
