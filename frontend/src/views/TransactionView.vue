@@ -302,6 +302,7 @@ import { getAccounts } from '@/api/accounts'
 import { getChannels, getPlatforms } from '@/api/channels'
 import { getTags } from '@/api/tags'
 import { getBooks } from '@/api/books'
+import { getMembers } from '@/api/families'
 import type { Transaction, Category, PaymentAccount, Tag, Channel, Platform, AccountBook } from '@/types'
 
 interface FamilyMember { id: number; nickname: string }
@@ -528,6 +529,7 @@ onMounted(async () => {
     getPlatforms().then((r) => { platforms.value = r.data }),
     getTags().then((r) => { tags.value = r.data }),
     getBooks().then((r) => { books.value = r.data }),
+    getMembers().then((r) => { familyMembers.value = r.data }).catch(() => {}),
   ])
 })
 </script>
