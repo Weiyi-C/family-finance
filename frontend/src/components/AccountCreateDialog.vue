@@ -67,6 +67,22 @@
             </el-select>
           </el-form-item>
         </template>
+        <!-- 亲情卡：选择使用者和扣款账户 -->
+        <template v-if="isFamilyCard">
+          <el-form-item label="使用者">
+            <el-select v-model="form.linked_user_id" clearable placeholder="选择家庭成员" class="w-full">
+              <el-option v-for="m in familyMembers" :key="m.id" :label="`${m.nickname}${m.phone ? ` (${m.phone})` : ''}`" :value="m.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="扣款账户">
+            <el-select v-model="form.linked_account_id" clearable placeholder="实际扣款的账户" class="w-full">
+              <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
+            </el-select>
+          </el-form-item>
+          <div class="text-sm text-muted mb-12" style="margin-top: -8px;">
+            亲情卡使用者付款时，实际从扣款账户扣款。如不指定扣款账户，默认从父账户（支付宝余额）扣款。
+          </div>
+        </template>
       </el-form>
     </div>
 
@@ -199,6 +215,18 @@ const form = reactive({
   existing_parent_id: null as number | null,
   account_identifier: '',
   parent_name: '',
+  linked_user_id: null as number | null,
+  linked_account_id: null as number | null,
+})
+
+// 家庭成员列表（亲情卡用）
+import { getMembers, type FamilyMember } from '@/api/families'
+const familyMembers = ref<FamilyMember[]>([])
+
+// 叶子账户列表（亲情卡扣款账户选择用）
+const leafAccounts = computed(() => {
+  const parentIds = new Set(props.accounts.filter(a => a.parent_id).map(a => a.parent_id))
+  return props.accounts.filter(a => a.is_active && !parentIds.has(a.id))
 })
 
 // 支付渠道选项
@@ -232,6 +260,7 @@ const channelProducts = computed(() => {
     { type_code: 'alipay_huabei', name: '花呗', icon: '🌸' },
     { type_code: 'alipay_jiebei', name: '借呗', icon: '🔶' },
     { type_code: 'alipay_xiaoheibao', name: '小荷包', icon: '👛' },
+    { type_code: 'alipay_family_card', name: '亲情卡', icon: '💝' },
   ]
   if (name.includes('微信')) return [
     { type_code: 'wechat_balance', name: '微信零钱', icon: '💰' },
@@ -258,6 +287,8 @@ const isChannelCredit = computed(() => creditTypeCodes.has(form.type_code))
 // 支持自然月账单周期的类型
 const naturalMonthTypes = new Set(['alipay_huabei'])
 const isNaturalMonthSupported = computed(() => naturalMonthTypes.has(form.type_code))
+// 亲情卡
+const isFamilyCard = computed(() => form.type_code === 'alipay_family_card')
 
 // 银行卡名称占位符
 const bankNamePlaceholder = computed(() => {
@@ -289,6 +320,15 @@ function resetForm() {
   form.existing_parent_id = null
   form.account_identifier = ''
   form.parent_name = ''
+  form.linked_user_id = null
+  form.linked_account_id = null
+}
+
+async function loadFamilyMembers() {
+  try {
+    const res = await getMembers()
+    familyMembers.value = res.data
+  } catch { /* ignore */ }
 }
 
 function onChannelChange() {
@@ -365,6 +405,11 @@ async function handleCreate() {
         if (form.billing_cycle_type === 'fixed_day' && form.billing_day) payload.billing_day = form.billing_day
         if (form.due_day) payload.due_day = form.due_day
       }
+      // 亲情卡：关联使用者和扣款账户
+      if (isFamilyCard.value) {
+        if (form.linked_user_id) payload.linked_user_id = form.linked_user_id
+        if (form.linked_account_id) payload.linked_account_id = form.linked_account_id
+      }
     } else if (categoryType.value === 'bank') {
       payload.bank_id = form.bank_id
       payload.bank_name = form.bank_name
@@ -438,6 +483,8 @@ watch(visible, (v) => {
     step.value = 1
     categoryType.value = 'channel'
     resetForm()
+    // 加载家庭成员列表（亲情卡用）
+    loadFamilyMembers()
 
     // 如果传入了 initialMethod，根据类型自动填充
     if (props.initialMethod) {
