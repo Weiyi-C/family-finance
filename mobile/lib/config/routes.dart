@@ -18,6 +18,9 @@ import '../features/category/screens/category_screen.dart';
 import '../features/tag/screens/tag_screen.dart';
 import '../features/notification/screens/notification_screen.dart';
 import '../features/family/screens/family_screen.dart';
+import '../features/rule/screens/rule_screen.dart';
+import '../features/ai/screens/ai_assistant_screen.dart';
+import '../features/backup/screens/backup_screen.dart';
 import 'main_layout.dart';
 
 final appRouter = GoRouter(
@@ -103,6 +106,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/family',
       builder: (context, state) => const FamilyScreen(),
+    ),
+    GoRoute(
+      path: '/rules',
+      builder: (context, state) => const RuleScreen(),
+    ),
+    GoRoute(
+      path: '/ai-assistant',
+      builder: (context, state) => const AIAssistantScreen(),
+    ),
+    GoRoute(
+      path: '/backup',
+      builder: (context, state) => const BackupScreen(),
     ),
   ],
 );

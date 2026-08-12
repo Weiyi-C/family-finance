@@ -129,6 +129,8 @@ class SettingsScreen extends ConsumerWidget {
       ('报销管理', Icons.receipt, () => context.push('/reimbursements')),
       ('分类管理', Icons.category, () => context.push('/categories')),
       ('标签管理', Icons.label, () => context.push('/tags')),
+      ('规则引擎', Icons.rule, () => context.push('/rules')),
+      ('AI助手', Icons.smart_toy, () => context.push('/ai-assistant')),
       ('家庭管理', Icons.family_restroom, () => context.push('/family')),
     ];
 
@@ -213,6 +215,15 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               context.push('/sync-status');
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.backup),
+            title: const Text('备份恢复'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push('/backup');
             },
           ),
           const Divider(height: 1),
