@@ -97,9 +97,21 @@ def parse_ccb_credit_csv(content: str) -> tuple[list[dict], dict]:
                 txn_type = "expense"
 
             # 平台和商户识别
-            platform, merchant = identify_platform_and_merchant(
-                description, description, "ccb"
-            )
+            # 建行信用卡的交易描述格式：支付宝-特约商户、20260729高速通行费四川成德南金堂
+            platform = "建设银行"
+            merchant = description
+            # 检查描述是否以已知平台开头
+            for known in ["支付宝", "微信", "财付通", "京东", "美团", "抖音", "淘宝", "天猫", "拼多多"]:
+                if description.startswith(known):
+                    platform = known
+                    # 提取商户名（去掉平台前缀）
+                    merchant = description[len(known):].lstrip("-").strip() or description
+                    break
+            if platform == "建设银行":
+                # 没有匹配到已知平台，使用通用识别
+                platform, merchant = identify_platform_and_merchant(
+                    description, description, "ccb"
+                )
 
             # 支付方式
             payment_method = f"建设银行信用卡({current_card[-4:]})" if current_card else "建设银行信用卡"
