@@ -2,6 +2,7 @@
 
 from .categorize import (
     auto_categorize,
+    auto_categorize_with_db,
     ai_suggest_category,
     auto_assign_tags,
     AUTO_CATEGORY_RULES,
@@ -16,6 +17,7 @@ from .match import (
 
 __all__ = [
     "auto_categorize",
+    "auto_categorize_with_db",
     "ai_suggest_category",
     "auto_assign_tags",
     "AUTO_CATEGORY_RULES",

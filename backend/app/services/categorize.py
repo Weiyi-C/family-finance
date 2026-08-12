@@ -300,3 +300,77 @@ async def auto_assign_tags(
         )
         if not existing.scalar_one_or_none():
             db.add(TransactionTag(transaction_id=txn_id, tag_id=tag.id))
+
+
+async def auto_categorize_with_db(
+    db: AsyncSession,
+    family_id: int,
+    merchant: str,
+    description: str,
+    txn_type: str = "expense",
+    platform: str = "",
+    payment_method: str = "",
+) -> tuple[str | None, list[str]]:
+    """自动分类（优先数据库规则，兜底代码规则）
+
+    Args:
+        db: 数据库会话
+        family_id: 家庭ID
+        merchant: 商户名
+        description: 商品描述
+        txn_type: 交易类型（expense/income）
+        platform: 平台名
+        payment_method: 支付方式
+
+    Returns:
+        (分类名, 标签列表)
+    """
+    from app.models.rule import AutomationRule
+    from sqlalchemy import or_
+
+    combined = f"{merchant} {description}".lower()
+
+    # 1. 查询数据库规则（优先用户私有，其次系统级）
+    result = await db.execute(
+        select(AutomationRule).where(
+            AutomationRule.is_active == True,
+            or_(AutomationRule.family_id == family_id, AutomationRule.family_id.is_(None)),
+            AutomationRule.stage == "classify",
+        ).order_by(
+            AutomationRule.priority.desc(),
+            AutomationRule.family_id.nulls_last(),  # 用户私有优先
+        )
+    )
+    rules = result.scalars().all()
+
+    for rule in rules:
+        conditions = rule.conditions or {}
+        actions = rule.actions or {}
+        keywords = conditions.get("keywords", [])
+        if not keywords:
+            continue
+        # 检查是否有关键词匹配
+        if any(kw.lower() in combined for kw in keywords):
+            category_name = actions.get("category_name")
+            tags = actions.get("tags", [])
+            if category_name:
+                # 检查交易类型是否匹配
+                from app.models.category import Category
+                cat_result = await db.execute(
+                    select(Category).where(
+                        (Category.family_id == family_id) | (Category.family_id.is_(None)),
+                        Category.name == category_name,
+                    ).limit(1)
+                )
+                cat = cat_result.scalar_one_or_none()
+                if cat:
+                    # 收入分类不匹配支出交易，反之亦然
+                    if txn_type == "expense" and cat.type == "income":
+                        continue
+                    if txn_type == "income" and cat.type == "expense":
+                        continue
+                rule.hit_count += 1
+                return category_name, tags
+
+    # 2. 兜底：代码硬编码规则
+    return auto_categorize(merchant, description, txn_type, platform, payment_method)

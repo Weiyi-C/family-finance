@@ -19,6 +19,7 @@ from app.models.user import User
 from app.parsers import detect_and_decode, parse_alipay_csv, parse_wechat_csv, parse_excel, parse_icbc_pdf, parse_icbc_csv
 from app.services import (
     auto_categorize,
+    auto_categorize_with_db,
     ai_suggest_category,
     auto_assign_tags,
     match_payment_method_to_account,
@@ -29,14 +30,24 @@ logger = structlog.get_logger()
 router = APIRouter(tags=["账单导入"])
 
 
-# ===================== 平台别名映射 =====================
-PLATFORM_ALIASES = {
-    "淘宝闪购": "淘宝", "天猫": "淘宝", "淘宝商城": "淘宝",
-    "京东到家": "京东", "京东商城": "京东",
-    "美团外卖": "美团", "大众点评": "美团",
-    "饿了么星选": "饿了么",
-    "拼多多": "拼多多", "抖音商城": "抖音",
-}
+
+async def _resolve_alias(db: AsyncSession, family_id: int, original_name: str):
+    """查询商户别名，返回 (alias_name, category_id, platform_id) 或 None"""
+    from app.models.merchant_alias import MerchantAlias
+    from sqlalchemy import or_
+    
+    result = await db.execute(
+        select(MerchantAlias).where(
+            MerchantAlias.is_active == True,
+            or_(MerchantAlias.family_id == family_id, MerchantAlias.family_id.is_(None)),
+            MerchantAlias.original_name == original_name,
+        ).order_by(MerchantAlias.family_id.nulls_last())  # 用户私有优先
+    )
+    alias = result.scalar_one_or_none()
+    if alias:
+        alias.hit_count += 1
+        return alias
+    return None
 
 
 @router.post("/api/imports/upload")
@@ -160,8 +171,8 @@ async def upload_import(
         platform = item.get("platform", "")
         pm = item.get("payment_method", "")
 
-        # 本地关键词规则分类（上传阶段快速分类，AI 在确认阶段使用）
-        suggested_cat, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+        # 数据库规则 + 代码兜底分类（上传阶段快速分类）
+        suggested_cat, auto_tags = await auto_categorize_with_db(db, current_user.family_id, merchant, description, txn_type, platform, pm)
 
         # 写入分类建议
         if suggested_cat:
@@ -470,12 +481,30 @@ async def confirm_import(
             )
             platform_id = platform_result.scalar()
             if not platform_id:
-                mapped_name = PLATFORM_ALIASES.get(platform_name)
-                if mapped_name:
+                # 查询商户别名表获取平台映射
+                alias = await _resolve_alias(db, current_user.family_id, platform_name)
+                if alias and alias.platform_id:
+                    platform_id = alias.platform_id
+                elif alias and alias.alias_name != platform_name:
+                    # 别名指向规范名称，再次查询平台
                     platform_result = await db.execute(
-                        select(Platform.id).where(Platform.name == mapped_name).limit(1)
+                        select(Platform.id).where(Platform.name == alias.alias_name).limit(1)
                     )
                     platform_id = platform_result.scalar()
+
+        # 商户别名替换 + 自动分类
+        merchant_name = raw.get("merchant", "")
+        suggested_category_id = raw.get("suggested_category_id")
+        if merchant_name:
+            alias = await _resolve_alias(db, current_user.family_id, merchant_name)
+            if alias:
+                merchant_name = alias.alias_name
+                raw["merchant"] = alias.alias_name  # 存回 raw，后续创建交易时使用
+                if alias.platform_id and not platform_id:
+                    platform_id = alias.platform_id
+                if alias.category_id and not suggested_category_id:
+                    suggested_category_id = alias.category_id
+                    raw["suggested_category_id"] = alias.category_id
 
         # 查找支付渠道ID（支持自动识别）
         channel_id = None
@@ -527,8 +556,8 @@ async def confirm_import(
                 category_id = _category_name_map.get("转账")
                 suggested_tags = ["转账"]
             else:
-                # 本地规则分类（跳过单独AI调用，已使用批量结果）
-                cat_name, auto_tags = auto_categorize(merchant, description, txn_type, platform, pm)
+                # 数据库规则 + 代码兜底分类
+                cat_name, auto_tags = await auto_categorize_with_db(db, current_user.family_id, merchant, description, txn_type, platform, pm)
 
                 if cat_name:
                     cat_id = _category_name_map.get(cat_name)
