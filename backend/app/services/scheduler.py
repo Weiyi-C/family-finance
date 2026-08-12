@@ -10,6 +10,7 @@ from app.services.recurring_service import run_recurring_job
 from app.services.notify_service import run_notify_job
 from app.services.clean_service import run_clean_job
 from app.services.analyze_service import run_analyze_job
+from app.services.exchange_rate_service import update_exchange_rates
 from app.database import async_session
 
 logger = structlog.get_logger()
@@ -50,6 +51,15 @@ async def run_ai_analysis_job():
         logger.info("ai_analysis_job_complete", families=len(families), suggestions=total_suggestions)
 
 
+async def run_exchange_rate_job():
+    """定时汇率更新任务"""
+    try:
+        count = await update_exchange_rates()
+        logger.info("exchange_rate_job_complete", updated=count)
+    except Exception as e:
+        logger.error("exchange_rate_job_error", error=str(e))
+
+
 async def start_scheduler():
     """启动定时任务调度器"""
     global _scheduler_running
@@ -62,7 +72,8 @@ async def start_scheduler():
         try:
             from datetime import datetime
             now = datetime.now()
-            # 每天凌晨2点执行周期交易
+            
+            # 每天凌晨2点执行周期交易和AI分析
             if now.hour == 2:
                 await run_recurring_job()
                 await run_ai_analysis_job()
@@ -71,36 +82,20 @@ async def start_scheduler():
                     await run_clean_job()
                     await run_analyze_job()
                 await asyncio.sleep(3600)
+            
+            # 每天凌晨3点执行汇率更新
+            elif now.hour == 3:
+                await run_exchange_rate_job()
+                await asyncio.sleep(3600)
+            
             # 每天早上8点执行提醒通知
             elif now.hour == 8:
                 await run_notify_job()
                 await asyncio.sleep(3600)
+            
             else:
                 await asyncio.sleep(300)  # 每5分钟检查一次
-        except Exception as e:
-            logger.error("scheduler_error", error=str(e))
-            await asyncio.sleep(60)
-
-
-async def start_scheduler():
-    """启动定时任务调度器"""
-    global _scheduler_running
-    if _scheduler_running:
-        return
-    _scheduler_running = True
-    logger.info("scheduler_started")
-
-    while _scheduler_running:
-        try:
-            from datetime import datetime
-            now = datetime.now()
-            # 每天凌晨2点执行
-            if now.hour == 2:
-                await run_ai_analysis_job()
-                # 等待1小时避免重复执行
-                await asyncio.sleep(3600)
-            else:
-                await asyncio.sleep(300)  # 每5分钟检查一次
+                
         except Exception as e:
             logger.error("scheduler_error", error=str(e))
             await asyncio.sleep(60)
