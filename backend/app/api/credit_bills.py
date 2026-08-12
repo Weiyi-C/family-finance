@@ -14,7 +14,108 @@ from app.models.user import User
 from app.schemas.extra import CreditBillResponse, CreditBillPayRequest
 
 logger = structlog.get_logger()
-router = APIRouter(tags=["信用卡账单"])
+router = APIRouter(tags=["信用账单"])
+
+# 所有信用类产品类型
+CREDIT_TYPES = ["bank_credit", "alipay_huabei", "alipay_jiebei", "jd_baitiao", "meituan_monthly"]
+
+
+async def auto_update_credit_bill(db: AsyncSession, family_id: int, account_id: int, txn_time: datetime):
+    """交易变更时自动更新信用账单
+    
+    根据交易时间确定账单月份，重新计算该月账单金额。
+    如果账单不存在则创建，已存在则更新金额。
+    """
+    # 查询账户信息
+    account_result = await db.execute(
+        select(PaymentAccount).where(
+            PaymentAccount.id == account_id,
+            PaymentAccount.type_code.in_(CREDIT_TYPES),
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    if not account:
+        return  # 非信用账户，不需要处理
+
+    target_year = txn_time.year
+    target_month = txn_time.month
+    due_day = account.due_day or 20
+
+    # 计算账单周期
+    if account.billing_cycle_type == 'natural_month':
+        bill_start = datetime(target_year, target_month, 1)
+        last_day = calendar.monthrange(target_year, target_month)[1]
+        bill_end = datetime(target_year, target_month, last_day)
+        if target_month == 12:
+            due_date = datetime(target_year + 1, 1, due_day)
+        else:
+            due_date = datetime(target_year, target_month + 1, due_day)
+    else:
+        billing_day = account.billing_day or 1
+        if target_month == 1:
+            bill_start = datetime(target_year - 1, 12, billing_day + 1)
+        else:
+            bill_start = datetime(target_year, target_month - 1, billing_day + 1)
+        bill_end = datetime(target_year, target_month, billing_day)
+        if due_day <= billing_day:
+            if target_month == 12:
+                due_date = datetime(target_year + 1, 1, due_day)
+            else:
+                due_date = datetime(target_year, target_month + 1, due_day)
+        else:
+            due_date = datetime(target_year, target_month, due_day)
+
+    # 查询该周期内的支出总额
+    total_result = await db.execute(
+        select(func.coalesce(func.sum(Transaction.amount), 0)).where(
+            Transaction.payment_account_id == account_id,
+            Transaction.family_id == family_id,
+            Transaction.entry_side == "debit",
+            Transaction.type == "expense",
+            Transaction.is_deleted == False,
+            Transaction.transaction_time >= bill_start,
+            Transaction.transaction_time <= bill_end,
+        )
+    )
+    total_amount = int(total_result.scalar() or 0)
+
+    # 查找已有账单
+    existing_result = await db.execute(
+        select(CreditCardBill).where(
+            CreditCardBill.account_id == account_id,
+            CreditCardBill.bill_year == target_year,
+            CreditCardBill.bill_month == target_month,
+        )
+    )
+    existing_bill = existing_result.scalar_one_or_none()
+
+    if total_amount > 0:
+        if existing_bill:
+            existing_bill.total_amount = total_amount
+            existing_bill.min_payment = total_amount // 10
+            # 如果已还金额超过新总额，调整状态
+            if existing_bill.paid_amount >= total_amount:
+                existing_bill.status = "paid"
+            elif existing_bill.paid_amount > 0:
+                existing_bill.status = "partial"
+            else:
+                existing_bill.status = "pending"
+        else:
+            bill = CreditCardBill(
+                account_id=account_id,
+                family_id=family_id,
+                bill_year=target_year,
+                bill_month=target_month,
+                billing_date=bill_end.date(),
+                due_date=due_date.date(),
+                total_amount=total_amount,
+                min_payment=total_amount // 10,
+                status="pending",
+            )
+            db.add(bill)
+    elif existing_bill:
+        # 交易金额为0（全部删除），删除账单
+        await db.delete(existing_bill)
 
 
 @router.post("/api/credit-bills/generate")
@@ -24,14 +125,13 @@ async def generate_bills(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """生成信用卡账单（基于交易记录自动汇总）"""
+    """生成信用账单（基于交易记录自动汇总）"""
     try:
         now = datetime.now()
         target_year = year or now.year
         target_month = month or now.month
 
-        # 查找所有信用账户（银行信用卡 + 花呗 + 京东白条等）
-        CREDIT_TYPES = ["bank_credit", "alipay_huabei", "jd_baitiao"]
+        # 查找所有信用账户
         accounts_result = await db.execute(
             select(PaymentAccount).where(
                 PaymentAccount.family_id == current_user.family_id,
@@ -42,7 +142,7 @@ async def generate_bills(
         credit_accounts = accounts_result.scalars().all()
 
         if not credit_accounts:
-            return {"message": "没有信用卡账户", "generated": 0}
+            return {"message": "没有信用账户", "generated": 0}
 
         generated = 0
         for account in credit_accounts:

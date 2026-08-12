@@ -1,26 +1,11 @@
 <template>
   <div>
     <div class="page-header">
-      <h3>信用卡账单</h3>
+      <h3>信用账单</h3>
       <div>
         <span class="summary-text" v-if="summary">待还总额: <b>{{ formatMoney(summary.total_due) }}</b> ({{ summary.bill_count }}笔)</span>
       </div>
     </div>
-
-    <!-- 生成账单 -->
-    <el-card class="mb-16">
-      <div class="flex items-center gap-12">
-        <span class="text-regular">生成账单：</span>
-        <el-date-picker
-          v-model="genMonth"
-          type="month"
-          placeholder="选择月份"
-          value-format="YYYY-MM"
-          class="w-160"
-        />
-        <el-button type="primary" :loading="generating" @click="handleGenerate">生成</el-button>
-      </div>
-    </el-card>
 
     <el-card>
       <el-table :data="bills" stripe v-loading="loading">
@@ -56,7 +41,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showPay" title="信用卡还款" width="360px">
+    <el-dialog v-model="showPay" title="信用还款" width="360px">
       <el-form label-width="80px">
         <el-form-item label="还款金额(元)"><el-input-number v-model="payYuan" :min="0.01" :precision="2" class="w-full" /></el-form-item>
       </el-form>
@@ -71,20 +56,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getCreditBills, payCreditBill, getCreditBillSummary, generateCreditBills } from '@/api/creditBills'
+import { getCreditBills, payCreditBill, getCreditBillSummary } from '@/api/creditBills'
 import { getAccounts } from '@/api/accounts'
 import type { CreditBill } from '@/api/creditBills'
 import type { PaymentAccount } from '@/types'
 
 const loading = ref(false)
-const generating = ref(false)
 const bills = ref<CreditBill[]>([])
 const accounts = ref<PaymentAccount[]>([])
 const summary = ref<{ total_due: number; bill_count: number } | null>(null)
 const showPay = ref(false)
 const payBillId = ref(0)
 const payYuan = ref(0)
-const genMonth = ref('')
 
 const statusMap: Record<string, string> = { pending: '待还', partial: '部分', paid: '已还', overdue: '逾期' }
 const statusType: Record<string, string> = { pending: 'warning', partial: '', paid: 'success', overdue: 'danger' }
@@ -107,19 +90,6 @@ async function load() {
     summary.value = summaryRes.data
     accounts.value = accountsRes.data
   } finally { loading.value = false }
-}
-
-async function handleGenerate() {
-  if (!genMonth.value) { ElMessage.warning('请选择月份'); return }
-  const [year, month] = genMonth.value.split('-').map(Number)
-  generating.value = true
-  try {
-    const res = await generateCreditBills(year, month)
-    ElMessage.success(res.data.message)
-    await load()
-  } catch (err: any) {
-    ElMessage.error(err?.response?.data?.detail || '生成失败')
-  } finally { generating.value = false }
 }
 
 function openPay(row: CreditBill) { payBillId.value = row.id; payYuan.value = (row.total_amount - row.paid_amount) / 100; showPay.value = true }

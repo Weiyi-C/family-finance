@@ -51,7 +51,7 @@
             </el-menu-item>
             <el-menu-item index="/credit-bills">
               <el-icon><Document /></el-icon>
-              <template #title>信用卡账单</template>
+              <template #title>信用账单</template>
             </el-menu-item>
             <el-menu-item index="/debts">
               <el-icon><Money /></el-icon>
@@ -220,7 +220,7 @@ const titleMap: Record<string, string> = {
   '/stats': '统计报表',
   '/debts': '借贷管理',
   '/savings': '储蓄目标',
-  '/credit-bills': '信用卡账单',
+  '/credit-bills': '信用账单',
   '/recurring': '周期交易',
   '/reimbursements': '报销管理',
   '/import': '导入/导出',

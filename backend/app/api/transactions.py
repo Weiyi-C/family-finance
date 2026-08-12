@@ -212,6 +212,11 @@ async def create_transaction(
     await db.commit()
     await db.refresh(debit)
 
+    # 自动更新信用账单
+    if body.type == "expense" and actual_account:
+        from app.api.credit_bills import auto_update_credit_bill
+        await auto_update_credit_bill(db, current_user.family_id, actual_account, body.transaction_time)
+
     logger.info("transaction_created", entry_id=entry_id, type=body.type, amount=body.amount)
     return await _to_response(debit, body.tag_ids, db)
 
@@ -387,6 +392,11 @@ async def delete_transaction(
         txn.is_deleted = True
     await db.commit()
 
+    # 自动更新信用账单
+    if txn.type == "expense" and txn.payment_account_id:
+        from app.api.credit_bills import auto_update_credit_bill
+        await auto_update_credit_bill(db, current_user.family_id, txn.payment_account_id, txn.transaction_time)
+
     logger.info("transaction_deleted", txn_id=txn_id)
 
 
@@ -460,6 +470,11 @@ async def batch_create(
         )
         db.add(debit_txn)
         created.append(entry_id)
+
+        # 自动更新信用账单
+        if txn_type == "expense" and actual_account:
+            from app.api.credit_bills import auto_update_credit_bill
+            await auto_update_credit_bill(db, current_user.family_id, actual_account, txn_time)
 
     await db.commit()
     return {"created": len(created), "entry_ids": created}

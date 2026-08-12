@@ -270,6 +270,10 @@ const channelProducts = computed(() => {
     { type_code: 'e_wallet', name: '京东钱包余额', icon: '💰' },
     { type_code: 'jd_baitiao', name: '京东白条', icon: '🏷️' },
   ]
+  if (name.includes('美团')) return [
+    { type_code: 'e_wallet', name: '美团钱包余额', icon: '💰' },
+    { type_code: 'meituan_monthly', name: '美团月付', icon: '🏷️' },
+  ]
   if (name.includes('抖音')) return [
     { type_code: 'e_wallet', name: '抖音钱包余额', icon: '💰' },
   ]
@@ -282,7 +286,7 @@ const savingsAccounts = computed(() => props.accounts.filter((a) => a.type_code 
 const dayOptions = Array.from({ length: 28 }, (_, i) => i + 1)
 
 // 当前渠道产品是否为信用类
-const creditTypeCodes = new Set(['alipay_huabei', 'alipay_jiebei', 'jd_baitiao'])
+const creditTypeCodes = new Set(['alipay_huabei', 'alipay_jiebei', 'jd_baitiao', 'meituan_monthly'])
 const isChannelCredit = computed(() => creditTypeCodes.has(form.type_code))
 // 支持自然月账单周期的类型
 const naturalMonthTypes = new Set(['alipay_huabei'])
