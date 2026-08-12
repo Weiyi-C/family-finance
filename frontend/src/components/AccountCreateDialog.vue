@@ -272,7 +272,7 @@ const channelProducts = computed(() => {
   ]
   if (name.includes('美团')) return [
     { type_code: 'e_wallet', name: '美团钱包余额', icon: '💰' },
-    { type_code: 'meituan_monthly', name: '美团月付', icon: '🏷️' },
+    { type_code: 'meituan_monthly', name: '月付', icon: '🏷️' },
   ]
   if (name.includes('抖音')) return [
     { type_code: 'e_wallet', name: '抖音钱包余额', icon: '💰' },
