@@ -81,7 +81,7 @@
               </span>
             </div>
           </template>
-          <div v-if="assetGroups.length === 0" class="text-center text-muted" class="p-20">
+          <div v-if="assetGroups.length === 0" class="text-center text-muted p-20">
             暂无账户数据
           </div>
           <div v-for="group in assetGroups" :key="group.label" class="flex justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid var(--color-border-extra-light);">
@@ -93,7 +93,7 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>本月预算</span></template>
-          <div v-if="budgetUsages.length === 0" class="text-center text-muted" class="p-20">
+          <div v-if="budgetUsages.length === 0" class="text-center text-muted p-20">
             暂未设置预算
           </div>
           <div v-for="bu in budgetUsages" :key="bu.budget_id" class="mb-16">

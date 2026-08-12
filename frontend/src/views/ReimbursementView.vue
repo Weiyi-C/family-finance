@@ -57,7 +57,7 @@
         </el-table>
 
         <el-divider>已选交易</el-divider>
-        <div v-if="form.items.length === 0" class="text-muted text-center" class="p-20">
+        <div v-if="form.items.length === 0" class="text-muted text-center p-20">
           请从上方表格中选择要报销的交易
         </div>
         <div v-for="(item, i) in form.items" :key="i" class="flex items-center gap-8 mb-8">
