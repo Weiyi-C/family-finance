@@ -15,7 +15,7 @@ export function getExchangeRates(params?: {
   target_currency?: string
   rate_date?: string
 }) {
-  return api.get<ExchangeRate[]>('/api/exchange-rates', { params })
+  return api.get<ExchangeRate[]>('/exchange-rates', { params })
 }
 
 export function convertCurrency(params: {
@@ -25,7 +25,7 @@ export function convertCurrency(params: {
   rate_date?: string
 }) {
   return api.get<{ amount: number; converted: number; rate: number; rate_date: string }>(
-    '/api/exchange-rates/convert',
+    '/exchange-rates/convert',
     { params }
   )
 }
@@ -38,5 +38,5 @@ export function createExchangeRate(data: {
   rate_type?: string
   source?: string
 }) {
-  return api.post<ExchangeRate>('/api/exchange-rates', data)
+  return api.post<ExchangeRate>('/exchange-rates', data)
 }
