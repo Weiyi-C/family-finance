@@ -1,5 +1,5 @@
-import '../database/local_database.dart';
-import '../services/api_service.dart';
+import 'package:family_finance_app/data/database/local_database.dart';
+import 'package:family_finance_app/data/services/api_service.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
@@ -12,57 +12,153 @@ class SyncService {
   
   SyncService._internal();
   
-  Future<void> syncAll() async {
-    if (_isSyncing) return;
+  /// 同步所有数据
+  Future<SyncResult> syncAll() async {
+    if (_isSyncing) {
+      return SyncResult(isSyncing: true);
+    }
+    
     _isSyncing = true;
+    final conflicts = <SyncConflict>[];
     
     try {
-      await _syncTransactions();
-      await _syncAccounts();
-      await _syncCategories();
-      await _markSynced();
-    } catch (e) {
-      // TODO: 使用日志框架
-    } finally {
-      _isSyncing = false;
-    }
-  }
-  
-  Future<void> _syncTransactions() async {
-    try {
-      final data = await _api.getTransactions(page: 1, pageSize: 100);
-      final items = data['items'] as List;
+      // 1. 推送本地更改
+      await _pushLocalChanges();
       
-      for (final item in items) {
-        await _db.insertTransaction(Map<String, dynamic>.from(item));
-      }
+      // 2. 拉取服务器数据并检测冲突
+      final serverConflicts = await _pullAndDetectConflicts();
+      conflicts.addAll(serverConflicts);
+      
+      // 3. 标记已同步的记录
+      await _markSynced();
+      
+      _isSyncing = false;
+      return SyncResult(
+        success: true,
+        conflicts: conflicts,
+      );
     } catch (e) {
-      // TODO: 使用日志框架
+      _isSyncing = false;
+      return SyncResult(
+        success: false,
+        error: e.toString(),
+      );
     }
   }
   
-  Future<void> _syncAccounts() async {
+  /// 推送本地更改到服务器
+  Future<void> _pushLocalChanges() async {
+    final logs = await _db.getUnsyncedLogs();
+    
+    for (final log in logs) {
+      try {
+        final table = log['table_name'] as String;
+        final recordId = log['record_id'] as int;
+        final action = log['action'] as String;
+        
+        switch (table) {
+          case 'transactions':
+            if (action == 'create') {
+              final txn = await _getLocalTransaction(recordId);
+              if (txn != null) {
+                await _api.createTransaction(txn);
+              }
+            } else if (action == 'update') {
+              final txn = await _getLocalTransaction(recordId);
+              if (txn != null) {
+                await _api.updateTransaction(recordId, txn);
+              }
+            } else if (action == 'delete') {
+              await _api.deleteTransaction(recordId);
+            }
+            break;
+        }
+        
+        await _db.markSynced(log['id'] as int);
+      } catch (e) {
+        // 推送失败，保留日志等待下次同步
+        print('Push error for log ${log['id']}: $e');
+      }
+    }
+  }
+  
+  /// 拉取服务器数据并检测冲突
+  Future<List<SyncConflict>> _pullAndDetectConflicts() async {
+    final conflicts = <SyncConflict>[];
+    
     try {
-      final data = await _api.getAccounts();
-      for (final item in data) {
-        await _db.insertAccount(Map<String, dynamic>.from(item));
+      // 拉取服务器交易数据
+      final serverData = await _api.getTransactions(page: 1, pageSize: 100);
+      final serverTransactions = serverData['items'] as List;
+      
+      for (final serverTxn in serverTransactions) {
+        final serverMap = Map<String, dynamic>.from(serverTxn);
+        final serverId = serverMap['id'] as int;
+        
+        // 获取本地数据
+        final localTxn = await _getLocalTransaction(serverId);
+        
+        if (localTxn != null) {
+          // 检测冲突
+          final conflict = _detectConflict(serverId, localTxn, serverMap);
+          if (conflict != null) {
+            conflicts.add(conflict);
+          } else {
+            // 无冲突，更新本地数据
+            await _db.updateTransaction(serverId, serverMap);
+          }
+        } else {
+          // 本地不存在，直接插入
+          await _db.insertTransaction(serverMap);
+        }
       }
     } catch (e) {
-      // TODO: 使用日志框架
+      print('Pull error: $e');
     }
+    
+    return conflicts;
   }
   
-  Future<void> _syncCategories() async {
-    try {
-      final data = await _api.getCategories();
-      for (final item in data) {
-        await _db.insertCategory(Map<String, dynamic>.from(item));
+  /// 检测冲突
+  SyncConflict? _detectConflict(
+    int recordId,
+    Map<String, dynamic> localData,
+    Map<String, dynamic> serverData,
+  ) {
+    // 比较关键字段
+    final criticalFields = ['amount', 'type', 'transaction_time'];
+    final compareFields = [...criticalFields, 'merchant_name', 'description', 'category_id'];
+    
+    final conflictingFields = <String>[];
+    
+    for (final field in compareFields) {
+      if (localData[field]?.toString() != serverData[field]?.toString()) {
+        conflictingFields.add(field);
       }
-    } catch (e) {
-      // TODO: 使用日志框架
     }
+    
+    if (conflictingFields.isEmpty) {
+      return null; // 无冲突
+    }
+    
+    return SyncConflict(
+      tableName: 'transactions',
+      recordId: recordId,
+      localData: localData,
+      serverData: serverData,
+      conflictingFields: conflictingFields,
+      detectedAt: DateTime.now(),
+    );
   }
   
+  /// 获取本地交易数据
+  Future<Map<String, dynamic>?> _getLocalTransaction(int id) async {
+    final results = await _db.getTransactions(limit: 1);
+    if (results.isEmpty) return null;
+    return results.first;
+  }
+  
+  /// 标记已同步记录
   Future<void> _markSynced() async {
     final logs = await _db.getUnsyncedLogs();
     for (final log in logs) {
@@ -70,18 +166,37 @@ class SyncService {
     }
   }
   
-  Future<void> pushLocalChanges() async {
-    final logs = await _db.getUnsyncedLogs();
-    
-    for (final log in logs) {
-      try {
-        // TODO: 根据表名和操作类型推送到服务器
-        await _db.markSynced(log['id'] as int);
-      } catch (e) {
-        // TODO: 使用日志框架
-      }
-    }
-  }
-  
   bool get isSyncing => _isSyncing;
+}
+
+class SyncResult {
+  final bool success;
+  final bool isSyncing;
+  final List<SyncConflict> conflicts;
+  final String? error;
+  
+  SyncResult({
+    this.success = false,
+    this.isSyncing = false,
+    this.conflicts = const [],
+    this.error,
+  });
+}
+
+class SyncConflict {
+  final String tableName;
+  final int recordId;
+  final Map<String, dynamic> localData;
+  final Map<String, dynamic> serverData;
+  final List<String> conflictingFields;
+  final DateTime detectedAt;
+  
+  SyncConflict({
+    required this.tableName,
+    required this.recordId,
+    required this.localData,
+    required this.serverData,
+    required this.conflictingFields,
+    required this.detectedAt,
+  });
 }

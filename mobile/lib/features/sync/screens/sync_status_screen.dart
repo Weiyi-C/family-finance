@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:family_finance_app/core/network/network_status.dart';
 import 'package:family_finance_app/features/transaction/providers/offline_transaction_provider.dart';
+import 'package:family_finance_app/features/sync/providers/conflict_provider.dart';
 
 class SyncStatusScreen extends ConsumerWidget {
   const SyncStatusScreen({super.key});
@@ -35,6 +37,9 @@ class SyncStatusScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             // 同步状态卡片
             _buildSyncCard(context, offlineState, isOffline),
+            const SizedBox(height: 16),
+            // 冲突提示
+            _buildConflictCard(context, ref),
             const SizedBox(height: 16),
             // 待同步交易列表
             _buildPendingTransactions(context, offlineState),
@@ -152,6 +157,58 @@ class SyncStatusScreen extends ConsumerWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
+    );
+  }
+
+  Widget _buildConflictCard(BuildContext context, WidgetRef ref) {
+    final conflictState = ref.watch(conflictProvider);
+    final conflictCount = conflictState.pendingConflicts.length;
+    
+    if (conflictCount == 0) {
+      return const SizedBox.shrink();
+    }
+    
+    return Card(
+      color: Colors.orange[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '发现 $conflictCount 个数据冲突',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.orange[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '离线期间修改的数据与服务器不一致',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                context.push('/conflict-resolution');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[700],
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('解决冲突'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

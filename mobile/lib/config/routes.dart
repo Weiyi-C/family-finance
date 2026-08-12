@@ -6,6 +6,7 @@ import '../features/statistics/screens/statistics_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/settings/screens/server_config_screen.dart';
 import '../features/sync/screens/sync_status_screen.dart';
+import '../features/sync/screens/conflict_resolution_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import 'main_layout.dart';
@@ -53,6 +54,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/sync-status',
       builder: (context, state) => const SyncStatusScreen(),
+    ),
+    GoRoute(
+      path: '/conflict-resolution',
+      builder: (context, state) => const ConflictResolutionScreen(),
     ),
   ],
 );
