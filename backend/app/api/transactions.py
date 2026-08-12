@@ -158,6 +158,17 @@ async def create_transaction(
     if linked_user and not body.paid_by:
         paid_by = linked_user
 
+    # 获取亲情卡名称，追加到描述中
+    description = body.description
+    if body.payment_account_id and actual_account != body.payment_account_id:
+        card_result = await db.execute(
+            select(PaymentAccount.name).where(PaymentAccount.id == body.payment_account_id)
+        )
+        card_name = card_result.scalar()
+        if card_name:
+            prefix = f"[{card_name}]"
+            description = f"{prefix} {description}" if description else prefix
+
     debit = Transaction(
         family_id=current_user.family_id,
         book_id=body.book_id,
@@ -173,7 +184,7 @@ async def create_transaction(
         payment_channel_id=body.payment_channel_id,
         platform_id=body.platform_id,
         merchant_name=body.merchant_name,
-        description=body.description,
+        description=description,
         transaction_time=body.transaction_time,
         recorded_by=current_user.id,
         paid_by=paid_by,
@@ -410,6 +421,17 @@ async def batch_create(
         if linked_user and not item.get("paid_by"):
             paid_by = linked_user
 
+        # 获取亲情卡名称，追加到描述中
+        description = item.get("description", "")
+        if item.get("payment_account_id") and actual_account != item.get("payment_account_id"):
+            card_result = await db.execute(
+                select(PaymentAccount.name).where(PaymentAccount.id == item.get("payment_account_id"))
+            )
+            card_name = card_result.scalar()
+            if card_name:
+                prefix = f"[{card_name}]"
+                description = f"{prefix} {description}" if description else prefix
+
         debit_txn = Transaction(
             family_id=current_user.family_id,
             book_id=item.get("book_id"),
@@ -424,7 +446,7 @@ async def batch_create(
             payment_channel_id=item.get("payment_channel_id"),
             platform_id=item.get("platform_id"),
             merchant_name=item.get("merchant_name"),
-            description=item.get("description"),
+            description=description,
             transaction_time=txn_time,
             recorded_by=current_user.id,
             paid_by=paid_by,
