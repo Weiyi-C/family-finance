@@ -98,18 +98,18 @@
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
 
-      <el-table :data="transactions" stripe v-loading="loading" class="w-full" resizable
-        :max-height="tableMaxHeight" @selection-change="handleSelectionChange">
+      <el-table :data="transactions" stripe v-loading="loading" class="w-full"
+        :max-height="tableMaxHeight" @selection-change="handleSelectionChange" @header-dragend="onColumnResize">
         <el-table-column type="selection" width="45" fixed />
-        <el-table-column prop="transaction_time" label="时间" width="160" fixed>
+        <el-table-column prop="transaction_time" label="时间" :width="colWidth('time', 160)" fixed resizable>
           <template #default="{ row }">{{ formatTime(row.transaction_time) }}</template>
         </el-table-column>
-        <el-table-column label="账本" width="80">
+        <el-table-column label="账本" :width="colWidth('book', 80)" resizable>
           <template #default="{ row }">
             <span v-if="row.book_id" class="clickable-cell" @click="quickFilter('book_id', row.book_id)">{{ getBookName(row.book_id) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="type" label="类型" width="120">
+        <el-table-column prop="type" label="类型" :width="colWidth('type', 120)" resizable>
           <template #default="{ row }">
             <el-tag :type="typeTag[row.type]" size="small" class="clickable-cell" @click="quickFilter('type', row.type)">{{ typeMap[row.type] }}</el-tag>
             <el-tag v-if="row.is_quick_entry" size="small" type="warning" class="ml-4">快速</el-tag>
@@ -118,19 +118,19 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="分类" width="120">
+        <el-table-column label="分类" :width="colWidth('category', 120)" resizable>
           <template #default="{ row }">
             <span v-if="row.category_id" class="clickable-cell" @click="quickFilter('category_id', row.category_id)">{{ getCategoryPath(row.category_id, row.sub_category_id) }}</span>
             <span v-else class="text-placeholder">未分类</span>
           </template>
         </el-table-column>
-        <el-table-column prop="merchant_name" label="商户" width="120" show-overflow-tooltip>
+        <el-table-column prop="merchant_name" label="商户" :width="colWidth('merchant', 120)" show-overflow-tooltip resizable>
           <template #default="{ row }">
             <span v-if="row.merchant_name" class="clickable-cell" @click="quickFilter('merchant_name', row.merchant_name)">{{ row.merchant_name }}</span>
             <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="资金来源" width="120">
+        <el-table-column label="资金来源" :width="colWidth('account', 120)" resizable>
           <template #default="{ row }">
             <template v-if="row.type === 'transfer'">
               <span class="text-muted">{{ getAccountName(row.source_account_id) || '未知' }}</span>
@@ -143,32 +143,32 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="支付渠道" width="90">
+        <el-table-column label="支付渠道" :width="colWidth('channel', 90)" resizable>
           <template #default="{ row }">
             <span v-if="row.payment_channel_id" class="clickable-cell" @click="quickFilter('payment_channel_id', row.payment_channel_id)">{{ getChannelName(row.payment_channel_id) }}</span>
             <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="平台" width="80">
+        <el-table-column label="平台" :width="colWidth('platform', 80)" resizable>
           <template #default="{ row }">
             <span v-if="row.platform_id" class="clickable-cell" @click="quickFilter('platform_id', row.platform_id)">{{ getPlatformName(row.platform_id) }}</span>
             <span v-else class="text-placeholder">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="币种" width="60">
+        <el-table-column label="币种" :width="colWidth('currency', 60)" resizable>
           <template #default="{ row }">
             <span class="clickable-cell" @click="quickFilter('currency', row.currency || 'CNY')">{{ row.currency || 'CNY' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="备注" min-width="120" show-overflow-tooltip />
-        <el-table-column label="标签" width="120">
+        <el-table-column prop="description" label="备注" :min-width="120" show-overflow-tooltip resizable />
+        <el-table-column label="标签" :width="colWidth('tags', 120)" resizable>
           <template #default="{ row }">
             <el-tag v-for="tagId in (row.tag_ids || [])" :key="tagId" size="small" class="mr-4">
               {{ getTagName(tagId) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="amount" label="金额" align="right" width="110" fixed="right">
+        <el-table-column prop="amount" label="金额" align="right" :width="colWidth('amount', 110)" fixed="right" resizable>
           <template #default="{ row }">
             <span v-if="row.type === 'transfer'" class="text-muted">
               {{ formatMoney(row.amount) }}
@@ -178,7 +178,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" :width="colWidth('actions', 120)" fixed="right" resizable>
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="editTxn(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
@@ -386,6 +386,40 @@ const typeTag: Record<string, string> = { expense: 'danger', income: 'success', 
 const tableMaxHeight = computed(() => {
   return window.innerHeight - 320
 })
+
+// 列宽持久化
+const COL_WIDTHS_KEY = 'txn_col_widths'
+const savedColWidths = ref<Record<string, number>>({})
+
+function loadColWidths() {
+  try {
+    const saved = localStorage.getItem(COL_WIDTHS_KEY)
+    if (saved) savedColWidths.value = JSON.parse(saved)
+  } catch { /* ignore */ }
+}
+
+function saveColWidths() {
+  localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(savedColWidths.value))
+}
+
+function colWidth(name: string, defaultWidth: number): number {
+  return savedColWidths.value[name] || defaultWidth
+}
+
+function onColumnResize(newWidth: number, _: unknown, column: { property?: string; label?: string }) {
+  // 通过 property 或 label 匹配列名
+  const labelMap: Record<string, string> = {
+    '时间': 'time', '账本': 'book', '类型': 'type', '分类': 'category',
+    '商户': 'merchant', '资金来源': 'account', '支付渠道': 'channel',
+    '平台': 'platform', '币种': 'currency', '备注': 'desc', '标签': 'tags',
+    '金额': 'amount', '操作': 'actions',
+  }
+  const name = labelMap[column.label || ''] || column.property || ''
+  if (name) {
+    savedColWidths.value[name] = newWidth
+    saveColWidths()
+  }
+}
 
 const filters = reactive({
   book_id: null as number | null,
@@ -608,6 +642,7 @@ async function handleBatchDelete() {
 }
 
 onMounted(async () => {
+  loadColWidths()
   await Promise.all([
     loadTransactions(),
     getCategories().then((r) => {
