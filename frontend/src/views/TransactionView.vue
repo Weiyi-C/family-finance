@@ -178,8 +178,9 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="colWidth('actions', 120)" fixed="right" resizable>
+        <el-table-column label="操作" :width="colWidth('actions', 150)" fixed="right" resizable>
           <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="router.push(`/transactions/${row.id}`)">详情</el-button>
             <el-button link type="primary" size="small" @click="editTxn(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
               <template #reference>
@@ -346,6 +347,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '@/api/transactions'
@@ -359,6 +361,7 @@ import type { Transaction, Category, PaymentAccount, Tag, Channel, Platform, Acc
 
 interface FamilyMember { id: number; nickname: string }
 
+const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const transactions = ref<Transaction[]>([])

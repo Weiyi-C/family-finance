@@ -16,6 +16,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
         { path: 'transactions', name: 'transactions', component: () => import('@/views/TransactionView.vue') },
+        { path: 'transactions/:id', name: 'transaction-detail', component: () => import('@/views/TransactionDetailView.vue') },
         { path: 'accounts', name: 'accounts', component: () => import('@/views/AccountView.vue') },
         { path: 'categories', name: 'categories', component: () => import('@/views/CategoryView.vue') },
         { path: 'budgets', name: 'budgets', component: () => import('@/views/BudgetView.vue') },
