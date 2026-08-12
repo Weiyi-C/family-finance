@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.database import get_db
+from app.models.account import PaymentAccount
 from app.models.transaction import Transaction
 from app.models.transaction_tag import TransactionTag
 from app.models.user import User
@@ -103,6 +104,27 @@ async def _get_user_txn(db: AsyncSession, txn_id: int, family_id: int) -> Transa
     return result.scalar_one_or_none()
 
 
+async def _resolve_family_card(account_id: int | None, db: AsyncSession) -> tuple[int | None, int | None]:
+    """解析亲情卡，返回 (实际扣款账户ID, 使用者ID)
+    
+    如果账户是亲情卡（有 linked_account_id），返回关联的扣款账户和使用者。
+    否则返回原账户ID和 None。
+    """
+    if not account_id:
+        return None, None
+    
+    result = await db.execute(
+        select(PaymentAccount.linked_account_id, PaymentAccount.linked_user_id).where(
+            PaymentAccount.id == account_id
+        )
+    )
+    row = result.first()
+    if row and row[0]:
+        # 是亲情卡，返回关联的扣款账户和使用者
+        return row[0], row[1]
+    return account_id, None
+
+
 @router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
 async def create_transaction(
     body: TransactionCreate,
@@ -118,12 +140,23 @@ async def create_transaction(
     result = await db.execute(text("SELECT nextval('transactions_id_seq')"))
     entry_id = result.scalar()
 
+    # 解析亲情卡：如果账户是亲情卡，使用关联的扣款账户
+    actual_account, linked_user = await _resolve_family_card(body.payment_account_id, db)
+    actual_dest = body.destination_account_id
+    if body.type == "transfer" and body.destination_account_id:
+        actual_dest, _ = await _resolve_family_card(body.destination_account_id, db)
+
     if body.type == "transfer":
-        debit_account = body.destination_account_id
-        credit_account = body.payment_account_id
+        debit_account = actual_dest
+        credit_account = actual_account
     else:
-        debit_account = body.payment_account_id
-        credit_account = body.payment_account_id
+        debit_account = actual_account
+        credit_account = actual_account
+
+    # 如果是亲情卡使用者，使用使用者作为 paid_by
+    paid_by = body.paid_by or current_user.id
+    if linked_user and not body.paid_by:
+        paid_by = linked_user
 
     debit = Transaction(
         family_id=current_user.family_id,
@@ -143,7 +176,7 @@ async def create_transaction(
         description=body.description,
         transaction_time=body.transaction_time,
         recorded_by=current_user.id,
-        paid_by=body.paid_by or current_user.id,
+        paid_by=paid_by,
         is_quick_entry=body.is_quick_entry,
         completion_status=body.completion_status,
     )
@@ -360,6 +393,9 @@ async def batch_create(
         txn_type = item.get("type", "expense")
         debit_side = "debit" if txn_type != "income" else "credit"
 
+        # 解析亲情卡
+        actual_account, linked_user = await _resolve_family_card(item.get("payment_account_id"), db)
+
         # 解析交易时间
         txn_time = item.get("transaction_time")
         if isinstance(txn_time, str) and txn_time:
@@ -369,6 +405,10 @@ async def batch_create(
                 txn_time = datetime.now()
         elif not txn_time:
             txn_time = datetime.now()
+
+        paid_by = item.get("paid_by", current_user.id)
+        if linked_user and not item.get("paid_by"):
+            paid_by = linked_user
 
         debit_txn = Transaction(
             family_id=current_user.family_id,
@@ -380,14 +420,14 @@ async def batch_create(
             currency=item.get("currency", "CNY"),
             category_id=item.get("category_id"),
             sub_category_id=item.get("sub_category_id"),
-            payment_account_id=item.get("payment_account_id"),
+            payment_account_id=actual_account,
             payment_channel_id=item.get("payment_channel_id"),
             platform_id=item.get("platform_id"),
             merchant_name=item.get("merchant_name"),
             description=item.get("description"),
             transaction_time=txn_time,
             recorded_by=current_user.id,
-            paid_by=item.get("paid_by", current_user.id),
+            paid_by=paid_by,
         )
         db.add(debit_txn)
         created.append(entry_id)
