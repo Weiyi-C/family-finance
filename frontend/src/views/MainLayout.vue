@@ -198,7 +198,7 @@ import {
   HomeFilled, List, CreditCard, DataAnalysis, Document, Setting, SetUp,
   Fold, Expand, ArrowDown, UserFilled, Wallet, Bell,
   Tickets, Clock, Upload, Money, Coin, Aim, TrendCharts,
-  Notebook, Menu, PriceTag, Connection, Operation, User, Refresh, Monitor, MagicStick,
+  Notebook, Menu, PriceTag, Connection, Operation, User, Refresh, Monitor, MagicStick, FolderOpened,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
