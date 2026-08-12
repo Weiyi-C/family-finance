@@ -104,7 +104,7 @@
           <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="notification-badge">
             <el-button :icon="Bell" circle size="small" @click="router.push('/notifications')" />
           </el-badge>
-          <el-dropdown @command="handleCommand" style="margin-left: 16px;">
+          <el-dropdown @command="handleCommand" class="ml-16">
             <span class="user-info">
               <el-avatar :size="32" :icon="UserFilled" />
               <span class="user-name">{{ auth.user?.nickname || '用户' }}</span>

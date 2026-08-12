@@ -1,10 +1,10 @@
 <template>
   <el-dialog v-model="visible" :title="title" width="550px" destroy-on-close @close="$emit('close')">
     <!-- 第一步：选择类别 -->
-    <div v-if="step === 1" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-      <el-card v-for="cat in categories" :key="cat.value" shadow="hover" style="cursor: pointer; text-align: center;"
+    <div v-if="step === 1" class="grid-cols-3 gap-16">
+      <el-card v-for="cat in categories" :key="cat.value" shadow="hover" class="cursor-pointer text-center"
         @click="selectCategory(cat.value)">
-        <div style="font-size: 36px; margin-bottom: 8px;">{{ cat.icon }}</div>
+        <div class="mb-8" style="font-size: 36px;">{{ cat.icon }}</div>
         <div class="font-medium">{{ cat.label }}</div>
         <div class="text-sm text-muted mt-4">{{ cat.desc }}</div>
       </el-card>
@@ -22,10 +22,10 @@
         <!-- 选择已有账号或新建 -->
         <el-form-item label="账号" v-if="existingPlatformAccounts.length > 0">
           <el-radio-group v-model="form.existing_parent_id" class="w-full">
-            <el-radio v-for="a in existingPlatformAccounts" :key="a.id" :value="a.id" style="display: block; margin-bottom: 8px;">
+            <el-radio v-for="a in existingPlatformAccounts" :key="a.id" :value="a.id" class="block mb-8">
               {{ a.name }}
             </el-radio>
-            <el-radio :value="null" style="display: block;">新建账号</el-radio>
+            <el-radio :value="null" class="block">新建账号</el-radio>
           </el-radio-group>
         </el-form-item>
 

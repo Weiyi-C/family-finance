@@ -11,7 +11,7 @@
         <el-card shadow="hover">
           <div class="text-center">
             <div class="text-sm text-muted">今日错误</div>
-            <div style="font-size: 28px; font-weight: 600; color: #f56c6c; margin: 8px 0;">{{ summary.today_errors }}</div>
+            <div class="text-expense font-bold" style="font-size: 28px; margin: 8px 0;">{{ summary.today_errors }}</div>
           </div>
         </el-card>
       </el-col>
@@ -19,7 +19,7 @@
         <el-card shadow="hover">
           <div class="text-center">
             <div class="text-sm text-muted">本周慢查询</div>
-            <div style="font-size: 28px; font-weight: 600; color: #e6a23c; margin: 8px 0;">{{ summary.week_slow_queries }}</div>
+            <div class="text-warning font-bold" style="font-size: 28px; margin: 8px 0;">{{ summary.week_slow_queries }}</div>
           </div>
         </el-card>
       </el-col>
@@ -27,7 +27,7 @@
         <el-card shadow="hover">
           <div class="text-center">
             <div class="text-sm text-muted">服务状态</div>
-            <div style="font-size: 28px; font-weight: 600; color: #67c23a; margin: 8px 0;">正常</div>
+            <div class="text-income font-bold" style="font-size: 28px; margin: 8px 0;">正常</div>
           </div>
         </el-card>
       </el-col>
@@ -62,7 +62,7 @@
             <el-table-column prop="endpoint" label="接口" width="150" show-overflow-tooltip />
             <el-table-column prop="duration_ms" label="耗时" width="80">
               <template #default="{ row }">
-                <span :style="{ color: row.duration_ms > 3000 ? '#f56c6c' : '#e6a23c' }">{{ row.duration_ms }}ms</span>
+                <span :class="row.duration_ms > 3000 ? 'text-expense' : 'text-warning'">{{ row.duration_ms }}ms</span>
               </template>
             </el-table-column>
             <el-table-column prop="query_text" label="SQL" min-width="200" show-overflow-tooltip />

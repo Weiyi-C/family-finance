@@ -16,10 +16,10 @@
       <template #header><span>本月 vs 上月 环比</span></template>
       <el-row :gutter="20">
         <el-col :span="6" v-for="item in comparisonCards" :key="item.label">
-          <div style="text-align: center; padding: 12px;">
+          <div class="text-center p-12">
             <div class="text-sm text-muted mb-8">{{ item.label }}</div>
             <div class="text-xl font-bold">{{ item.value }}</div>
-            <div style="font-size: 13px; margin-top: 4px;" :style="{ color: item.changeColor }">
+            <div class="text-sm mt-4" :class="item.changeClass">
               {{ item.changeText }}
             </div>
           </div>
@@ -31,13 +31,13 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>月度趋势</span></template>
-          <div ref="monthlyRef" style="height: 320px;"></div>
+          <div ref="monthlyRef" class="h-320"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card>
           <template #header><span>分类占比</span></template>
-          <div ref="categoryRef" style="height: 320px;"></div>
+          <div ref="categoryRef" class="h-320"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -46,7 +46,7 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>日趋势</span></template>
-          <div ref="dailyRef" style="height: 300px;"></div>
+          <div ref="dailyRef" class="h-300"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
@@ -94,13 +94,13 @@
         <div class="flex justify-between items-center">
           <span>交叉分析</span>
           <div class="flex gap-12">
-            <el-select v-model="crossDim1" size="small" style="width: 120px;" @change="loadCross">
+            <el-select v-model="crossDim1" size="small" class="w-120" @change="loadCross">
               <el-option label="按分类" value="category" />
               <el-option label="按账户" value="account" />
               <el-option label="按渠道" value="channel" />
               <el-option label="按平台" value="platform" />
             </el-select>
-            <el-select v-model="crossDim2" size="small" style="width: 120px;" @change="loadCross">
+            <el-select v-model="crossDim2" size="small" class="w-120" @change="loadCross">
               <el-option label="按月" value="month" />
               <el-option label="按日" value="day" />
               <el-option label="按星期" value="weekday" />
@@ -108,7 +108,7 @@
           </div>
         </div>
       </template>
-      <div ref="crossRef" style="height: 350px;"></div>
+      <div ref="crossRef" class="h-350"></div>
     </el-card>
   </div>
 </template>
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { getChartColors } from '@/utils/chartTheme'
 import { getByMonth, getByCategory, getByDay, getMerchantRanking, getComparison, getCrossAnalysis } from '@/api/stats'
 import { getCategories } from '@/api/categories'
 import { getAccounts } from '@/api/accounts'
@@ -181,25 +182,25 @@ const comparisonCards = computed(() => {
       label: '支出',
       value: formatMoney(current.expense),
       changeText: formatChange(changes.expense_change),
-      changeColor: changes.expense_change !== null && changes.expense_change > 0 ? '#f56c6c' : '#67c23a',
+      changeClass: changes.expense_change !== null && changes.expense_change > 0 ? 'text-expense' : 'text-income',
     },
     {
       label: '收入',
       value: formatMoney(current.income),
       changeText: formatChange(changes.income_change),
-      changeColor: changes.income_change !== null && changes.income_change > 0 ? '#67c23a' : '#f56c6c',
+      changeClass: changes.income_change !== null && changes.income_change > 0 ? 'text-income' : 'text-expense',
     },
     {
       label: '净收支',
       value: formatMoney(current.net),
       changeText: formatChange(changes.net_change),
-      changeColor: changes.net_change !== null && changes.net_change >= 0 ? '#67c23a' : '#f56c6c',
+      changeClass: changes.net_change !== null && changes.net_change >= 0 ? 'text-income' : 'text-expense',
     },
     {
       label: '笔数',
       value: String(current.count),
       changeText: formatChange(changes.count_change),
-      changeColor: '#909399',
+      changeClass: 'text-muted',
     },
   ]
 })
@@ -283,7 +284,7 @@ function renderCrossChart() {
       orient: 'horizontal',
       left: 'center',
       bottom: 0,
-      inRange: { color: ['#f5f5f5', '#409eff'] },
+      inRange: { color: [getChartColors().bgPage, getChartColors().primary] },
     },
     series: [{
       type: 'heatmap',
@@ -313,7 +314,7 @@ async function load() {
       tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; return `${p.name}<br/>${p.marker} ¥${(p.value / 100).toFixed(2)}` } },
       xAxis: { type: 'category', data: monthRes.data.map((d) => d.month) },
       yAxis: { type: 'value', axisLabel: { formatter: (v: number) => `¥${v / 100}` } },
-      series: [{ type: 'bar', data: monthRes.data.map((d) => chartType.value === 'expense' ? d.expense : d.income), itemStyle: { color: chartType.value === 'expense' ? '#f56c6c' : '#67c23a' } }],
+      series: [{ type: 'bar', data: monthRes.data.map((d) => chartType.value === 'expense' ? d.expense : d.income), itemStyle: { color: chartType.value === 'expense' ? getChartColors().expense : getChartColors().income } }],
     })
   }
 

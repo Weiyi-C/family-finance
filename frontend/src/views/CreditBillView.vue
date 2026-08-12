@@ -16,7 +16,7 @@
           type="month"
           placeholder="选择月份"
           value-format="YYYY-MM"
-          style="width: 160px;"
+          class="w-160"
         />
         <el-button type="primary" :loading="generating" @click="handleGenerate">生成</el-button>
       </div>
@@ -40,7 +40,7 @@
         </el-table-column>
         <el-table-column label="待还" align="right">
           <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: 600;">{{ formatMoney(row.total_amount - row.paid_amount) }}</span>
+            <span class="text-expense font-bold">{{ formatMoney(row.total_amount - row.paid_amount) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80">

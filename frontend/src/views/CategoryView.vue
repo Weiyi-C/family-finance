@@ -8,7 +8,7 @@
           <el-radio-button value="expense">支出</el-radio-button>
           <el-radio-button value="income">收入</el-radio-button>
         </el-radio-group>
-        <el-button type="primary" style="margin-left: 12px;" @click="showDialog = true"><el-icon><Plus /></el-icon> 新建</el-button>
+        <el-button type="primary" class="ml-8" @click="showDialog = true"><el-icon><Plus /></el-icon> 新建</el-button>
       </div>
     </div>
     <el-card>
@@ -21,7 +21,7 @@
         <template #default="{ data }">
           <div class="tree-node">
             <span>
-              <el-tag :type="data.type === 'expense' ? 'danger' : 'success'" size="small" style="margin-right: 8px;">
+              <el-tag :type="data.type === 'expense' ? 'danger' : 'success'" size="small" class="mr-8">
                 {{ data.type === 'expense' ? '支出' : '收入' }}
               </el-tag>
               {{ data.name }}

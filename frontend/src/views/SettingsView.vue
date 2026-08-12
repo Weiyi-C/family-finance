@@ -7,7 +7,7 @@
     <el-card>
       <el-form :model="settings" label-width="120px" v-loading="loading">
         <el-form-item label="昵称">
-          <el-input v-model="nickname" placeholder="请输入昵称" style="width: 200px;" />
+          <el-input v-model="nickname" placeholder="请输入昵称" class="w-200" />
           <el-button type="primary" class="ml-8" :loading="savingNickname" @click="handleSaveNickname">保存</el-button>
         </el-form-item>
         <el-form-item label="手机号">
@@ -15,7 +15,7 @@
         </el-form-item>
         <el-divider>偏好设置</el-divider>
         <el-form-item label="默认货币">
-          <el-select v-model="settings.default_currency" style="width: 200px;">
+          <el-select v-model="settings.default_currency" class="w-200">
             <el-option label="人民币 (CNY)" value="CNY" /><el-option label="美元 (USD)" value="USD" /><el-option label="欧元 (EUR)" value="EUR" />
           </el-select>
         </el-form-item>
@@ -110,13 +110,13 @@
 
         <el-divider>修改密码</el-divider>
         <el-form-item label="原密码">
-          <el-input v-model="pwdForm.old_password" type="password" placeholder="输入原密码" show-password style="width: 280px;" />
+          <el-input v-model="pwdForm.old_password" type="password" placeholder="输入原密码" show-password class="w-280" />
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="pwdForm.new_password" type="password" placeholder="至少6位" show-password style="width: 280px;" />
+          <el-input v-model="pwdForm.new_password" type="password" placeholder="至少6位" show-password class="w-280" />
         </el-form-item>
         <el-form-item label="确认密码">
-          <el-input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码" show-password style="width: 280px;" />
+          <el-input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码" show-password class="w-280" />
         </el-form-item>
         <el-form-item>
           <el-button type="warning" :loading="changingPwd" @click="handleChangePassword">修改密码</el-button>

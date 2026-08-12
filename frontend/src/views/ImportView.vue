@@ -60,8 +60,8 @@
               accept=".csv,.xlsx,.xls,.pdf,.txt,.jpg,.jpeg,.png"
               drag
             >
-              <el-icon style="font-size: 40px; color: #c0c4cc;"><Upload /></el-icon>
-              <div class="text-muted">拖拽文件到此处，或<em style="color: #409eff;">点击上传</em></div>
+              <el-icon class="text-placeholder" style="font-size: 40px;"><Upload /></el-icon>
+              <div class="text-muted">拖拽文件到此处，或<em class="text-primary" style="cursor: pointer;">点击上传</em></div>
               <template #tip>
                 <div class="text-sm text-muted">
                   支持 CSV、Excel、PDF、TXT 文件，或账单截图（JPG/PNG）
@@ -110,7 +110,7 @@
             系统检测到以下支付方式，请为每种方式选择对应的资金来源账户。
           </p>
           <div v-for="method in uploadResult.meta.detected_methods" :key="method" class="flex items-center gap-12 mb-12">
-            <span style="width: 120px; font-weight: 500;">{{ method }}:</span>
+            <span class="w-120 font-medium">{{ method }}:</span>
             <el-select v-model="methodAccountMap[method]" placeholder="选择账户" class="flex-1" clearable>
               <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
             </el-select>

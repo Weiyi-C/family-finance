@@ -3,10 +3,10 @@
     <div class="page-header">
       <h3>借贷管理</h3>
       <div>
-        <el-select v-model="filterType" clearable placeholder="类型" style="width: 100px; margin-right: 8px;" @change="load">
+        <el-select v-model="filterType" clearable placeholder="类型" class="w-100 mr-8" @change="load">
           <el-option label="借出" value="lend" /><el-option label="借入" value="borrow" />
         </el-select>
-        <el-select v-model="filterStatus" clearable placeholder="状态" style="width: 100px; margin-right: 8px;" @change="load">
+        <el-select v-model="filterStatus" clearable placeholder="状态" class="w-100 mr-8" @change="load">
           <el-option label="待还" value="pending" /><el-option label="部分" value="partial" /><el-option label="已清" value="settled" />
         </el-select>
         <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 新建</el-button>

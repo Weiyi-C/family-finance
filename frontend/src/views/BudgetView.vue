@@ -3,7 +3,7 @@
     <div class="page-header">
       <h3>预算管理</h3>
       <div>
-        <el-date-picker v-model="month" type="month" value-format="YYYY-MM" @change="load" style="width: 160px; margin-right: 12px;" />
+        <el-date-picker v-model="month" type="month" value-format="YYYY-MM" @change="load" class="w-160" style="margin-right: 12px;" />
         <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 新建预算</el-button>
       </div>
     </div>

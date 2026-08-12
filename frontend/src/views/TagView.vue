@@ -9,7 +9,7 @@
         <el-table-column prop="name" label="名称" />
         <el-table-column prop="color" label="颜色" width="100">
           <template #default="{ row }">
-            <el-tag :color="row.color" v-if="row.color" size="small" style="color: #fff;">{{ row.color }}</el-tag>
+            <el-tag :color="row.color" v-if="row.color" size="small" class="text-primary">{{ row.color }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="usage_count" label="使用次数" width="100" />

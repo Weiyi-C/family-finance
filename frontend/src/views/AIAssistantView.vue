@@ -41,7 +41,7 @@
     </el-row>
 
     <!-- 筛选标签 -->
-    <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
+    <div class="flex items-center gap-12 mb-16">
       <el-radio-group v-model="filterType" @change="loadSuggestions">
         <el-radio-button value="">全部</el-radio-button>
         <el-radio-button value="tag">标签建议</el-radio-button>
@@ -67,12 +67,12 @@
     </div>
 
     <!-- 建议列表 -->
-    <div v-if="loading" style="text-align: center; padding: 40px;">
+    <div v-if="loading" class="text-center p-20">
       <el-icon class="is-loading" :size="24"><Loading /></el-icon>
       <p class="text-muted mt-8">加载中...</p>
     </div>
 
-    <div v-else-if="filteredSuggestions.length === 0" class="text-center text-muted" style="padding: 60px;">
+    <div v-else-if="filteredSuggestions.length === 0" class="text-center text-muted" style="padding: 60px 0;">
       <el-icon :size="48"><CircleCheck /></el-icon>
       <p class="mt-12">暂无建议，点击"开始分析"让 AI 检查你的交易</p>
     </div>
@@ -99,8 +99,8 @@
               </div>
               <div class="suggestion-body">
                 <p>建议为交易添加标签：</p>
-                <div style="margin: 8px 0;">
-                  <el-tag v-for="tag in (s.suggestion.tags as string[])" :key="tag" style="margin-right: 6px;">{{ tag }}</el-tag>
+                <div class="my-8">
+                  <el-tag v-for="tag in (s.suggestion.tags as string[])" :key="tag" class="mr-4">{{ tag }}</el-tag>
                 </div>
                 <p v-if="s.reason" class="reason">{{ s.reason }}</p>
               </div>
@@ -148,7 +148,7 @@
             </template>
 
             <!-- 状态标签 -->
-            <div v-if="s.status !== 'pending'" style="margin-top: 8px;">
+            <div v-if="s.status !== 'pending'" class="mt-8">
               <el-tag :type="s.status === 'accepted' ? 'success' : 'danger'" size="small">
                 {{ s.status === 'accepted' ? '已采纳' : '已拒绝' }}
               </el-tag>

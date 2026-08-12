@@ -12,7 +12,7 @@
           <div class="flex justify-between items-center">
             <span>{{ group.icon }} {{ group.label }} ({{ group.accounts.length }}个)</span>
             <div class="flex items-center gap-12">
-              <span style="font-weight: 600; font-size: 15px;" :class="group.total < 0 ? 'text-expense' : ''">
+              <span class="font-bold" :class="group.total < 0 ? 'text-expense' : ''">
                 {{ group.accounts.length > 1 ? formatMoney(group.total) : '' }}
               </span>
               <el-button size="small" @click="openAddProduct(group)">添加产品</el-button>

@@ -33,7 +33,7 @@
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" /></el-form-item>
         <el-form-item v-if="editingId" label="设为默认">
           <el-switch v-model="form.is_default" />
-          <span style="color: #909399; font-size: 12px; margin-left: 8px;">记账时默认选中此账本</span>
+          <span class="text-sm text-muted ml-8">记账时默认选中此账本</span>
         </el-form-item>
       </el-form>
       <template #footer>

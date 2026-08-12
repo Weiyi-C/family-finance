@@ -37,7 +37,7 @@
               <el-avatar :size="32" :icon="UserFilled" />
               <div>
                 <div class="font-medium">{{ row.nickname }}</div>
-                <div style="font-size: 12px; color: #909399;">{{ row.phone || '-' }}</div>
+                <div class="text-sm text-muted">{{ row.phone || '-' }}</div>
               </div>
             </div>
           </template>
@@ -53,7 +53,7 @@
               v-if="row.id !== currentUserId"
               :model-value="row.role"
               size="small"
-              style="width: 100px;"
+              class="w-100"
               @change="(val: string) => handleRoleChange(row.id, val)"
             >
               <el-option label="管理员" value="admin" />

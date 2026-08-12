@@ -10,12 +10,12 @@
     <el-card class="filter-card">
       <el-form :inline="true" :model="filters">
         <el-form-item label="账本">
-          <el-select v-model="filters.book_id" clearable placeholder="全部" style="width: 120px;" @change="loadTransactions">
+          <el-select v-model="filters.book_id" clearable placeholder="全部" class="w-120" @change="loadTransactions">
             <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="filters.type" clearable placeholder="全部" style="width: 100px;">
+          <el-select v-model="filters.type" clearable placeholder="全部" class="w-100">
             <el-option label="支出" value="expense" />
             <el-option label="收入" value="income" />
             <el-option label="资金转移" value="transfer" />
@@ -23,25 +23,25 @@
         </el-form-item>
         <el-form-item label="日期">
           <el-date-picker v-model="dateRange" type="daterange" start-placeholder="开始" end-placeholder="结束"
-            value-format="YYYY-MM-DD" @change="onDateChange" style="width: 260px;" />
+            value-format="YYYY-MM-DD" @change="onDateChange" class="w-260" />
         </el-form-item>
         <el-form-item label="账户">
-          <el-select v-model="filters.payment_account_id" clearable placeholder="全部" style="width: 120px;">
+          <el-select v-model="filters.payment_account_id" clearable placeholder="全部" class="w-120">
             <el-option v-for="a in accounts" :key="a.id" :label="a.name" :value="a.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="渠道">
-          <el-select v-model="filters.payment_channel_id" clearable placeholder="全部" style="width: 100px;">
+          <el-select v-model="filters.payment_channel_id" clearable placeholder="全部" class="w-100">
             <el-option v-for="c in channels" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="平台">
-          <el-select v-model="filters.platform_id" clearable placeholder="全部" style="width: 100px;">
+          <el-select v-model="filters.platform_id" clearable placeholder="全部" class="w-100">
             <el-option v-for="p in platforms" :key="p.id" :label="p.name" :value="p.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" placeholder="搜索备注/商户" clearable style="width: 140px;" />
+          <el-input v-model="filters.keyword" placeholder="搜索备注/商户" clearable class="w-140" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadTransactions">查询</el-button>
@@ -51,7 +51,7 @@
 
     <el-card class="mt-16">
       <!-- 批量操作栏 -->
-      <div v-if="selectedIds.length > 0" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 12px; background: #f0f9ff; border-radius: 4px;">
+      <div v-if="selectedIds.length > 0" class="flex items-center gap-12 mb-12" style="padding: 8px 12px; background: var(--color-bg-selected); border-radius: var(--border-radius);">
         <span class="text-sm text-regular">已选 {{ selectedIds.length }} 条</span>
         <el-button size="small" type="danger" @click="handleBatchDelete">批量删除</el-button>
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
@@ -69,7 +69,7 @@
         <el-table-column prop="type" label="类型" width="120">
           <template #default="{ row }">
             <el-tag :type="typeTag[row.type]" size="small">{{ typeMap[row.type] }}</el-tag>
-            <el-tag v-if="row.is_quick_entry" size="small" type="warning" style="margin-left: 4px;">快速</el-tag>
+            <el-tag v-if="row.is_quick_entry" size="small" type="warning" class="ml-4">快速</el-tag>
             <span v-if="row.type === 'transfer' && row.payment_account_id" class="text-sm text-muted ml-4">
               → {{ getAccountName(row.payment_account_id) }}
             </span>
@@ -113,7 +113,7 @@
         <el-table-column prop="description" label="备注" min-width="120" show-overflow-tooltip />
         <el-table-column label="标签" width="120">
           <template #default="{ row }">
-            <el-tag v-for="tagId in (row.tag_ids || [])" :key="tagId" size="small" style="margin-right: 4px;">
+            <el-tag v-for="tagId in (row.tag_ids || [])" :key="tagId" size="small" class="mr-4">
               {{ getTagName(tagId) }}
             </el-tag>
           </template>

@@ -3,7 +3,7 @@
     <div class="page-header">
       <h3>报销管理</h3>
       <div>
-        <el-select v-model="filterStatus" clearable placeholder="状态" style="width: 120px; margin-right: 8px;" @change="load">
+        <el-select v-model="filterStatus" clearable placeholder="状态" class="w-120 mr-8" @change="load">
           <el-option label="草稿" value="draft" /><el-option label="待审批" value="submitted" />
           <el-option label="已审批" value="approved" /><el-option label="已到账" value="received" />
         </el-select>
@@ -41,7 +41,7 @@
         <el-form-item label="备注"><el-input v-model="form.description" /></el-form-item>
         <el-divider>选择要报销的交易</el-divider>
         <div class="mb-12">
-          <el-input v-model="searchKeyword" placeholder="搜索交易备注/商户" clearable style="width: 200px; margin-right: 8px;" />
+          <el-input v-model="searchKeyword" placeholder="搜索交易备注/商户" clearable class="w-200 mr-8" />
           <el-button @click="searchTransactions">搜索</el-button>
         </div>
         <el-table :data="availableTxns" stripe size="small" max-height="250" @selection-change="onTxnSelect" class="mb-16">
@@ -57,15 +57,15 @@
         </el-table>
 
         <el-divider>已选交易</el-divider>
-        <div v-if="form.items.length === 0" class="text-muted text-center" style="padding: 20px;">
+        <div v-if="form.items.length === 0" class="text-muted text-center" class="p-20">
           请从上方表格中选择要报销的交易
         </div>
-        <div v-for="(item, i) in form.items" :key="i" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+        <div v-for="(item, i) in form.items" :key="i" class="flex items-center gap-8 mb-8">
           <span class="flex-1">{{ item.description }}</span>
-          <span style="width: 100px; text-align: right;">{{ formatMoney(item.amount) }}</span>
+          <span class="w-100 text-right">{{ formatMoney(item.amount) }}</span>
           <el-button type="danger" :icon="Delete" circle size="small" @click="removeItem(i)" />
         </div>
-        <div v-if="form.items.length > 0" style="text-align: right; font-weight: bold; margin-top: 8px;">
+        <div v-if="form.items.length > 0" class="text-right font-bold mt-8">
           合计: {{ formatMoney(totalAmount) }}
         </div>
       </el-form>

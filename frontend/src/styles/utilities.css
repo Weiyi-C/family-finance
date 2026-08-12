@@ -23,11 +23,41 @@
 
 /* 宽度 */
 .w-full { width: 100%; }
+.w-100 { width: 100px; }
+.w-120 { width: 120px; }
+.w-140 { width: 140px; }
+.w-160 { width: 160px; }
+.w-200 { width: 200px; }
+.w-260 { width: 260px; }
+.w-280 { width: 280px; }
+
+/* 高度 */
+.h-300 { height: 300px; }
+.h-320 { height: 320px; }
+.h-350 { height: 350px; }
 
 /* 文本对齐 */
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .text-left { text-align: left; }
+
+/* Display */
+.block { display: block; }
+.inline-block { display: inline-block; }
+.hidden { display: none; }
+
+/* Grid */
+.grid-cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+
+/* Cursor */
+.cursor-pointer { cursor: pointer; }
+
+/* 间距补充 */
+.p-12 { padding: 12px; }
+.p-20 { padding: 20px; }
+.px-12 { padding-left: 12px; padding-right: 12px; }
+.py-8 { padding-top: 8px; padding-bottom: 8px; }
+.my-8 { margin-top: 8px; margin-bottom: 8px; }
 
 /* Flex 布局 */
 .flex { display: flex; }

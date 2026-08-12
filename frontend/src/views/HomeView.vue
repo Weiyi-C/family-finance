@@ -19,7 +19,7 @@
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
           @change="loadData"
-          style="width: 260px;"
+          class="w-260"
         />
         <span class="text-sm text-muted">{{ periodLabel }}</span>
       </div>
@@ -32,7 +32,7 @@
           <div class="summary-item">
             <div class="summary-label">收入</div>
             <div class="summary-value income">{{ formatMoney(summary.total_income) }}</div>
-            <div v-if="comparison" class="summary-change" :style="{ color: (comparison.changes.income_change ?? 0) >= 0 ? '#67c23a' : '#f56c6c' }">
+            <div v-if="comparison" class="summary-change" :class="(comparison.changes.income_change ?? 0) >= 0 ? 'text-income' : 'text-expense'">
               {{ formatChange(comparison.changes.income_change) }}
             </div>
           </div>
@@ -43,7 +43,7 @@
           <div class="summary-item">
             <div class="summary-label">支出</div>
             <div class="summary-value expense">{{ formatMoney(summary.total_expense) }}</div>
-            <div v-if="comparison" class="summary-change" :style="{ color: (comparison.changes.expense_change ?? 0) <= 0 ? '#67c23a' : '#f56c6c' }">
+            <div v-if="comparison" class="summary-change" :class="(comparison.changes.expense_change ?? 0) <= 0 ? 'text-income' : 'text-expense'">
               {{ formatChange(comparison.changes.expense_change) }}
             </div>
           </div>
@@ -81,10 +81,10 @@
               </span>
             </div>
           </template>
-          <div v-if="assetGroups.length === 0" class="text-center text-muted" style="padding: 20px;">
+          <div v-if="assetGroups.length === 0" class="text-center text-muted" class="p-20">
             暂无账户数据
           </div>
-          <div v-for="group in assetGroups" :key="group.label" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+          <div v-for="group in assetGroups" :key="group.label" class="flex justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid var(--color-border-extra-light);">
             <span>{{ group.icon }} {{ group.label }}</span>
             <span class="font-medium" :class="group.total < 0 ? 'expense' : ''">{{ formatMoney(group.total) }}</span>
           </div>
@@ -93,12 +93,12 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>本月预算</span></template>
-          <div v-if="budgetUsages.length === 0" class="text-center text-muted" style="padding: 20px;">
+          <div v-if="budgetUsages.length === 0" class="text-center text-muted" class="p-20">
             暂未设置预算
           </div>
           <div v-for="bu in budgetUsages" :key="bu.budget_id" class="mb-16">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="font-size: 13px;">{{ bu.category_name || '总预算' }}</span>
+            <div class="flex justify-between mb-4">
+              <span class="text-sm">{{ bu.category_name || '总预算' }}</span>
               <span class="text-sm text-muted">
                 {{ formatMoney(bu.spent) }} / {{ formatMoney(bu.amount) }}
               </span>
@@ -118,13 +118,13 @@
       <el-col :span="12">
         <el-card>
           <template #header><span>趋势</span></template>
-          <div ref="trendChartRef" style="height: 300px;"></div>
+          <div ref="trendChartRef" class="h-300"></div>
         </el-card>
       </el-col>
       <el-col :span="12">
         <el-card>
           <template #header><span>支出分类占比</span></template>
-          <div ref="categoryChartRef" style="height: 300px;"></div>
+          <div ref="categoryChartRef" class="h-300"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -161,6 +161,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import * as echarts from 'echarts'
+import { getChartColors } from '@/utils/chartTheme'
 import { getSummary, getByCategory, getByDay, getComparison } from '@/api/stats'
 import { getTransactions } from '@/api/transactions'
 import { getAccounts } from '@/api/accounts'
@@ -394,7 +395,7 @@ function renderTrendChart(data: DailyStats[]) {
       data: data.map((d) => d.total),
       smooth: true,
       areaStyle: { opacity: 0.3 },
-      itemStyle: { color: '#409eff' },
+      itemStyle: { color: getChartColors().primary },
     }],
     grid: { left: 60, right: 20, top: 30, bottom: data.length > 15 ? 60 : 30 },
   })
