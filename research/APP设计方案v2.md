@@ -524,6 +524,267 @@ enum ConnectionStatus {
 4. 保存配置并开始同步
 5. 支持多服务器切换
 
+### 4.4 主题系统设计
+
+**设计原则**：
+- 支持多种主题风格切换
+- 主题配置持久化存储
+- 跟随系统或手动切换
+- 支持自定义主题色
+
+**主题模式**：
+```dart
+enum ThemeMode {
+  light,    // 浅色模式（默认）
+  dark,     // 深色模式
+  auto,     // 跟随系统
+}
+
+enum ThemePreset {
+  sakura,     // 樱花粉（默认治愈系）
+  mint,       // 薄荷绿
+  lavender,   // 薰衣草紫
+  sunset,     // 日落橙
+  ocean,      // 海洋蓝
+  forest,     // 森林绿
+  custom,     // 自定义
+}
+```
+
+**主题配置模型**：
+```dart
+class AppTheme {
+  final ThemeMode mode;           // 主题模式
+  final ThemePreset preset;       // 预设主题
+  final Color? primaryColor;      // 自定义主色
+  final Color? accentColor;       // 自定义强调色
+  final double fontSize;          // 字体大小（0.8-1.4）
+  final bool useRoundedCorners;   // 使用圆角
+  final bool useAnimations;       // 使用动画
+}
+
+class ThemeColors {
+  // 浅色模式
+  static const light = {
+    'background': Color(0xFFFFF8F0),    // 米白
+    'card': Color(0xFFFFFFFF),          // 纯白
+    'primary': Color(0xFFFFB5C2),       // 樱花粉
+    'secondary': Color(0xFF98D8C8),     // 薄荷绿
+    'text': Color(0xFF5D4E37),          // 深棕
+    'textSecondary': Color(0xFF8B7D6B), // 浅棕
+    'divider': Color(0xFFF0E6D8),       // 米色
+    'income': Color(0xFF98D8C8),        // 收入绿
+    'expense': Color(0xFFFFB5C2),       // 支出粉
+    'transfer': Color(0xFF87CEEB),      // 转账蓝
+  };
+
+  // 深色模式
+  static const dark = {
+    'background': Color(0xFF1A1A1A),    // 深黑
+    'card': Color(0xFF2D2D2D),          // 深灰
+    'primary': Color(0xFFFFB5C2),       // 樱花粉
+    'secondary': Color(0xFF98D8C8),     // 薄荷绿
+    'text': Color(0xFFF5F5F5),          // 浅白
+    'textSecondary': Color(0xFFB0B0B0), // 灰色
+    'divider': Color(0xFF3D3D3D),       // 分割线
+    'income': Color(0xFF98D8C8),        // 收入绿
+    'expense': Color(0xFFFFB5C2),       // 支出粉
+    'transfer': Color(0xFF87CEEB),      // 转账蓝
+  };
+}
+```
+
+**预设主题色彩**：
+
+```
+🌸 樱花粉（默认）
+├── 主色：#FFB5C2
+├── 辅助：#FFD1DC
+├── 强调：#98D8C8
+└── 风格：温柔治愈，适合日常使用
+
+🌿 薄荷绿
+├── 主色：#98D8C8
+├── 辅助：#B8E6D0
+├── 强调：#FFB5C2
+└── 风格：清新自然，护眼舒适
+
+💜 薰衣草紫
+├── 主色：#C8A2C8
+├── 辅助：#D8BFD8
+├── 强调：#FFD700
+└── 风格：优雅浪漫，适合女性用户
+
+🌅 日落橙
+├── 主色：#FFB347
+├── 辅助：#FFCC80
+├── 强调：#87CEEB
+└── 风格：温暖活力，充满能量
+
+🌊 海洋蓝
+├── 主色：#87CEEB
+├── 辅助：#B0E0E6
+├── 强调：#FFB5C2
+└── 风格：清爽宁静，专注高效
+
+🌲 森林绿
+├── 主色：#90EE90
+├── 辅助：#98FB98
+├── 强调：#FFD700
+└── 风格：生机勃勃，自然健康
+```
+
+**主题切换页面设计**：
+```
+┌─────────────────────────────────────┐
+│  主题设置                           │
+│                                     │
+│  ───── 主题模式 ─────               │
+│  ┌─────┐ ┌─────┐ ┌─────┐          │
+│  │ ☀️  │ │ 🌙  │ │ 📱  │          │
+│  │浅色 │ │深色 │ │自动 │          │
+│  └─────┘ └─────┘ └─────┘          │
+│                                     │
+│  ───── 预设主题 ─────               │
+│  ┌─────┐ ┌─────┐ ┌─────┐          │
+│  │ 🌸  │ │ 🌿  │ │ 💜  │          │
+│  │樱花 │ │薄荷 │ │薰衣草│          │
+│  └─────┘ └─────┘ └─────┘          │
+│  ┌─────┐ ┌─────┐ ┌─────┐          │
+│  │ 🌅  │ │ 🌊  │ │ 🌲  │          │
+│  │日落 │ │海洋 │ │森林 │          │
+│  └─────┘ └─────┘ └─────┘          │
+│                                     │
+│  ───── 自定义颜色 ─────             │
+│  主色调  [■] #FFB5C2    [选择]     │
+│  强调色  [■] #98D8C8    [选择]     │
+│                                     │
+│  ───── 显示设置 ─────               │
+│  字体大小  ████████░░ 1.0x         │
+│  圆角样式  [开关] 已开启            │
+│  动画效果  [开关] 已开启            │
+│                                     │
+│  ───── 预览 ─────                   │
+│  ┌─────────────────────────────┐   │
+│  │  [预览卡片]                  │   │
+│  │  收入 ¥15,000               │   │
+│  │  支出 ¥8,500                │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│           [ 保存设置 ]              │
+└─────────────────────────────────────┘
+```
+
+**主题切换实现**：
+```dart
+// Riverpod状态管理
+final themeProvider = StateNotifierProvider<ThemeNotifier, AppTheme>((ref) {
+  return ThemeNotifier();
+});
+
+class ThemeNotifier extends StateNotifier<AppTheme> {
+  ThemeNotifier() : super(AppTheme.defaultTheme()) {
+    _loadFromStorage();
+  }
+
+  // 从本地存储加载主题配置
+  Future<void> _loadFromStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('themeMode') ?? 'light';
+    final preset = prefs.getString('themePreset') ?? 'sakura';
+    // ... 加载其他配置
+  }
+
+  // 切换主题模式
+  Future<void> setMode(ThemeMode mode) async {
+    state = state.copyWith(mode: mode);
+    await _saveToStorage();
+  }
+
+  // 切换预设主题
+  Future<void> setPreset(ThemePreset preset) async {
+    state = state.copyWith(preset: preset);
+    await _saveToStorage();
+  }
+
+  // 自定义颜色
+  Future<void> setCustomColors(Color primary, Color accent) async {
+    state = state.copyWith(
+      preset: ThemePreset.custom,
+      primaryColor: primary,
+      accentColor: accent,
+    );
+    await _saveToStorage();
+  }
+
+  // 保存到本地存储
+  Future<void> _saveToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('themeMode', state.mode.name);
+    await prefs.setString('themePreset', state.preset.name);
+    // ... 保存其他配置
+  }
+}
+```
+
+**Flutter主题集成**：
+```dart
+// MaterialApp配置
+MaterialApp(
+  theme: AppTheme.lightTheme(),      // 浅色主题
+  darkTheme: AppTheme.darkTheme(),   // 深色主题
+  themeMode: themeMode,              // 当前模式
+  // ...
+)
+
+// 主题定义
+class AppTheme {
+  static ThemeData lightTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.light(
+        primary: Color(0xFFFFB5C2),
+        secondary: Color(0xFF98D8C8),
+        // ...
+      ),
+      // 圆角配置
+      cardTheme: CardTheme(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      // 按钮配置
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      // ...
+    );
+  }
+}
+```
+
+**主题切换动画**：
+```dart
+// 平滑过渡动画
+AnimatedTheme(
+  data: currentTheme,
+  duration: Duration(milliseconds: 300),
+  curve: Curves.easeInOut,
+  child: child,
+)
+
+// 颜色过渡
+AnimatedContainer(
+  duration: Duration(milliseconds: 300),
+  color: themeColors.background,
+  // ...
+)
+```
+
 ---
 
 ## 五、页面详细设计
