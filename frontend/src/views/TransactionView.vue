@@ -58,6 +58,39 @@
     </el-card>
 
     <el-card class="mt-16">
+      <!-- 活跃筛选条件标签 -->
+      <div v-if="hasActiveFilters" class="flex items-center gap-8 mb-12 flex-wrap">
+        <span class="text-sm text-muted">筛选中：</span>
+        <el-tag v-if="filters.book_id" closable @close="filters.book_id = null; loadTransactions()" size="small">
+          账本: {{ getBookName(filters.book_id) }}
+        </el-tag>
+        <el-tag v-if="filters.type" closable @close="filters.type = ''; loadTransactions()" size="small">
+          类型: {{ typeMap[filters.type] }}
+        </el-tag>
+        <el-tag v-if="filters.payment_account_id" closable @close="filters.payment_account_id = null; loadTransactions()" size="small">
+          账户: {{ getAccountName(filters.payment_account_id) }}
+        </el-tag>
+        <el-tag v-if="filters.payment_channel_id" closable @close="filters.payment_channel_id = null; loadTransactions()" size="small">
+          渠道: {{ getChannelName(filters.payment_channel_id) }}
+        </el-tag>
+        <el-tag v-if="filters.platform_id" closable @close="filters.platform_id = null; loadTransactions()" size="small">
+          平台: {{ getPlatformName(filters.platform_id) }}
+        </el-tag>
+        <el-tag v-if="filters.category_id" closable @close="filters.category_id = null; loadTransactions()" size="small">
+          分类: {{ getCategoryName(filters.category_id) }}
+        </el-tag>
+        <el-tag v-if="filters.merchant_name" closable @close="filters.merchant_name = ''; loadTransactions()" size="small">
+          商户: {{ filters.merchant_name }}
+        </el-tag>
+        <el-tag v-if="filters.currency" closable @close="filters.currency = ''; loadTransactions()" size="small">
+          币种: {{ filters.currency }}
+        </el-tag>
+        <el-tag v-if="filters.keyword" closable @close="filters.keyword = ''; loadTransactions()" size="small">
+          关键词: {{ filters.keyword }}
+        </el-tag>
+        <el-button link type="primary" size="small" @click="clearFilters">清除全部</el-button>
+      </div>
+
       <!-- 批量操作栏 -->
       <div v-if="selectedIds.length > 0" class="flex items-center gap-12 mb-12" style="padding: 8px 12px; background: var(--color-bg-selected); border-radius: var(--border-radius);">
         <span class="text-sm text-regular">已选 {{ selectedIds.length }} 条</span>
@@ -310,7 +343,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '@/api/transactions'
@@ -356,6 +389,13 @@ const filters = reactive({
   category_id: null as number | null,
   merchant_name: '',
   currency: '',
+})
+
+// 是否有活跃的筛选条件
+const hasActiveFilters = computed(() => {
+  return !!(filters.book_id || filters.type || filters.payment_account_id ||
+    filters.payment_channel_id || filters.platform_id || filters.category_id ||
+    filters.merchant_name || filters.currency || filters.keyword || dateRange.value)
 })
 
 const form = reactive({
