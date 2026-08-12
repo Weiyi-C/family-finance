@@ -16,7 +16,7 @@ from app.models.transaction import Transaction
 from app.models.user import User
 
 # 从新模块导入
-from app.parsers import detect_and_decode, parse_alipay_csv, parse_wechat_csv, parse_excel, parse_icbc_pdf, parse_icbc_csv
+from app.parsers import detect_and_decode, parse_alipay_csv, parse_wechat_csv, parse_excel, parse_icbc_pdf, parse_icbc_csv, parse_ccb_credit_csv, parse_ccb_debit_xls, parse_meituan_csv
 from app.services import (
     auto_categorize,
     auto_categorize_with_db,
@@ -74,6 +74,10 @@ async def upload_import(
                     source = "alipay"
                 elif "微信" in content_str[:500] or "交易单号" in content_str[:1000]:
                     source = "wechat"
+                elif "入账金额" in content_str[:2000] and "信用卡卡号" in content_str[:2000]:
+                    source = "ccb_credit"
+                elif "实付金额" in content_str[:2000] and "交易单号" in content_str[:2000]:
+                    source = "meituan"
                 else:
                     source = "alipay"
 
@@ -83,6 +87,10 @@ async def upload_import(
                 items, meta = parse_wechat_csv(content_str)
             elif source == "icbc":
                 items, meta = parse_icbc_csv(content_str)
+            elif source == "ccb_credit":
+                items, meta = parse_ccb_credit_csv(content_str)
+            elif source == "meituan":
+                items, meta = parse_meituan_csv(content_str)
             else:
                 raise ValueError(f"不支持的 CSV 来源: {source}")
             file_format = "csv"
@@ -96,7 +104,15 @@ async def upload_import(
                 raise ValueError("无法识别 TXT 文件格式")
             file_format = "txt"
         elif ext in ("xlsx", "xls"):
-            items, meta = parse_excel(content_bytes)
+            if ext == "xlsx":
+                items, meta = parse_excel(content_bytes)
+            else:
+                # xls 格式：优先尝试建行储蓄卡解析，失败则降级为通用 Excel
+                try:
+                    items, meta = parse_ccb_debit_xls(content_bytes)
+                    source = "ccb"
+                except Exception:
+                    items, meta = parse_excel(content_bytes)
             # 从解析器返回的 meta 中获取实际来源
             detected_platform = meta.get("platform", "")
             if detected_platform == "微信":
@@ -518,6 +534,10 @@ async def confirm_import(
             source_for_channel = "alipay"
         elif "财付通" in venue or "微信" in venue or "微信" in summary:
             source_for_channel = "wechat"
+        elif "建设银行" in venue or "建设银行" in str(raw.get("payment_method", "")):
+            source_for_channel = "ccb"
+        elif "美团" in str(raw.get("platform", "")) or "美团" in str(raw.get("payment_method", "")):
+            source_for_channel = "meituan"
         elif source_for_channel == "auto":
             platform_name = raw.get("platform", "")
             if platform_name == "微信" or "微信" in str(raw.get("payment_method", "")):
@@ -539,6 +559,21 @@ async def confirm_import(
             channel_result = await db.execute(
                 select(PaymentChannel.id).where(PaymentChannel.name == "银行转账").limit(1)
             )
+            channel_id = channel_result.scalar()
+        elif source_for_channel in ("ccb", "ccb_credit"):
+            channel_result = await db.execute(
+                select(PaymentChannel.id).where(PaymentChannel.name == "银行转账").limit(1)
+            )
+            channel_id = channel_result.scalar()
+        elif source_for_channel == "meituan":
+            channel_result = await db.execute(
+                select(PaymentChannel.id).where(PaymentChannel.name == "美团支付").limit(1)
+            )
+            # 美团支付渠道可能不存在，降级为银行转账
+            if not channel_result.scalar():
+                channel_result = await db.execute(
+                    select(PaymentChannel.id).where(PaymentChannel.name == "银行转账").limit(1)
+                )
             channel_id = channel_result.scalar()
 
         # 使用自动分类建议，否则实时分类
