@@ -98,7 +98,7 @@
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
 
-      <el-table :data="transactions" stripe v-loading="loading" class="w-full"
+      <el-table :data="transactions" stripe v-loading="loading" class="w-full" border
         :max-height="tableMaxHeight" @selection-change="handleSelectionChange" @header-dragend="onColumnResize">
         <el-table-column type="selection" width="45" fixed />
         <el-table-column prop="transaction_time" label="时间" :width="colWidth('time', 160)" fixed resizable>
