@@ -14,7 +14,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="category_id" label="分类" width="100">
-          <template #default="{ row }">{{ row.category_id ? `分类${row.category_id}` : '-' }}</template>
+          <template #default="{ row }">{{ row.category_id ? getCategoryName(row.category_id) : '-' }}</template>
         </el-table-column>
         <el-table-column prop="hit_count" label="命中次数" width="90" />
         <el-table-column prop="is_active" label="状态" width="70">
@@ -96,6 +96,10 @@ async function handleSave() {
 
 async function handleDelete(id: number) {
   try { await deleteAlias(id); ElMessage.success('已删除'); await load() } catch { ElMessage.error('删除失败') }
+}
+
+function getCategoryName(id: number) {
+  return categories.value.find((c) => c.id === id)?.name || `分类${id}`
 }
 
 onMounted(async () => {
