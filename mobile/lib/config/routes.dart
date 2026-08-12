@@ -14,6 +14,10 @@ import '../features/debt/screens/debt_screen.dart';
 import '../features/savings/screens/savings_screen.dart';
 import '../features/reimbursement/screens/reimbursement_screen.dart';
 import '../features/credit_bill/screens/credit_bill_screen.dart';
+import '../features/category/screens/category_screen.dart';
+import '../features/tag/screens/tag_screen.dart';
+import '../features/notification/screens/notification_screen.dart';
+import '../features/family/screens/family_screen.dart';
 import 'main_layout.dart';
 
 final appRouter = GoRouter(
@@ -83,6 +87,22 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/credit-bills',
       builder: (context, state) => const CreditBillScreen(),
+    ),
+    GoRoute(
+      path: '/categories',
+      builder: (context, state) => const CategoryScreen(),
+    ),
+    GoRoute(
+      path: '/tags',
+      builder: (context, state) => const TagScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationScreen(),
+    ),
+    GoRoute(
+      path: '/family',
+      builder: (context, state) => const FamilyScreen(),
     ),
   ],
 );

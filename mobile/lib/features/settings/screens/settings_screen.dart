@@ -127,9 +127,9 @@ class SettingsScreen extends ConsumerWidget {
       ('储蓄目标', Icons.flag, () => context.push('/savings')),
       ('周期交易', Icons.repeat, () => context.push('/recurring')),
       ('报销管理', Icons.receipt, () => context.push('/reimbursements')),
-      ('规则引擎', Icons.settings, () {}),
-      ('AI助手', Icons.smart_toy, () {}),
-      ('家庭管理', Icons.family_restroom, () {}),
+      ('分类管理', Icons.category, () => context.push('/categories')),
+      ('标签管理', Icons.label, () => context.push('/tags')),
+      ('家庭管理', Icons.family_restroom, () => context.push('/family')),
     ];
 
     return Card(
