@@ -231,6 +231,9 @@ async def list_transactions(
     type: str | None = None,
     category_id: int | None = None,
     payment_account_id: int | None = None,
+    payment_channel_id: int | None = None,
+    platform_id: int | None = None,
+    tag_id: int | None = None,
     merchant_name: str | None = None,
     keyword: str | None = None,
     currency: str | None = None,
@@ -256,6 +259,10 @@ async def list_transactions(
         conditions.append(Transaction.category_id == category_id)
     if payment_account_id:
         conditions.append(Transaction.payment_account_id == payment_account_id)
+    if payment_channel_id:
+        conditions.append(Transaction.payment_channel_id == payment_channel_id)
+    if platform_id:
+        conditions.append(Transaction.platform_id == platform_id)
     if merchant_name:
         conditions.append(Transaction.merchant_name.ilike(f"%{_escape_like(merchant_name)}%", escape="\\"))
     if keyword:
@@ -284,6 +291,21 @@ async def list_transactions(
         conditions.append(Transaction.amount >= min_amount)
     if max_amount:
         conditions.append(Transaction.amount <= max_amount)
+
+    # 标签筛选：先查询有指定标签的 entry_id
+    if tag_id:
+        tag_subq = (
+            select(TransactionTag.transaction_id)
+            .where(TransactionTag.tag_id == tag_id)
+            .distinct()
+        )
+        tag_result = await db.execute(tag_subq)
+        entry_ids_with_tag = [row[0] for row in tag_result.all()]
+        if entry_ids_with_tag:
+            conditions.append(Transaction.entry_id.in_(entry_ids_with_tag))
+        else:
+            # 没有匹配的标签，直接返回空结果
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "pages": 0}
 
     stmt = (
         select(Transaction)

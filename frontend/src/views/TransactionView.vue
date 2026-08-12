@@ -47,6 +47,11 @@
             <el-option label="HKD" value="HKD" />
           </el-select>
         </el-form-item>
+        <el-form-item label="标签">
+          <el-select v-model="filters.tag_id" clearable filterable placeholder="全部" class="w-120">
+            <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="搜索备注/商户" clearable class="w-140" />
         </el-form-item>
@@ -84,6 +89,9 @@
         </el-tag>
         <el-tag v-if="filters.currency" closable @close="filters.currency = ''; loadTransactions()" size="small">
           币种: {{ filters.currency }}
+        </el-tag>
+        <el-tag v-if="filters.tag_id" closable @close="filters.tag_id = null; loadTransactions()" size="small">
+          标签: {{ getTagName(filters.tag_id) }}
         </el-tag>
         <el-tag v-if="filters.keyword" closable @close="filters.keyword = ''; loadTransactions()" size="small">
           关键词: {{ filters.keyword }}
@@ -431,6 +439,7 @@ const filters = reactive({
   payment_channel_id: null as number | null,
   platform_id: null as number | null,
   category_id: null as number | null,
+  tag_id: null as number | null,
   merchant_name: '',
   currency: '',
 })
@@ -439,7 +448,7 @@ const filters = reactive({
 const hasActiveFilters = computed(() => {
   return !!(filters.book_id || filters.type || filters.payment_account_id ||
     filters.payment_channel_id || filters.platform_id || filters.category_id ||
-    filters.merchant_name || filters.currency || filters.keyword || dateRange.value)
+    filters.tag_id || filters.merchant_name || filters.currency || filters.keyword || dateRange.value)
 })
 
 const form = reactive({
@@ -516,7 +525,7 @@ function clearFilters() {
   filters.start_date = ''; filters.end_date = ''
   filters.payment_account_id = null; filters.payment_channel_id = null
   filters.platform_id = null; filters.category_id = null
-  filters.merchant_name = ''; filters.currency = ''
+  filters.tag_id = null; filters.merchant_name = ''; filters.currency = ''
   dateRange.value = null
   page.value = 1
   loadTransactions()
