@@ -1,12 +1,10 @@
 <template>
   <div>
-    <div class="page-header">
-      <h3>账单导入</h3>
-      <div>
-        <el-button type="success" @click="showExportDialog = true"><el-icon><Upload /></el-icon> 导出数据</el-button>
-        <el-button type="primary" @click="showImportDialog = true" class="ml-8"><el-icon><Plus /></el-icon> 导入账单</el-button>
-      </div>
-    </div>
+    <PageHeader title="账单导入">
+      <el-button type="success" @click="showExportDialog = true"><el-icon><Upload /></el-icon> 导出数据</el-button>
+      <el-button type="primary" @click="showImportDialog = true"><el-icon><Plus /></el-icon> 导入账单</el-button>
+    </PageHeader>
+
     <el-card>
       <el-table :data="imports" stripe v-loading="loading">
         <el-table-column prop="source" label="来源" width="100">
@@ -14,7 +12,9 @@
         </el-table-column>
         <el-table-column prop="file_format" label="格式" width="70" />
         <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }"><el-tag :type="statusType[row.status]" size="small">{{ statusMap[row.status] || row.status }}</el-tag></template>
+          <template #default="{ row }">
+            <StatusTag :value="row.status" :map="statusMap" :type-map="statusType" />
+          </template>
         </el-table-column>
         <el-table-column prop="total_rows" label="总行数" width="80" />
         <el-table-column prop="parsed_count" label="已解析" width="80" />
@@ -25,137 +25,145 @@
         <el-table-column label="操作" width="180">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="viewItems(row.id)">查看明细</el-button>
-            <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
-              <template #reference><el-button link type="danger" size="small">删除</el-button></template>
-            </el-popconfirm>
+            <ConfirmDelete @confirm="handleDelete(row.id)" />
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <!-- 导入对话框 -->
-    <el-dialog v-model="showImportDialog" title="导入账单" width="700px" destroy-on-close @close="resetImport">
-      <!-- 第一步：上传文件 -->
-      <div v-if="step === 1">
-        <el-form label-width="80px">
-          <el-form-item label="账本">
-            <el-select v-model="importForm.book_id" class="w-full">
-              <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
-              <el-option label="+ 新建账本" value="__new__" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="来源">
-            <el-select v-model="importForm.source" class="w-full">
-              <el-option label="自动识别" value="auto" />
-              <el-option label="支付宝" value="alipay" />
-              <el-option label="微信" value="wechat" />
-              <el-option label="工商银行" value="icbc" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="账单文件">
-            <el-upload
-              :auto-upload="false"
-              :limit="1"
-              :on-change="handleFileChange"
-              accept=".csv,.xlsx,.xls,.pdf,.txt,.jpg,.jpeg,.png"
-              drag
-            >
-              <el-icon class="text-placeholder" style="font-size: 40px;"><Upload /></el-icon>
-              <div class="text-muted">拖拽文件到此处，或<em class="text-primary" style="cursor: pointer;">点击上传</em></div>
-              <template #tip>
-                <div class="text-sm text-muted">
-                  支持 CSV、Excel、PDF、TXT 文件，或账单截图（JPG/PNG）
-                </div>
-              </template>
-            </el-upload>
-          </el-form-item>
-          <el-form-item v-if="isImageFile">
-            <el-alert title="图片导入" type="info" :closable="false" class="w-full">
-              <template #default>
-                检测到图片文件，将使用 AI 识别账单内容。请确保图片清晰且包含完整的账单信息。
-              </template>
-            </el-alert>
-          </el-form-item>
-        </el-form>
-      </div>
+    <!-- 导入向导对话框 -->
+    <el-dialog v-model="showImportDialog" title="导入账单" width="750px" destroy-on-close @close="resetImport">
+      <StepWizard
+        ref="wizardRef"
+        :steps="wizardSteps"
+        :can-next="canNext"
+        :loading="confirming"
+        confirm-text="确认导入"
+        @cancel="showImportDialog = false"
+        @confirm="handleConfirmImport"
+      >
+        <!-- 第一步：上传文件 -->
+        <template #step-0>
+          <el-form label-width="80px">
+            <el-form-item label="账本">
+              <el-select v-model="importForm.book_id" class="w-full">
+                <el-option v-for="b in books" :key="b.id" :label="b.name" :value="b.id" />
+                <el-option label="+ 新建账本" value="__new__" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="来源">
+              <el-select v-model="importForm.source" class="w-full">
+                <el-option label="自动识别" value="auto" />
+                <el-option label="支付宝" value="alipay" />
+                <el-option label="微信" value="wechat" />
+                <el-option label="工商银行" value="icbc" />
+                <el-option label="建设银行（信用卡）" value="ccb_credit" />
+                <el-option label="美团" value="meituan" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="账单文件">
+              <el-upload
+                :auto-upload="false"
+                :limit="1"
+                :on-change="handleFileChange"
+                :on-remove="() => { selectedFile = null }"
+                accept=".csv,.xlsx,.xls,.pdf,.txt,.jpg,.jpeg,.png"
+                drag
+              >
+                <el-icon class="text-placeholder" style="font-size: 40px;"><Upload /></el-icon>
+                <div class="text-muted">拖拽文件到此处，或<em class="text-primary" style="cursor: pointer;">点击上传</em></div>
+                <template #tip>
+                  <div class="text-sm text-muted">
+                    支持 CSV、Excel、PDF、TXT 文件，或账单截图（JPG/PNG）
+                  </div>
+                </template>
+              </el-upload>
+            </el-form-item>
+            <el-form-item v-if="isImageFile">
+              <el-alert title="图片导入" type="info" :closable="false" class="w-full">
+                <template #default>
+                  检测到图片文件，将使用 AI 识别账单内容。请确保图片清晰且包含完整的账单信息。
+                </template>
+              </el-alert>
+            </el-form-item>
+          </el-form>
+        </template>
 
-      <!-- 第二步：配置账户映射 -->
-      <div v-if="step === 2">
-        <el-alert :title="`解析完成：${uploadResult?.parsed_count}条记录`" type="success" show-icon class="mb-16">
-          <template #default>
-            <span v-if="uploadResult?.skipped_duplicate">，跳过 {{ uploadResult.skipped_duplicate }} 条重复记录</span>
-          </template>
-        </el-alert>
+        <!-- 第二步：配置账户映射 -->
+        <template #step-1>
+          <el-alert :title="`解析完成：${uploadResult?.parsed_count}条记录`" type="success" show-icon class="mb-16">
+            <template #default>
+              <span v-if="uploadResult?.skipped_duplicate">，跳过 {{ uploadResult.skipped_duplicate }} 条重复记录</span>
+            </template>
+          </el-alert>
 
-        <!-- 默认账户 -->
-        <el-card class="mb-16">
-          <template #header><span>默认资金来源</span></template>
-          <p class="text-sm text-muted mb-12">
-            选择一个默认账户，用于没有明确支付方式的交易。
-          </p>
-          <el-select v-model="defaultAccountId" placeholder="选择默认账户" class="w-full" clearable>
-            <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
-            <el-option :value="0" label="不指定账户（稍后手动分配）" />
-          </el-select>
-        </el-card>
-
-        <!-- 支付方式映射 -->
-        <el-card v-if="uploadResult?.meta?.detected_methods?.length" class="mb-16">
-          <template #header>
-            <div class="flex justify-between items-center">
-              <span>支付方式 → 账户映射</span>
-            </div>
-          </template>
-          <p class="text-sm text-muted mb-12">
-            系统检测到以下支付方式，请为每种方式选择对应的资金来源账户。
-          </p>
-          <div v-for="method in uploadResult.meta.detected_methods" :key="method" class="flex items-center gap-12 mb-12">
-            <span class="w-120 font-medium">{{ method }}:</span>
-            <el-select v-model="methodAccountMap[method]" placeholder="选择账户" class="flex-1" clearable>
+          <!-- 默认账户 -->
+          <el-card class="mb-16">
+            <template #header><span>默认资金来源</span></template>
+            <p class="text-sm text-muted mb-12">
+              选择一个默认账户，用于没有明确支付方式的交易。
+            </p>
+            <el-select v-model="defaultAccountId" placeholder="选择默认账户" class="w-full" clearable>
               <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
+              <el-option :value="0" label="不指定账户（稍后手动分配）" />
             </el-select>
-            <el-button size="small" type="primary" link @click="openCreateAccount(method)">新建账户</el-button>
-          </div>
-        </el-card>
+          </el-card>
 
-        <!-- 预览 -->
-        <el-card>
-          <template #header><span>预览（前{{ uploadResult?.preview?.length || 0 }}条）</span></template>
-          <el-table :data="uploadResult?.preview || []" stripe size="small" max-height="300">
-            <el-table-column prop="transaction_time" label="时间" width="160" />
-            <el-table-column prop="merchant" label="商户" min-width="120" />
-            <el-table-column prop="description" label="商品" min-width="150" show-overflow-tooltip />
-            <el-table-column label="金额" align="right" width="100">
-              <template #default="{ row }">{{ formatMoney(row.amount) }}</template>
-            </el-table-column>
-            <el-table-column prop="type" label="类型" width="70">
-              <template #default="{ row }"><el-tag :type="row.type === 'expense' ? 'danger' : 'success'" size="small">{{ row.type === 'expense' ? '支出' : '收入' }}</el-tag></template>
-            </el-table-column>
-            <el-table-column label="支付方式" width="120">
-              <template #default="{ row }">
-                <span v-if="row.payment_method">{{ row.payment_method }}</span>
-                <span v-else class="text-placeholder">{{ defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.name : '待分配' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="自动分类" width="100">
-              <template #default="{ row }">
-                <el-tag v-if="row.suggested_category_name" type="success" size="small">{{ row.suggested_category_name }}</el-tag>
-                <span v-else class="text-placeholder">-</span>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </div>
+          <!-- 支付方式映射 -->
+          <el-card v-if="uploadResult?.meta?.detected_methods?.length" class="mb-16">
+            <template #header>
+              <div class="flex justify-between items-center">
+                <span>支付方式 → 账户映射</span>
+              </div>
+            </template>
+            <p class="text-sm text-muted mb-12">
+              系统检测到以下支付方式，请为每种方式选择对应的资金来源账户。
+            </p>
+            <div v-for="method in uploadResult.meta.detected_methods" :key="method" class="flex items-center gap-12 mb-12">
+              <span class="w-120 font-medium">{{ method }}:</span>
+              <el-select v-model="methodAccountMap[method]" placeholder="选择账户" class="flex-1" clearable>
+                <el-option v-for="a in leafAccounts" :key="a.id" :label="a.name" :value="a.id" />
+              </el-select>
+              <el-button size="small" type="primary" link @click="openCreateAccount(method)">新建账户</el-button>
+            </div>
+          </el-card>
 
-      <template #footer>
-        <el-button @click="showImportDialog = false">取消</el-button>
-        <el-button v-if="step === 1" type="primary" :loading="uploading" @click="handleUpload" :disabled="!selectedFile">上传解析</el-button>
-        <el-button v-if="step === 2" @click="step = 1">上一步</el-button>
-        <el-button v-if="step === 2" type="success" :loading="confirming" @click="handleConfirmImport">确认导入</el-button>
-      </template>
+          <!-- 预览 -->
+          <el-card>
+            <template #header><span>预览（前{{ uploadResult?.preview?.length || 0 }}条）</span></template>
+            <el-table :data="uploadResult?.preview || []" stripe size="small" max-height="300">
+              <el-table-column prop="transaction_time" label="时间" width="160" />
+              <el-table-column prop="merchant" label="商户" min-width="120" />
+              <el-table-column prop="description" label="商品" min-width="150" show-overflow-tooltip />
+              <el-table-column label="金额" align="right" width="100">
+                <template #default="{ row }">
+                  <AmountDisplay :value="row.amount" :type="row.type" />
+                </template>
+              </el-table-column>
+              <el-table-column prop="type" label="类型" width="70">
+                <template #default="{ row }">
+                  <el-tag :type="typeTagMap[row.type] || 'info'" size="small">{{ typeMap[row.type] || row.type }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="支付方式" width="120">
+                <template #default="{ row }">
+                  <span v-if="row.payment_method">{{ row.payment_method }}</span>
+                  <span v-else class="text-placeholder">{{ defaultAccountId ? accounts.find(a => a.id === defaultAccountId)?.name : '待分配' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="自动分类" width="100">
+                <template #default="{ row }">
+                  <el-tag v-if="row.suggested_category_name" type="success" size="small">{{ row.suggested_category_name }}</el-tag>
+                  <span v-else class="text-placeholder">-</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </template>
+      </StepWizard>
     </el-dialog>
 
-    <!-- 新建账户对话框 - 使用共享组件 -->
+    <!-- 新建账户对话框 -->
     <AccountCreateDialog
       v-model="showAccountDialog"
       :banks="banks"
@@ -173,13 +181,15 @@
         </el-table-column>
         <el-table-column prop="parsed_merchant" label="商户" />
         <el-table-column prop="action" label="状态" width="80">
-          <template #default="{ row }"><el-tag size="small">{{ actionMap[row.action] || row.action }}</el-tag></template>
+          <template #default="{ row }">
+            <StatusTag :value="row.action" :map="actionMap" />
+          </template>
         </el-table-column>
       </el-table>
     </el-dialog>
 
     <!-- 导出对话框 -->
-    <el-dialog v-model="showExportDialog" title="导出数据" width="400px">
+    <CrudDialog v-model="showExportDialog" entity-name="数据" :is-edit="false" width="400px" @save="handleExport">
       <el-form label-width="80px">
         <el-form-item label="类型">
           <el-radio-group v-model="exportType">
@@ -195,11 +205,7 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="showExportDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleExport">导出</el-button>
-      </template>
-    </el-dialog>
+    </CrudDialog>
   </div>
 </template>
 
@@ -215,7 +221,14 @@ import { getChannels } from '@/api/channels'
 import { exportTransactions, exportAccounts, exportCategories } from '@/api/exports'
 import { aiParseImage } from '@/api/ai'
 import api from '@/api/index'
+import PageHeader from '@/components/PageHeader.vue'
+import StepWizard from '@/components/StepWizard.vue'
+import CrudDialog from '@/components/CrudDialog.vue'
+import ConfirmDelete from '@/components/ConfirmDelete.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import AmountDisplay from '@/components/AmountDisplay.vue'
 import AccountCreateDialog from '@/components/AccountCreateDialog.vue'
+import { formatMoney } from '@/utils/format'
 import type { BillImport, BillImportItem } from '@/api/imports'
 import type { PaymentAccount, AccountBook, Channel } from '@/types'
 import type { UploadFile } from 'element-plus'
@@ -254,7 +267,6 @@ const imports = ref<BillImport[]>([])
 const items = ref<BillImportItem[]>([])
 const books = ref<AccountBook[]>([])
 const accounts = ref<PaymentAccount[]>([])
-// 只显示叶子账户（有 parent_id 的子账户，或没有子账户的独立账户）
 const leafAccounts = computed(() => {
   const parentIds = new Set(accounts.value.filter(a => a.parent_id).map(a => a.parent_id))
   return accounts.value.filter(a => !parentIds.has(a.id))
@@ -268,19 +280,37 @@ const showExportDialog = ref(false)
 const showAccountDialog = ref(false)
 const selectedFile = ref<File | null>(null)
 const uploadResult = ref<UploadResult | null>(null)
-const step = ref(1)
 const defaultAccountId = ref<number | null>(null)
 const methodAccountMap = ref<Record<string, number | null>>({})
 const currentCreateMethod = ref('')
 const exportType = ref('transactions')
 const exportFormat = ref('csv')
+const wizardRef = ref()
 
-const sourceMap: Record<string, string> = { alipay: '支付宝', wechat: '微信', icbc: '工商银行', bank: '银行', auto: '自动' }
+const wizardSteps = [
+  { title: '选择文件', description: '选择账本和账单文件' },
+  { title: '配置映射', description: '配置账户映射并预览' },
+]
+
+const sourceMap: Record<string, string> = {
+  alipay: '支付宝', wechat: '微信', icbc: '工商银行',
+  ccb: '建设银行', ccb_credit: '建行信用卡', meituan: '美团',
+  bank: '银行', auto: '自动',
+}
 const statusMap: Record<string, string> = { pending: '待处理', parsed: '已解析', confirmed: '已导入', failed: '失败' }
 const statusType: Record<string, string> = { pending: 'info', parsed: 'warning', confirmed: 'success', failed: 'danger' }
 const actionMap: Record<string, string> = { pending: '待处理', imported: '已导入', skipped: '跳过', matched: '已匹配' }
+const typeMap: Record<string, string> = { expense: '支出', income: '收入', transfer: '资金转移' }
+const typeTagMap: Record<string, string> = { expense: 'danger', income: 'success', transfer: 'info' }
 
 const importForm = reactive({ book_id: 0 as number | string, source: 'auto' })
+
+const canNext = computed(() => {
+  if (!wizardRef.value) return true
+  const step = wizardRef.value.currentStep
+  if (step === 0) return !!selectedFile.value && !!importForm.book_id
+  return true
+})
 
 watch(() => importForm.book_id, async (val) => {
   if (val !== '__new__') return
@@ -298,17 +328,12 @@ watch(() => importForm.book_id, async (val) => {
   }
 })
 
-// 判断是否为图片文件
 const isImageFile = computed(() => {
   if (!selectedFile.value) return false
-  const type = selectedFile.value.type || ''
-  return type.startsWith('image/')
+  return (selectedFile.value.type || '').startsWith('image/')
 })
 
-function formatMoney(val: number) { return `¥${(val / 100).toFixed(2)}` }
-
 function resetImport() {
-  step.value = 1
   selectedFile.value = null
   uploadResult.value = null
   defaultAccountId.value = null
@@ -332,35 +357,27 @@ async function handleUpload() {
   if (!selectedFile.value || !importForm.book_id) { ElMessage.warning('请选择账本和文件'); return }
   uploading.value = true
   try {
-    // 判断是否为图片文件，使用 AI 识别
     if (isImageFile.value) {
       const res = await aiParseImage(selectedFile.value)
-      // 将 AI 解析结果转换为预览格式
       uploadResult.value = {
-        id: 0,
-        source: 'ai_vision',
-        parsed_count: res.data.count,
-        skipped_duplicate: 0,
+        id: 0, source: 'ai_vision', parsed_count: res.data.count, skipped_duplicate: 0,
         meta: { platform: 'AI识别', has_payment_method: false, detected_methods: [] },
-        method_matches: {},
-        unmatched_methods: [],
+        method_matches: {}, unmatched_methods: [],
         preview: res.data.transactions as unknown as Record<string, unknown>[],
       }
-      step.value = 2
+      wizardRef.value?.nextStep()
       ElMessage.success(`AI 识别出 ${res.data.count} 条交易记录`)
     } else {
-      // 普通文件上传
       const formData = new FormData()
       formData.append('file', selectedFile.value)
       formData.append('book_id', String(importForm.book_id))
       formData.append('source', importForm.source)
       const res = await api.post('/imports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       uploadResult.value = res.data
-      step.value = 2
+      wizardRef.value?.nextStep()
 
       const methodMatches = res.data.method_matches || {}
       const unmatchedMethods = res.data.unmatched_methods || []
-
       for (const [method, accountId] of Object.entries(methodMatches)) {
         methodAccountMap.value[method] = accountId as number
       }
@@ -369,13 +386,12 @@ async function handleUpload() {
           methodAccountMap.value[um.method] = null
         }
       }
-
       if (unmatchedMethods.length > 0) {
         ElMessage.info(`检测到 ${unmatchedMethods.length} 个未匹配的支付方式，请配置账户映射`)
       }
     }
   } catch (err: unknown) {
-    ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '上传失败')
+    ElMessage.error((err as any)?.response?.data?.detail || '上传失败')
   } finally { uploading.value = false }
 }
 
@@ -396,7 +412,7 @@ async function handleConfirmImport() {
     resetImport()
     await load()
   } catch (err: unknown) {
-    ElMessage.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '导入失败')
+    ElMessage.error((err as any)?.response?.data?.detail || '导入失败')
   } finally { confirming.value = false }
 }
 
@@ -406,7 +422,6 @@ function openCreateAccount(method: string) {
 }
 
 function onAccountCreated(account: PaymentAccount) {
-  // 将新创建的账户关联到当前支付方式
   if (currentCreateMethod.value) {
     methodAccountMap.value[currentCreateMethod.value] = account.id
   }
@@ -446,8 +461,3 @@ onMounted(async () => {
   ])
 })
 </script>
-
-<style scoped>
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h3 { margin: 0; }
-</style>
