@@ -681,4 +681,15 @@ onMounted(async () => {
   opacity: 0.7;
   text-decoration: underline;
 }
+/* 保留列宽拖拽功能，但隐藏行边框 */
+.el-table--border :deep(th.el-table__cell) {
+  border-right: 1px solid var(--color-border-light);
+}
+.el-table--border :deep(td.el-table__cell) {
+  border-right: none;
+}
+.el-table :deep(td.el-table__cell),
+.el-table :deep(th.el-table__cell.is-leaf) {
+  border-bottom: none;
+}
 </style>
