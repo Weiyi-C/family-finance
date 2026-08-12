@@ -9,6 +9,7 @@ from app.services.ai_analyzer import AIAnalyzer
 from app.services.recurring_service import run_recurring_job
 from app.services.notify_service import run_notify_job
 from app.services.clean_service import run_clean_job
+from app.services.analyze_service import run_analyze_job
 from app.database import async_session
 
 logger = structlog.get_logger()
@@ -65,9 +66,10 @@ async def start_scheduler():
             if now.hour == 2:
                 await run_recurring_job()
                 await run_ai_analysis_job()
-                # 每周日执行数据清洗
+                # 每周日执行数据清洗和分析洞察
                 if now.weekday() == 6:
                     await run_clean_job()
+                    await run_analyze_job()
                 await asyncio.sleep(3600)
             # 每天早上8点执行提醒通知
             elif now.hour == 8:

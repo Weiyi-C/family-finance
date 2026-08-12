@@ -124,7 +124,7 @@ import { getCategoriesFlat } from '@/api/categories'
 import type { AutomationRule } from '@/api/rules'
 import type { Category } from '@/types'
 
-const stageMap: Record<string, string> = { classify: '自动分类', tag: '自动标记', notify: '提醒通知', process: '后处理', clean: '数据清洗' }
+const stageMap: Record<string, string> = { classify: '自动分类', tag: '自动标记', notify: '提醒通知', process: '后处理', clean: '数据清洗', analyze: '分析洞察' }
 
 const loading = ref(false)
 const saving = ref(false)

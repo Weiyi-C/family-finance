@@ -740,7 +740,23 @@ CREATE TABLE ai_suggestions (
 
 CREATE INDEX idx_ai_suggestions_family ON ai_suggestions(family_id, status);
 
--- ===================== 26. 视图 =====================
+-- ===================== 26. 分析洞察 =====================
+
+CREATE TABLE insights (
+    id              BIGSERIAL PRIMARY KEY,
+    family_id       BIGINT NOT NULL REFERENCES families(id),
+    type            VARCHAR(30) NOT NULL,
+    title           VARCHAR(200) NOT NULL,
+    content         TEXT,
+    data            JSONB,
+    is_read         BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_insight_type CHECK (type IN ('trend_alert', 'category_spike', 'savings_tip', 'merchant_rank'))
+);
+
+CREATE INDEX idx_insights_family ON insights(family_id, is_read);
+
+-- ===================== 27. 视图 =====================
 
 CREATE VIEW user_transactions AS
 SELECT

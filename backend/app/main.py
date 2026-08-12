@@ -27,6 +27,7 @@ from app.api.exchange_rates import router as exchange_rates_router
 from app.api.exports import router as exports_router
 from app.api.families import router as families_router
 from app.api.imports import router as imports_router
+from app.api.insights import router as insights_router
 from app.api.monitor import router as monitor_router
 from app.api.notifications import router as notifications_router
 from app.api.recurring import router as recurring_router
@@ -93,6 +94,7 @@ app.include_router(exchange_rates_router)
 app.include_router(exports_router)
 app.include_router(families_router)
 app.include_router(imports_router)
+app.include_router(insights_router)
 app.include_router(monitor_router)
 app.include_router(notifications_router)
 app.include_router(recurring_router)

@@ -81,6 +81,10 @@
               <el-icon><DataBoard /></el-icon>
               <template #title>报表中心</template>
             </el-menu-item>
+            <el-menu-item index="/insights">
+              <el-icon><TrendCharts /></el-icon>
+              <template #title>分析洞察</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 报销 -->
@@ -223,6 +227,7 @@ const titleMap: Record<string, string> = {
   '/budgets': '预算管理',
   '/stats': '统计报表',
   '/reports': '报表中心',
+  '/insights': '分析洞察',
   '/debts': '借贷管理',
   '/savings': '储蓄目标',
   '/credit-bills': '信用账单',
