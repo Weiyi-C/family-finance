@@ -27,7 +27,10 @@ def _escape_like(value: str) -> str:
 
 async def _to_response(txn: Transaction, tag_ids: list[int] | None = None, db: AsyncSession | None = None) -> TransactionResponse:
     source_account_id = None
+    destination_account_id = None
+    
     if txn.type == "transfer" and txn.entry_id and db:
+        # 获取贷方（来源账户）
         credit_result = await db.execute(
             select(Transaction.payment_account_id).where(
                 Transaction.entry_id == txn.entry_id,
@@ -38,6 +41,23 @@ async def _to_response(txn: Transaction, tag_ids: list[int] | None = None, db: A
         )
         row = credit_result.first()
         source_account_id = row[0] if row else None
+        
+        # 获取借方（目标账户）
+        debit_result = await db.execute(
+            select(Transaction.payment_account_id).where(
+                Transaction.entry_id == txn.entry_id,
+                Transaction.entry_side == "debit",
+                Transaction.family_id == txn.family_id,
+                Transaction.is_deleted == False,
+            )
+        )
+        row = debit_result.first()
+        destination_account_id = row[0] if row else None
+
+    # 对于转账，payment_account_id 返回来源账户（用户视角）
+    display_account_id = txn.payment_account_id
+    if txn.type == "transfer":
+        display_account_id = source_account_id
 
     return TransactionResponse(
         id=txn.id,
@@ -53,8 +73,9 @@ async def _to_response(txn: Transaction, tag_ids: list[int] | None = None, db: A
         category_id=txn.category_id,
         sub_category_id=txn.sub_category_id,
         detail_category_id=txn.detail_category_id,
-        payment_account_id=txn.payment_account_id,
+        payment_account_id=display_account_id,
         source_account_id=source_account_id,
+        destination_account_id=destination_account_id,
         payment_channel_id=txn.payment_channel_id,
         platform_id=txn.platform_id,
         merchant_name=txn.merchant_name,
