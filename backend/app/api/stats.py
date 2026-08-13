@@ -27,9 +27,19 @@ def _base_conditions(family_id: int, start: str | None, end: str | None, book_id
         Transaction.is_deleted == False,
     ]
     if start:
-        conds.append(Transaction.transaction_time >= datetime.fromisoformat(start))
+        # 支持日期格式 YYYY-MM-DD 和完整 ISO 格式
+        if len(start) == 10:
+            start_dt = datetime.strptime(start, "%Y-%m-%d")
+        else:
+            start_dt = datetime.fromisoformat(start)
+        conds.append(Transaction.transaction_time >= start_dt)
     if end:
-        conds.append(Transaction.transaction_time <= datetime.fromisoformat(end))
+        # 支持日期格式 YYYY-MM-DD 和完整 ISO 格式
+        if len(end) == 10:
+            end_dt = datetime.strptime(end, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        else:
+            end_dt = datetime.fromisoformat(end)
+        conds.append(Transaction.transaction_time <= end_dt)
     if book_id:
         conds.append(Transaction.book_id == book_id)
     return conds

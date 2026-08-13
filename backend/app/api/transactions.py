@@ -137,6 +137,23 @@ async def create_transaction(
         if body.payment_account_id and body.payment_account_id == body.destination_account_id:
             raise HTTPException(status_code=400, detail="源账户和目标账户不能相同")
 
+    # 验证 category_id 是否有效
+    if body.category_id:
+        from app.models.category import Category
+        cat_result = await db.execute(
+            select(Category.id).where(Category.id == body.category_id)
+        )
+        if not cat_result.scalar():
+            raise HTTPException(status_code=400, detail="分类不存在")
+
+    # 验证 account_id 是否有效
+    if body.payment_account_id:
+        acct_result = await db.execute(
+            select(PaymentAccount.id).where(PaymentAccount.id == body.payment_account_id)
+        )
+        if not acct_result.scalar():
+            raise HTTPException(status_code=400, detail="账户不存在")
+
     result = await db.execute(text("SELECT nextval('transactions_id_seq')"))
     entry_id = result.scalar()
 

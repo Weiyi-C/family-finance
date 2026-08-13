@@ -137,6 +137,7 @@ async def get_account(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # 查询账户信息
     result = await db.execute(
         select(PaymentAccount).where(
             PaymentAccount.id == account_id,
@@ -146,7 +147,29 @@ async def get_account(
     account = result.scalar_one_or_none()
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="账户不存在")
-    return AccountResponse.model_validate(account)
+    
+    # 计算余额
+    balance_query = select(
+        PaymentAccount.id,
+        (PaymentAccount.initial_balance + _calc_balance_query()).label("balance"),
+    ).outerjoin(
+        Transaction,
+        and_(
+            Transaction.payment_account_id == PaymentAccount.id,
+            Transaction.is_deleted == False,
+        ),
+    ).where(
+        PaymentAccount.id == account_id,
+    ).group_by(PaymentAccount.id)
+    
+    balance_result = await db.execute(balance_query)
+    balance_row = balance_result.first()
+    
+    # 构建响应
+    account_data = AccountResponse.model_validate(account)
+    account_data.balance = int(balance_row.balance) if balance_row else account.initial_balance
+    
+    return account_data
 
 
 @router.put("/{account_id}", response_model=AccountResponse)
