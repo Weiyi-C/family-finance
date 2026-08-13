@@ -5,6 +5,7 @@ import '../features/transaction/screens/create_transaction_screen.dart';
 import '../features/statistics/screens/statistics_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/settings/screens/server_config_screen.dart';
+import '../features/settings/screens/language_screen.dart';
 import '../features/sync/screens/sync_status_screen.dart';
 import '../features/sync/screens/conflict_resolution_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
@@ -21,6 +22,7 @@ import '../features/family/screens/family_screen.dart';
 import '../features/rule/screens/rule_screen.dart';
 import '../features/ai/screens/ai_assistant_screen.dart';
 import '../features/backup/screens/backup_screen.dart';
+import '../features/import/screens/import_export_screen.dart';
 import 'main_layout.dart';
 
 final appRouter = GoRouter(
@@ -118,6 +120,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/backup',
       builder: (context, state) => const BackupScreen(),
+    ),
+    GoRoute(
+      path: '/import-export',
+      builder: (context, state) => const ImportExportScreen(),
+    ),
+    GoRoute(
+      path: '/language',
+      builder: (context, state) => const LanguageScreen(),
     ),
   ],
 );

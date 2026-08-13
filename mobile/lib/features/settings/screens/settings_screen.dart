@@ -131,7 +131,9 @@ class SettingsScreen extends ConsumerWidget {
       ('标签管理', Icons.label, () => context.push('/tags')),
       ('规则引擎', Icons.rule, () => context.push('/rules')),
       ('AI助手', Icons.smart_toy, () => context.push('/ai-assistant')),
+      ('导入导出', Icons.import_export, () => context.push('/import-export')),
       ('家庭管理', Icons.family_restroom, () => context.push('/family')),
+      ('通知', Icons.notifications, () => context.push('/notifications')),
     ];
 
     return Card(
@@ -196,6 +198,16 @@ class SettingsScreen extends ConsumerWidget {
                 ref.read(themeModeProvider.notifier).setThemeMode(modes.first);
               },
             ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('语言设置'),
+            subtitle: const Text('中文'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push('/language');
+            },
           ),
           const Divider(height: 1),
           ListTile(
