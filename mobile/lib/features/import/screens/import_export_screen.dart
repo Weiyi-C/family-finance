@@ -11,8 +11,8 @@ class ImportExportScreen extends ConsumerStatefulWidget {
 class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   String _selectedSource = 'auto';
   String _selectedFormat = 'csv';
-  bool _isImporting = false;
   bool _isExporting = false;
+  bool _isImporting = false;
 
   @override
   Widget build(BuildContext context) {
