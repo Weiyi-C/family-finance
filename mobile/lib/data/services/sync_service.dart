@@ -1,3 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:family_finance_app/core/network/network_status.dart';
 import 'package:family_finance_app/data/database/local_database.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 
@@ -11,7 +14,51 @@ class SyncService {
   bool _isSyncing = false;
   
   SyncService._internal();
-  
+
+  /// 同步离线注册
+  Future<bool> syncRegistration(ApiService api, LocalDatabase db) async {
+    final pendingUser = await db.getPendingLocalUser();
+    if (pendingUser == null) return true;
+
+    try {
+      final data = await api.syncRegister(
+        clientId: pendingUser['local_id'] as String,
+        phone: pendingUser['phone'] as String,
+        passwordHash: pendingUser['password_hash'] as String,
+        nickname: (pendingUser['nickname'] as String?) ?? '',
+      );
+
+      final serverId = data['user_id']?.toString();
+      final familyId = data['family_id']?.toString();
+
+      await db.updateLocalUserStatus(
+        pendingUser['local_id'] as String,
+        'SYNCED',
+        serverId: serverId,
+        familyId: familyId,
+      );
+
+      if (serverId != null) {
+        await db.insertIdMapping({
+          'local_id': pendingUser['local_id'] as String,
+          'server_id': serverId,
+          'entity_type': 'user',
+          'synced_at': DateTime.now().millisecondsSinceEpoch,
+        });
+      }
+
+      final syncItems = await db.getPendingSyncItems();
+      for (final item in syncItems) {
+        await db.updateSyncStatus(item['id'] as int, 'DONE');
+      }
+
+      return true;
+    } catch (e) {
+      print('Registration sync failed: $e');
+      return false;
+    }
+  }
+
   /// 同步所有数据
   Future<SyncResult> syncAll() async {
     if (_isSyncing) {
@@ -22,6 +69,17 @@ class SyncService {
     final conflicts = <SyncConflict>[];
     
     try {
+      // 0. 先同步离线注册
+      final prefs = await SharedPreferences.getInstance();
+      final isOfflineUser = prefs.getBool('is_offline_user') ?? false;
+      if (isOfflineUser) {
+        final registered = await syncRegistration(_api, _db);
+        if (!registered) {
+          _isSyncing = false;
+          return SyncResult(success: false, error: '注册同步失败，请检查网络');
+        }
+      }
+
       // 1. 推送本地更改
       await _pushLocalChanges();
       
@@ -200,3 +258,12 @@ class SyncConflict {
     required this.detectedAt,
   });
 }
+
+final autoSyncProvider = Provider<void>((ref) {
+  final networkStatus = ref.watch(networkStatusProvider);
+  final syncService = SyncService();
+
+  if (networkStatus == NetworkStatus.online) {
+    Future.microtask(() => syncService.syncAll());
+  }
+});
