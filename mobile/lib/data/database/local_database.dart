@@ -21,8 +21,9 @@ class LocalDatabase {
     
     return await openDatabase(
       dbPath2,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
   
@@ -122,6 +123,46 @@ class LocalDatabase {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+
+    // 本地用户表
+    await db.execute('''
+      CREATE TABLE users_local (
+        local_id TEXT PRIMARY KEY,
+        phone TEXT NOT NULL,
+        nickname TEXT,
+        password_hash TEXT NOT NULL,
+        registration_status TEXT NOT NULL DEFAULT 'PENDING',
+        server_id TEXT,
+        family_id TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    // ID 映射表
+    await db.execute('''
+      CREATE TABLE id_mapping (
+        local_id TEXT PRIMARY KEY,
+        server_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        synced_at INTEGER NOT NULL
+      )
+    ''');
+
+    // 同步队列表
+    await db.execute('''
+      CREATE TABLE sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        local_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        status TEXT DEFAULT 'PENDING',
+        retry_count INTEGER DEFAULT 0,
+        error_message TEXT,
+        created_at INTEGER NOT NULL
+      )
+    ''');
   }
   
   // 交易操作
@@ -209,6 +250,47 @@ class LocalDatabase {
     return maps.first['value'] as String?;
   }
   
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE users_local (
+          local_id TEXT PRIMARY KEY,
+          phone TEXT NOT NULL,
+          nickname TEXT,
+          password_hash TEXT NOT NULL,
+          registration_status TEXT NOT NULL DEFAULT 'PENDING',
+          server_id TEXT,
+          family_id TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE id_mapping (
+          local_id TEXT PRIMARY KEY,
+          server_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          synced_at INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE sync_queue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          entity_type TEXT NOT NULL,
+          local_id TEXT NOT NULL,
+          operation TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          status TEXT DEFAULT 'PENDING',
+          retry_count INTEGER DEFAULT 0,
+          error_message TEXT,
+          created_at INTEGER NOT NULL
+        )
+      ''');
+    }
+  }
+
   // 同步日志
   Future<void> addSyncLog(String table, int recordId, String action, String? data) async {
     final db = await database;
@@ -229,5 +311,101 @@ class LocalDatabase {
   Future<void> markSynced(int logId) async {
     final db = await database;
     await db.update('sync_log', {'is_synced': 1}, where: 'id = ?', whereArgs: [logId]);
+  }
+
+  // 本地用户操作
+  Future<int> insertLocalUser(Map<String, dynamic> user) async {
+    final db = await database;
+    return await db.insert('users_local', user);
+  }
+
+  Future<Map<String, dynamic>?> getLocalUser(String localId) async {
+    final db = await database;
+    final maps = await db.query('users_local', where: 'local_id = ?', whereArgs: [localId]);
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<Map<String, dynamic>?> getPendingLocalUser() async {
+    final db = await database;
+    final maps = await db.query(
+      'users_local',
+      where: 'registration_status = ?',
+      whereArgs: ['PENDING'],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<int> updateLocalUserStatus(
+    String localId,
+    String status, {
+    String? serverId,
+    String? familyId,
+  }) async {
+    final db = await database;
+    final data = <String, dynamic>{
+      'registration_status': status,
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    };
+    if (serverId != null) data['server_id'] = serverId;
+    if (familyId != null) data['family_id'] = familyId;
+    return await db.update('users_local', data, where: 'local_id = ?', whereArgs: [localId]);
+  }
+
+  // ID 映射操作
+  Future<int> insertIdMapping(Map<String, dynamic> mapping) async {
+    final db = await database;
+    return await db.insert('id_mapping', mapping);
+  }
+
+  Future<String?> getServerId(String localId, String entityType) async {
+    final db = await database;
+    final maps = await db.query(
+      'id_mapping',
+      where: 'local_id = ? AND entity_type = ?',
+      whereArgs: [localId, entityType],
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['server_id'] as String?;
+  }
+
+  // 同步队列操作
+  Future<int> enqueueSync(Map<String, dynamic> item) async {
+    final db = await database;
+    return await db.insert('sync_queue', item);
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingSyncItems({int? limit}) async {
+    final db = await database;
+    return await db.query(
+      'sync_queue',
+      where: 'status = ?',
+      whereArgs: ['PENDING'],
+      orderBy: 'created_at ASC',
+      limit: limit,
+    );
+  }
+
+  Future<int> updateSyncStatus(
+    int id,
+    String status, {
+    String? errorMessage,
+  }) async {
+    final db = await database;
+    final data = <String, dynamic>{
+      'status': status,
+    };
+    if (errorMessage != null) {
+      data['error_message'] = errorMessage;
+    }
+    if (status == 'FAILED') {
+      final item = await db.query('sync_queue', where: 'id = ?', whereArgs: [id]);
+      if (item.isNotEmpty) {
+        data['retry_count'] = (item.first['retry_count'] as int) + 1;
+      }
+    }
+    return await db.update('sync_queue', data, where: 'id = ?', whereArgs: [id]);
   }
 }
