@@ -10,6 +10,7 @@ import '../features/sync/screens/sync_status_screen.dart';
 import '../features/sync/screens/conflict_resolution_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
 import '../features/recurring/screens/recurring_screen.dart';
 import '../features/debt/screens/debt_screen.dart';
 import '../features/savings/screens/savings_screen.dart';
@@ -35,6 +36,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainLayout(child: child),
