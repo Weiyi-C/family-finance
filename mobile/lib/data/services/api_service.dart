@@ -50,6 +50,21 @@ class ApiService {
     return response.data;
   }
   
+  Future<Map<String, dynamic>> syncRegister({
+    required String clientId,
+    required String phone,
+    required String passwordHash,
+    required String nickname,
+  }) async {
+    final response = await _dio.post('/sync/register', data: {
+      'client_id': clientId,
+      'phone': phone,
+      'password_hash': passwordHash,
+      'nickname': nickname,
+    });
+    return response.data;
+  }
+
   // 交易
   Future<Map<String, dynamic>> getTransactions({
     int? page,
