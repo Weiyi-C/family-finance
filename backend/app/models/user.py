@@ -27,6 +27,7 @@ class User(Base):
     family_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("families.id"))
     nickname: Mapped[str] = mapped_column(String(50), nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500))
+    client_id: Mapped[str | None] = mapped_column(String(36), unique=True)
     phone: Mapped[str | None] = mapped_column(String(20), unique=True)
     password_hash: Mapped[str | None] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="member")

@@ -42,6 +42,7 @@ from app.api.settings import router as settings_router
 from app.api.snapshots import router as snapshots_router
 from app.api.stats import router as stats_router
 from app.api.sync import router as sync_router
+from app.api.sync_register import router as sync_register_router
 from app.api.tags import router as tags_router
 from app.api.transactions import router as transactions_router
 from app.api.users import router as users_router
@@ -109,6 +110,7 @@ app.include_router(settings_router)
 app.include_router(snapshots_router)
 app.include_router(stats_router)
 app.include_router(sync_router)
+app.include_router(sync_register_router)
 app.include_router(tags_router)
 app.include_router(transactions_router)
 app.include_router(users_router)

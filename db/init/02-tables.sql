@@ -27,6 +27,7 @@ CREATE TABLE users (
     family_id       BIGINT REFERENCES families(id),
     nickname        VARCHAR(50) NOT NULL,
     avatar_url      VARCHAR(500),
+    client_id       VARCHAR(36) UNIQUE,
     phone           VARCHAR(20) UNIQUE,
     password_hash   VARCHAR(255),
     role            VARCHAR(20) DEFAULT 'member',
