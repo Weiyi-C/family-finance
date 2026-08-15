@@ -343,3 +343,299 @@ class Tag {
     };
   }
 }
+
+class CreditBill {
+  final int id;
+  final int familyId;
+  final int accountId;
+  final String? accountName;
+  final int year;
+  final int month;
+  final int totalAmount;
+  final int paidAmount;
+  final DateTime? dueDate;
+  final String status;
+
+  CreditBill({
+    required this.id,
+    required this.familyId,
+    required this.accountId,
+    this.accountName,
+    required this.year,
+    required this.month,
+    required this.totalAmount,
+    required this.paidAmount,
+    this.dueDate,
+    required this.status,
+  });
+
+  factory CreditBill.fromJson(Map<String, dynamic> json) {
+    return CreditBill(
+      id: json['id'],
+      familyId: json['family_id'],
+      accountId: json['account_id'],
+      accountName: json['account_name'],
+      year: json['year'],
+      month: json['month'],
+      totalAmount: json['total_amount'],
+      paidAmount: json['paid_amount'],
+      dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
+      status: json['status'],
+    );
+  }
+
+  double get totalAmountYuan => totalAmount / 100;
+  double get paidAmountYuan => paidAmount / 100;
+  double get remainingYuan => (totalAmount - paidAmount) / 100;
+}
+
+class Debt {
+  final int id;
+  final int familyId;
+  final String type;
+  final String personName;
+  final int amount;
+  final String? description;
+  final DateTime? dueDate;
+  final String status;
+  final int repaidAmount;
+
+  Debt({
+    required this.id,
+    required this.familyId,
+    required this.type,
+    required this.personName,
+    required this.amount,
+    this.description,
+    this.dueDate,
+    required this.status,
+    required this.repaidAmount,
+  });
+
+  factory Debt.fromJson(Map<String, dynamic> json) {
+    return Debt(
+      id: json['id'],
+      familyId: json['family_id'],
+      type: json['type'],
+      personName: json['person_name'],
+      amount: json['amount'],
+      description: json['description'],
+      dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
+      status: json['status'],
+      repaidAmount: json['repaid_amount'],
+    );
+  }
+
+  double get amountYuan => amount / 100;
+  double get repaidYuan => repaidAmount / 100;
+  double get remainingYuan => (amount - repaidAmount) / 100;
+}
+
+class DebtRepayment {
+  final int id;
+  final int debtId;
+  final int amount;
+  final DateTime repayDate;
+  final String? description;
+
+  DebtRepayment({
+    required this.id,
+    required this.debtId,
+    required this.amount,
+    required this.repayDate,
+    this.description,
+  });
+
+  factory DebtRepayment.fromJson(Map<String, dynamic> json) {
+    return DebtRepayment(
+      id: json['id'],
+      debtId: json['debt_id'],
+      amount: json['amount'],
+      repayDate: DateTime.parse(json['repay_date']),
+      description: json['description'],
+    );
+  }
+
+  double get amountYuan => amount / 100;
+}
+
+class SavingsGoal {
+  final int id;
+  final int familyId;
+  final String name;
+  final int targetAmount;
+  final int currentAmount;
+  final DateTime? deadline;
+  final String status;
+  final String? icon;
+  final String? color;
+
+  SavingsGoal({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    required this.targetAmount,
+    required this.currentAmount,
+    this.deadline,
+    required this.status,
+    this.icon,
+    this.color,
+  });
+
+  factory SavingsGoal.fromJson(Map<String, dynamic> json) {
+    return SavingsGoal(
+      id: json['id'],
+      familyId: json['family_id'],
+      name: json['name'],
+      targetAmount: json['target_amount'],
+      currentAmount: json['current_amount'],
+      deadline: json['deadline'] != null ? DateTime.parse(json['deadline']) : null,
+      status: json['status'],
+      icon: json['icon'],
+      color: json['color'],
+    );
+  }
+
+  double get targetAmountYuan => targetAmount / 100;
+  double get currentAmountYuan => currentAmount / 100;
+  double get progress => targetAmount > 0 ? (currentAmount / targetAmount).clamp(0, 1) : 0;
+}
+
+class RecurringTransaction {
+  final int id;
+  final int familyId;
+  final String type;
+  final int amount;
+  final int? categoryId;
+  final int? accountId;
+  final String? description;
+  final String frequency;
+  final int? dayOfMonth;
+  final bool isActive;
+  final DateTime? nextRunDate;
+
+  RecurringTransaction({
+    required this.id,
+    required this.familyId,
+    required this.type,
+    required this.amount,
+    this.categoryId,
+    this.accountId,
+    this.description,
+    required this.frequency,
+    this.dayOfMonth,
+    this.isActive = true,
+    this.nextRunDate,
+  });
+
+  factory RecurringTransaction.fromJson(Map<String, dynamic> json) {
+    return RecurringTransaction(
+      id: json['id'],
+      familyId: json['family_id'],
+      type: json['type'],
+      amount: json['amount'],
+      categoryId: json['category_id'],
+      accountId: json['account_id'],
+      description: json['description'],
+      frequency: json['frequency'],
+      dayOfMonth: json['day_of_month'],
+      isActive: json['is_active'] ?? true,
+      nextRunDate: json['next_run_date'] != null ? DateTime.parse(json['next_run_date']) : null,
+    );
+  }
+
+  double get amountYuan => amount / 100;
+}
+
+class Reimbursement {
+  final int id;
+  final int familyId;
+  final String title;
+  final int totalAmount;
+  final String status;
+  final DateTime? submitDate;
+  final List<ReimbursementItem>? items;
+
+  Reimbursement({
+    required this.id,
+    required this.familyId,
+    required this.title,
+    required this.totalAmount,
+    required this.status,
+    this.submitDate,
+    this.items,
+  });
+
+  factory Reimbursement.fromJson(Map<String, dynamic> json) {
+    return Reimbursement(
+      id: json['id'],
+      familyId: json['family_id'],
+      title: json['title'],
+      totalAmount: json['total_amount'],
+      status: json['status'],
+      submitDate: json['submit_date'] != null ? DateTime.parse(json['submit_date']) : null,
+      items: json['items'] != null
+          ? (json['items'] as List).map((i) => ReimbursementItem.fromJson(i)).toList()
+          : null,
+    );
+  }
+
+  double get totalAmountYuan => totalAmount / 100;
+}
+
+class ReimbursementItem {
+  final int id;
+  final int reimbursementId;
+  final String description;
+  final int amount;
+  final DateTime? date;
+
+  ReimbursementItem({
+    required this.id,
+    required this.reimbursementId,
+    required this.description,
+    required this.amount,
+    this.date,
+  });
+
+  factory ReimbursementItem.fromJson(Map<String, dynamic> json) {
+    return ReimbursementItem(
+      id: json['id'],
+      reimbursementId: json['reimbursement_id'],
+      description: json['description'],
+      amount: json['amount'],
+      date: json['date'] != null ? DateTime.parse(json['date']) : null,
+    );
+  }
+
+  double get amountYuan => amount / 100;
+}
+
+class ImportRecord {
+  final int id;
+  final String filename;
+  final String source;
+  final String status;
+  final int itemCount;
+  final DateTime createdAt;
+
+  ImportRecord({
+    required this.id,
+    required this.filename,
+    required this.source,
+    required this.status,
+    required this.itemCount,
+    required this.createdAt,
+  });
+
+  factory ImportRecord.fromJson(Map<String, dynamic> json) {
+    return ImportRecord(
+      id: json['id'],
+      filename: json['filename'],
+      source: json['source'],
+      status: json['status'],
+      itemCount: json['item_count'],
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}

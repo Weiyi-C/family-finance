@@ -13,9 +13,13 @@ import '../features/splash/screens/splash_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/recurring/screens/recurring_screen.dart';
+import '../features/recurring/screens/recurring_form_screen.dart';
 import '../features/debt/screens/debt_screen.dart';
+import '../features/debt/screens/debt_form_screen.dart';
 import '../features/savings/screens/savings_screen.dart';
+import '../features/savings/screens/savings_form_screen.dart';
 import '../features/reimbursement/screens/reimbursement_screen.dart';
+import '../features/reimbursement/screens/reimbursement_form_screen.dart';
 import '../features/credit_bill/screens/credit_bill_screen.dart';
 import '../features/category/screens/category_screen.dart';
 import '../features/tag/screens/tag_screen.dart';
@@ -92,16 +96,46 @@ final appRouter = GoRouter(
       builder: (context, state) => const RecurringScreen(),
     ),
     GoRoute(
+      path: '/recurring-create',
+      builder: (context, state) => const RecurringFormScreen(),
+    ),
+    GoRoute(
+      path: '/recurring/:id/edit',
+      builder: (context, state) {
+        final recurring = state.extra as RecurringTransaction;
+        return RecurringFormScreen(recurring: recurring);
+      },
+    ),
+    GoRoute(
       path: '/debts',
       builder: (context, state) => const DebtScreen(),
+    ),
+    GoRoute(
+      path: '/debt-create',
+      builder: (context, state) => const DebtFormScreen(),
     ),
     GoRoute(
       path: '/savings',
       builder: (context, state) => const SavingsScreen(),
     ),
     GoRoute(
+      path: '/savings-create',
+      builder: (context, state) => const SavingsFormScreen(),
+    ),
+    GoRoute(
+      path: '/savings/:id/edit',
+      builder: (context, state) {
+        final goal = state.extra as SavingsGoal;
+        return SavingsFormScreen(goal: goal);
+      },
+    ),
+    GoRoute(
       path: '/reimbursements',
       builder: (context, state) => const ReimbursementScreen(),
+    ),
+    GoRoute(
+      path: '/reimbursement-create',
+      builder: (context, state) => const ReimbursementFormScreen(),
     ),
     GoRoute(
       path: '/credit-bills',

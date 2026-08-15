@@ -246,18 +246,264 @@ class ApiService {
     return response.data;
   }
   
+  // 导入导出
+  Future<Map<String, dynamic>> uploadImport(String source, String filePath) async {
+    final formData = FormData.fromMap({
+      'source': source,
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    final response = await _dio.post('/imports/upload', data: formData);
+    return response.data;
+  }
+
+  Future<List<dynamic>> getImports() async {
+    final response = await _dio.get('/imports');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getImportById(int id) async {
+    final response = await _dio.get('/imports/$id');
+    return response.data;
+  }
+
+  Future<List<dynamic>> getImportItems(int id) async {
+    final response = await _dio.get('/imports/$id/items');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> confirmImport(int id) async {
+    final response = await _dio.post('/imports/$id/confirm');
+    return response.data;
+  }
+
+  Future<void> deleteImport(int id) async {
+    await _dio.delete('/imports/$id');
+  }
+
+  Future<List<int>> exportTransactions({
+    String? startDate,
+    String? endDate,
+    String? format,
+  }) async {
+    final params = <String, dynamic>{};
+    if (startDate != null) params['start_date'] = startDate;
+    if (endDate != null) params['end_date'] = endDate;
+    if (format != null) params['format'] = format;
+
+    final response = await _dio.get<List<int>>(
+      '/export/transactions',
+      queryParameters: params,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? [];
+  }
+
+  Future<List<int>> exportAccounts() async {
+    final response = await _dio.get<List<int>>(
+      '/export/accounts',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? [];
+  }
+
+  Future<List<int>> exportCategories() async {
+    final response = await _dio.get<List<int>>(
+      '/export/categories',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? [];
+  }
+
   // 信用账单
   Future<List<dynamic>> getCreditBills() async {
     final response = await _dio.get('/credit-bills');
     return response.data;
   }
-  
+
+  Future<Map<String, dynamic>> generateCreditBills({int? year, int? month}) async {
+    final params = <String, dynamic>{};
+    if (year != null) params['year'] = year;
+    if (month != null) params['month'] = month;
+
+    final response = await _dio.post('/credit-bills/generate', queryParameters: params);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getCreditBillById(int id) async {
+    final response = await _dio.get('/credit-bills/$id');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getCreditBillSummary() async {
+    final response = await _dio.get('/credit-bills/summary');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> payCreditBill(int id, Map<String, dynamic> data) async {
+    final response = await _dio.post('/credit-bills/$id/pay', data: data);
+    return response.data;
+  }
+
+  // 借贷
+  Future<List<dynamic>> getDebts({String? type, String? status}) async {
+    final params = <String, dynamic>{};
+    if (type != null) params['type'] = type;
+    if (status != null) params['status'] = status;
+
+    final response = await _dio.get('/debts', queryParameters: params);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getDebtSummary() async {
+    final response = await _dio.get('/debts/summary');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> createDebt(Map<String, dynamic> data) async {
+    final response = await _dio.post('/debts', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateDebt(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/debts/$id', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteDebt(int id) async {
+    await _dio.delete('/debts/$id');
+  }
+
+  Future<List<dynamic>> getDebtRepayments(int debtId) async {
+    final response = await _dio.get('/debts/$debtId/repayments');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> addRepayment(int debtId, Map<String, dynamic> data) async {
+    final response = await _dio.post('/debts/$debtId/repayments', data: data);
+    return response.data;
+  }
+
+  // 储蓄
+  Future<List<dynamic>> getSavingsGoals({String? status}) async {
+    final params = <String, dynamic>{};
+    if (status != null) params['status'] = status;
+
+    final response = await _dio.get('/savings', queryParameters: params);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> createSavingsGoal(Map<String, dynamic> data) async {
+    final response = await _dio.post('/savings', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getSavingsGoalById(int id) async {
+    final response = await _dio.get('/savings/$id');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateSavingsGoal(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/savings/$id', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteSavingsGoal(int id) async {
+    await _dio.delete('/savings/$id');
+  }
+
+  Future<Map<String, dynamic>> depositToGoal(int id, Map<String, dynamic> data) async {
+    final response = await _dio.post('/savings/$id/deposit', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> abandonGoal(int id) async {
+    final response = await _dio.post('/savings/$id/abandon');
+    return response.data;
+  }
+
   // 周期交易
   Future<List<dynamic>> getRecurringTransactions() async {
     final response = await _dio.get('/recurring');
     return response.data;
   }
-  
+
+  Future<Map<String, dynamic>> createRecurring(Map<String, dynamic> data) async {
+    final response = await _dio.post('/recurring', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getRecurringById(int id) async {
+    final response = await _dio.get('/recurring/$id');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateRecurring(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/recurring/$id', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteRecurring(int id) async {
+    await _dio.delete('/recurring/$id');
+  }
+
+  Future<Map<String, dynamic>> generateFromRecurring(int id) async {
+    final response = await _dio.post('/recurring/$id/generate');
+    return response.data;
+  }
+
+  Future<List<dynamic>> getRecurringLogs(int id) async {
+    final response = await _dio.get('/recurring/$id/logs');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> processRecurring() async {
+    final response = await _dio.post('/recurring/process');
+    return response.data;
+  }
+
+  // 报销
+  Future<List<dynamic>> getReimbursements({String? status}) async {
+    final params = <String, dynamic>{};
+    if (status != null) params['status'] = status;
+
+    final response = await _dio.get('/reimbursements', queryParameters: params);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> createReimbursement(Map<String, dynamic> data) async {
+    final response = await _dio.post('/reimbursements', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getReimbursementById(int id) async {
+    final response = await _dio.get('/reimbursements/$id');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateReimbursement(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/reimbursements/$id', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> submitReimbursement(int id) async {
+    final response = await _dio.post('/reimbursements/$id/submit');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> approveReimbursement(int id) async {
+    final response = await _dio.post('/reimbursements/$id/approve');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> receiveReimbursement(int id, Map<String, dynamic> data) async {
+    final response = await _dio.post('/reimbursements/$id/receive', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteReimbursement(int id) async {
+    await _dio.delete('/reimbursements/$id');
+  }
+
   // 通知
   Future<Map<String, dynamic>> getNotifications() async {
     final response = await _dio.get('/notifications');
