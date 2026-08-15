@@ -85,7 +85,7 @@ services:
       - flutter-web
     ports:
       - "8080:80"
-      - "8088:8088"
+      - "8090:8090"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
