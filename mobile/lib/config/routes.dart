@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../data/models/models.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/transaction/screens/transaction_list_screen.dart';
 import '../features/transaction/screens/create_transaction_screen.dart';
@@ -24,6 +25,11 @@ import '../features/rule/screens/rule_screen.dart';
 import '../features/ai/screens/ai_assistant_screen.dart';
 import '../features/backup/screens/backup_screen.dart';
 import '../features/import/screens/import_export_screen.dart';
+import '../features/budget/screens/budget_screen.dart';
+import '../features/budget/screens/budget_form_screen.dart';
+import '../features/account/screens/account_list_screen.dart';
+import '../features/account/screens/account_detail_screen.dart';
+import '../features/account/screens/account_form_screen.dart';
 import 'main_layout.dart';
 
 final appRouter = GoRouter(
@@ -64,7 +70,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/create-transaction',
-      builder: (context, state) => const CreateTransactionScreen(),
+      builder: (context, state) {
+        final transaction = state.extra as Transaction?;
+        return CreateTransactionScreen(transaction: transaction);
+      },
     ),
     GoRoute(
       path: '/server-config',
@@ -133,6 +142,43 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/language',
       builder: (context, state) => const LanguageScreen(),
+    ),
+    GoRoute(
+      path: '/budgets',
+      builder: (context, state) => const BudgetScreen(),
+    ),
+    GoRoute(
+      path: '/budget-create',
+      builder: (context, state) => const BudgetFormScreen(),
+    ),
+    GoRoute(
+      path: '/budget/:id/edit',
+      builder: (context, state) {
+        final budget = state.extra as Budget;
+        return BudgetFormScreen(budget: budget);
+      },
+    ),
+    GoRoute(
+      path: '/accounts',
+      builder: (context, state) => const AccountListScreen(),
+    ),
+    GoRoute(
+      path: '/account-create',
+      builder: (context, state) => const AccountFormScreen(),
+    ),
+    GoRoute(
+      path: '/account/:id',
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return AccountDetailScreen(accountId: id);
+      },
+    ),
+    GoRoute(
+      path: '/account/:id/edit',
+      builder: (context, state) {
+        final account = state.extra as Account;
+        return AccountFormScreen(account: account);
+      },
     ),
   ],
 );

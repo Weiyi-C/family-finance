@@ -244,22 +244,30 @@ class User {
 class Budget {
   final int id;
   final int familyId;
+  final int? bookId;
   final int? categoryId;
   final String period;
   final int year;
   final int month;
   final int amount;
+  final String currency;
+  final bool rollover;
+  final int rolloverAmount;
   final double alertThreshold;
   final int? spent;
   
   Budget({
     required this.id,
     required this.familyId,
+    this.bookId,
     this.categoryId,
     required this.period,
     required this.year,
     required this.month,
     required this.amount,
+    this.currency = 'CNY',
+    this.rollover = false,
+    this.rolloverAmount = 0,
     this.alertThreshold = 0.8,
     this.spent,
   });
@@ -268,17 +276,70 @@ class Budget {
     return Budget(
       id: json['id'],
       familyId: json['family_id'],
+      bookId: json['book_id'],
       categoryId: json['category_id'],
       period: json['period'],
       year: json['year'],
       month: json['month'],
       amount: json['amount'],
+      currency: json['currency'] ?? 'CNY',
+      rollover: json['rollover'] ?? false,
+      rolloverAmount: json['rollover_amount'] ?? 0,
       alertThreshold: (json['alert_threshold'] ?? 0.8).toDouble(),
       spent: json['spent'],
     );
   }
   
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'family_id': familyId,
+      'book_id': bookId,
+      'category_id': categoryId,
+      'period': period,
+      'year': year,
+      'month': month,
+      'amount': amount,
+      'currency': currency,
+      'rollover': rollover,
+      'rollover_amount': rolloverAmount,
+      'alert_threshold': alertThreshold,
+    };
+  }
+  
   double get amountYuan => amount / 100;
   double get spentYuan => (spent ?? 0) / 100;
   double get progress => spent != null ? (spent! / amount).clamp(0, 1) : 0;
+}
+
+class Tag {
+  final int id;
+  final int familyId;
+  final String name;
+  final String? color;
+
+  Tag({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    this.color,
+  });
+
+  factory Tag.fromJson(Map<String, dynamic> json) {
+    return Tag(
+      id: json['id'],
+      familyId: json['family_id'],
+      name: json['name'],
+      color: json['color'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'family_id': familyId,
+      'name': name,
+      'color': color,
+    };
+  }
 }

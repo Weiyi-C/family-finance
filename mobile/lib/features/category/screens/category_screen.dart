@@ -1,137 +1,561 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:family_finance_app/data/models/models.dart';
+import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
+import 'package:family_finance_app/features/transaction/providers/transaction_provider.dart';
+import 'package:family_finance_app/shared/widgets/confirm_dialog.dart';
 
-class CategoryScreen extends ConsumerWidget {
+const _iconOptions = <IconData>[
+  Icons.restaurant,
+  Icons.fastfood,
+  Icons.local_cafe,
+  Icons.local_grocery_store,
+  Icons.shopping_bag,
+  Icons.shopping_cart,
+  Icons.directions_car,
+  Icons.directions_bus,
+  Icons.train,
+  Icons.flight,
+  Icons.home,
+  Icons.hotel,
+  Icons.local_hospital,
+  Icons.school,
+  Icons.sports_esports,
+  Icons.movie,
+  Icons.music_note,
+  Icons.fitness_center,
+  Icons.pets,
+  Icons.card_giftcard,
+  Icons.account_balance,
+  Icons.work,
+  Icons.trending_up,
+  Icons.attach_money,
+  Icons.savings,
+  Icons.phone_android,
+  Icons.local_library,
+  Icons.brush,
+  Icons.child_care,
+  Icons.local_bar,
+];
+
+const _colorOptions = <Color>[
+  Colors.red,
+  Colors.pink,
+  Colors.purple,
+  Colors.indigo,
+  Colors.blue,
+  Colors.teal,
+  Colors.green,
+  Colors.lime,
+  Colors.orange,
+  Colors.brown,
+  Colors.grey,
+  Colors.cyan,
+];
+
+String _colorToHex(Color color) {
+  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+}
+
+Color _parseColor(String? hex) {
+  if (hex == null || hex.isEmpty) return Colors.grey;
+  final cleaned = hex.replaceFirst('#', '');
+  final value = int.tryParse(cleaned, radix: 16);
+  if (value == null) return Colors.grey;
+  return Color(value | 0xFF000000);
+}
+
+IconData _parseIcon(String? name) {
+  if (name == null || name.isEmpty) return Icons.category;
+  for (final icon in _iconOptions) {
+    if (icon.codePoint.toString() == name) {
+      return icon;
+    }
+  }
+  return Icons.category;
+}
+
+class CategoryScreen extends ConsumerStatefulWidget {
   const CategoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('分类管理'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '支出'),
-              Tab(text: '收入'),
-            ],
+  ConsumerState<CategoryScreen> createState() => _CategoryScreenState();
+}
+
+class _CategoryScreenState extends ConsumerState<CategoryScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('分类管理'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '支出'),
+            Tab(text: '收入'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              final type = _tabController.index == 0 ? 'expense' : 'income';
+              _showCreateDialog(context, type);
+            },
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _showCreateDialog(context),
-            ),
-          ],
-        ),
-        body: TabBarView(
-          children: [
-            _buildCategoryList(context, 'expense'),
-            _buildCategoryList(context, 'income'),
-          ],
-        ),
+        ],
+      ),
+      body: categoriesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('加载失败: $e')),
+        data: (categories) {
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildCategoryList(context, categories, 'expense'),
+              _buildCategoryList(context, categories, 'income'),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCategoryList(BuildContext context, String type) {
-    final categories = type == 'expense'
-        ? [
-            {'name': '餐饮', 'icon': Icons.restaurant, 'color': Colors.orange, 'children': ['早饭', '午饭', '晚饭', '下午茶']},
-            {'name': '交通', 'icon': Icons.directions_car, 'color': Colors.blue, 'children': ['打车', '地铁', '公交']},
-            {'name': '购物', 'icon': Icons.shopping_bag, 'color': Colors.pink, 'children': ['服饰', '日用品', '数码']},
-            {'name': '住房', 'icon': Icons.home, 'color': Colors.brown, 'children': ['房租', '水电', '物业']},
-            {'name': '娱乐', 'icon': Icons.sports_esports, 'color': Colors.purple, 'children': ['电影', '游戏', '旅行']},
-            {'name': '医疗', 'icon': Icons.local_hospital, 'color': Colors.red, 'children': ['看病', '药品']},
-            {'name': '教育', 'icon': Icons.school, 'color': Colors.teal, 'children': ['课程', '书籍']},
-          ]
-        : [
-            {'name': '工资薪酬', 'icon': Icons.account_balance, 'color': Colors.green, 'children': ['工资', '奖金']},
-            {'name': '副业收入', 'icon': Icons.work, 'color': Colors.blue, 'children': ['兼职', ' freelance']},
-            {'name': '投资收益', 'icon': Icons.trending_up, 'color': Colors.orange, 'children': ['股票', '基金']},
-            {'name': '红包收入', 'icon': Icons.card_giftcard, 'color': Colors.red, 'children': ['红包', '礼金']},
-          ];
+  Widget _buildCategoryList(
+    BuildContext context,
+    List<Category> categories,
+    String type,
+  ) {
+    final filtered =
+        categories.where((c) => c.type == type && c.level == 1).toList();
+
+    if (filtered.isEmpty) {
+      return const Center(child: Text('暂无分类'));
+    }
 
     return ListView.builder(
-      itemCount: categories.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final cat = categories[index];
-        final children = cat['children'] as List<String>;
-        
+        final cat = filtered[index];
+        final children = cat.children ?? [];
+        final isSystem = cat.familyId == null;
+        final color = _parseColor(cat.color);
+
         return ExpansionTile(
           leading: CircleAvatar(
-            backgroundColor: (cat['color'] as Color).withOpacity(0.1),
-            child: Icon(cat['icon'] as IconData, color: cat['color'] as Color),
+            backgroundColor: color.withValues(alpha: 0.1),
+            child: Icon(_parseIcon(cat.icon), color: color, size: 20),
           ),
-          title: Text(cat['name'] as String),
+          title: Row(
+            children: [
+              Flexible(child: Text(cat.name)),
+              if (isSystem) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.lock, size: 14, color: Colors.grey[400]),
+              ],
+            ],
+          ),
           subtitle: Text('${children.length}个子分类'),
-          children: children.map((child) => ListTile(
-            contentPadding: const EdgeInsets.only(left: 72),
-            title: Text(child),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit, size: 20),
-              onPressed: () {
-                // TODO: 编辑子分类
-              },
-            ),
-          )).toList(),
+          trailing: isSystem
+              ? null
+              : PopupMenuButton<String>(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                    const PopupMenuItem(value: 'delete', child: Text('删除')),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditDialog(context, cat);
+                    } else if (value == 'delete') {
+                      _showDeleteDialog(context, cat);
+                    }
+                  },
+                ),
+          children: children
+              .map((child) => _buildChildTile(context, child))
+              .toList(),
         );
       },
     );
   }
 
-  void _showCreateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新建分类'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: '分类名称',
-                hintText: '请输入分类名称',
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('图标: '),
-                IconButton(
-                  icon: const Icon(Icons.emoji_emotions),
-                  onPressed: () {
-                    // TODO: 选择图标
-                  },
-                ),
-                const SizedBox(width: 16),
-                const Text('颜色: '),
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildChildTile(BuildContext context, Category child) {
+    final isSystem = child.familyId == null;
+    final color = _parseColor(child.color);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 72, right: 16),
+      leading: CircleAvatar(
+        radius: 14,
+        backgroundColor: color.withValues(alpha: 0.1),
+        child: Icon(_parseIcon(child.icon), color: color, size: 16),
+      ),
+      title: Row(
+        children: [
+          Flexible(child: Text(child.name)),
+          if (isSystem) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.lock, size: 14, color: Colors.grey[400]),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: 创建分类
-              Navigator.pop(context);
-            },
-            child: const Text('创建'),
-          ),
         ],
       ),
+      trailing: isSystem
+          ? null
+          : PopupMenuButton<String>(
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                const PopupMenuItem(value: 'delete', child: Text('删除')),
+              ],
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _showEditDialog(context, child);
+                } else if (value == 'delete') {
+                  _showDeleteDialog(context, child);
+                }
+              },
+            ),
     );
+  }
+
+  Future<void> _showCreateDialog(BuildContext context, String type) async {
+    final nameController = TextEditingController();
+    IconData selectedIcon = Icons.category;
+    Color selectedColor = _colorOptions.first;
+
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('新建分类'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: '分类名称',
+                        hintText: '请输入分类名称',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('图标'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _iconOptions.map((icon) {
+                        final isSelected = icon == selectedIcon;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedIcon = icon),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: isSelected
+                                  ? Border.all(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
+                            child: Icon(icon,
+                                size: 20,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[700]),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('颜色'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _colorOptions.map((color) {
+                        final isSelected = color == selectedColor;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedColor = color),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check,
+                                    size: 16, color: Colors.white)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('创建'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (created != true) return;
+    if (!context.mounted) return;
+    final name = nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请输入分类名称')));
+      return;
+    }
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      await api.createCategory({
+        'name': name,
+        'icon': selectedIcon.codePoint.toString(),
+        'color': _colorToHex(selectedColor),
+        'type': type,
+      });
+      ref.invalidate(categoriesProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('创建成功')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('创建失败: $e')));
+    }
+  }
+
+  Future<void> _showEditDialog(BuildContext context, Category category) async {
+    final nameController = TextEditingController(text: category.name);
+    IconData selectedIcon = _parseIcon(category.icon);
+    Color selectedColor = _parseColor(category.color);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('编辑分类'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: '分类名称'),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('图标'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _iconOptions.map((icon) {
+                        final isSelected = icon == selectedIcon;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedIcon = icon),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: isSelected
+                                  ? Border.all(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
+                            child: Icon(icon,
+                                size: 20,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey[700]),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('颜色'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _colorOptions.map((color) {
+                        final isSelected = color == selectedColor;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedColor = color),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check,
+                                    size: 16, color: Colors.white)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (saved != true) return;
+    if (!context.mounted) return;
+    final name = nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请输入分类名称')));
+      return;
+    }
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      await api.updateCategory(category.id, {
+        'name': name,
+        'icon': selectedIcon.codePoint.toString(),
+        'color': _colorToHex(selectedColor),
+      });
+      ref.invalidate(categoriesProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('更新成功')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('更新失败: $e')));
+    }
+  }
+
+  Future<void> _showDeleteDialog(
+      BuildContext context, Category category) async {
+    final confirmed = await ConfirmDialog.show(
+      context: context,
+      title: '删除分类',
+      content: '确定要删除「${category.name}」吗？',
+      confirmText: '删除',
+      isDestructive: true,
+    );
+
+    if (!confirmed) return;
+    if (!context.mounted) return;
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      await api.deleteCategory(category.id);
+      ref.invalidate(categoriesProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已删除')));
+    } on DioException catch (e) {
+      if (!context.mounted) return;
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('系统分类不能删除')));
+      } else if (statusCode == 400) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('该分类下有子分类，请先删除子分类')));
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('删除失败: $e')));
+    }
   }
 }

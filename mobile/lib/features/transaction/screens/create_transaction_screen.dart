@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/network/network_status.dart';
+import '../../../data/models/models.dart';
 import '../providers/offline_transaction_provider.dart';
+import '../providers/transaction_provider.dart';
 
 class CreateTransactionScreen extends ConsumerStatefulWidget {
-  const CreateTransactionScreen({super.key});
+  final Transaction? transaction;
+
+  const CreateTransactionScreen({super.key, this.transaction});
 
   @override
   ConsumerState<CreateTransactionScreen> createState() => _CreateTransactionScreenState();
@@ -18,8 +22,11 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
   final _descriptionController = TextEditingController();
   int? _categoryId;
   int? _accountId;
-  DateTime _transactionTime = DateTime.now();
+  late DateTime _transactionTime = DateTime.now();
   bool _isSubmitting = false;
+  bool _initialized = false;
+
+  bool get _isEditMode => widget.transaction != null;
 
   @override
   void dispose() {
@@ -29,14 +36,31 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
     super.dispose();
   }
 
+  void _initFromTransaction() {
+    if (_initialized || !_isEditMode) return;
+    final t = widget.transaction!;
+    _type = t.type;
+    _amountController.text = t.amountYuan.toStringAsFixed(2);
+    _merchantController.text = t.merchantName ?? '';
+    _descriptionController.text = t.description ?? '';
+    _categoryId = t.categoryId;
+    _accountId = t.paymentAccountId;
+    _transactionTime = t.transactionTime;
+    _initialized = true;
+  }
+
   @override
   Widget build(BuildContext context) {
+    _initFromTransaction();
+
     final networkStatus = ref.watch(networkStatusProvider);
     final isOffline = networkStatus == NetworkStatus.offline;
+    final categories = ref.watch(categoriesProvider);
+    final accounts = ref.watch(accountsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('记一笔'),
+        title: Text(_isEditMode ? '编辑交易' : '记一笔'),
         actions: [
           if (isOffline)
             Container(
@@ -56,7 +80,7 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
               ),
             ),
           TextButton(
-            onPressed: _isSubmitting ? null : _handleSubmit,
+            onPressed: _isSubmitting ? null : () => _handleSubmit(ref),
             child: _isSubmitting
                 ? const SizedBox(
                     width: 16,
@@ -72,7 +96,6 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 离线提示
             if (isOffline)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -95,19 +118,14 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
                   ],
                 ),
               ),
-            // 类型选择
             _buildTypeSelector(),
             const SizedBox(height: 24),
-            // 金额输入
             _buildAmountInput(),
             const SizedBox(height: 16),
-            // 分类选择
-            _buildCategorySelector(),
+            _buildCategorySelector(categories),
             const SizedBox(height: 16),
-            // 账户选择
-            _buildAccountSelector(),
+            _buildAccountSelector(accounts),
             const SizedBox(height: 16),
-            // 商户输入
             TextFormField(
               controller: _merchantController,
               decoration: const InputDecoration(
@@ -116,10 +134,8 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
               ),
             ),
             const SizedBox(height: 16),
-            // 时间选择
             _buildTimeSelector(),
             const SizedBox(height: 16),
-            // 备注输入
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
@@ -129,9 +145,8 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
               ),
             ),
             const SizedBox(height: 24),
-            // 保存按钮
             ElevatedButton(
-              onPressed: _isSubmitting ? null : _handleSubmit,
+              onPressed: _isSubmitting ? null : () => _handleSubmit(ref),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -183,34 +198,150 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
     );
   }
 
-  Widget _buildCategorySelector() {
+  Widget _buildCategorySelector(AsyncValue<List<Category>> categories) {
+    String displayText = '点击选择分类';
+    categories.whenData((list) {
+      if (_categoryId != null) {
+        final match = list.where((c) => c.id == _categoryId).toList();
+        if (match.isNotEmpty) displayText = match.first.name;
+      }
+    });
+
     return InkWell(
-      onTap: () {
-        // TODO: 打开分类选择器
-      },
+      onTap: () => _showCategoryPicker(categories),
       child: InputDecorator(
         decoration: const InputDecoration(
           labelText: '分类',
           prefixIcon: Icon(Icons.category),
         ),
-        child: Text(_categoryId != null ? '已选择分类' : '点击选择分类'),
+        child: Text(displayText),
       ),
     );
   }
 
-  Widget _buildAccountSelector() {
+  void _showCategoryPicker(AsyncValue<List<Category>> categories) {
+    categories.whenData((list) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (ctx, scrollController) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '选择分类',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: list.length,
+                  itemBuilder: (ctx, index) {
+                    final category = list[index];
+                    final selected = category.id == _categoryId;
+                    return ListTile(
+                      leading: category.icon != null
+                          ? Text(category.icon!, style: const TextStyle(fontSize: 24))
+                          : const Icon(Icons.category),
+                      title: Text(category.name),
+                      trailing: selected
+                          ? const Icon(Icons.check, color: Colors.green)
+                          : null,
+                      onTap: () {
+                        setState(() => _categoryId = category.id);
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildAccountSelector(AsyncValue<List<Account>> accounts) {
+    String displayText = '点击选择账户';
+    accounts.whenData((list) {
+      if (_accountId != null) {
+        final match = list.where((a) => a.id == _accountId).toList();
+        if (match.isNotEmpty) displayText = match.first.name;
+      }
+    });
+
     return InkWell(
-      onTap: () {
-        // TODO: 打开账户选择器
-      },
+      onTap: () => _showAccountPicker(accounts),
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: _type == 'transfer' ? '转出账户' : '资金来源',
           prefixIcon: const Icon(Icons.account_balance_wallet),
         ),
-        child: Text(_accountId != null ? '已选择账户' : '点击选择账户'),
+        child: Text(displayText),
       ),
     );
+  }
+
+  void _showAccountPicker(AsyncValue<List<Account>> accounts) {
+    accounts.whenData((list) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (ctx, scrollController) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '选择账户',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: list.length,
+                  itemBuilder: (ctx, index) {
+                    final account = list[index];
+                    final selected = account.id == _accountId;
+                    return ListTile(
+                      leading: Icon(
+                        Icons.account_balance_wallet,
+                        color: account.color != null
+                            ? Color(int.parse(account.color!.replaceFirst('#', '0xff')))
+                            : null,
+                      ),
+                      title: Text(account.name),
+                      subtitle: account.bankName != null ? Text(account.bankName!) : null,
+                      trailing: selected
+                          ? const Icon(Icons.check, color: Colors.green)
+                          : null,
+                      onTap: () {
+                        setState(() => _accountId = account.id);
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildTimeSelector() {
@@ -247,7 +378,7 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
     );
   }
 
-  Future<void> _handleSubmit() async {
+  Future<void> _handleSubmit(WidgetRef ref) async {
     if (_amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入金额')),
@@ -268,23 +399,33 @@ class _CreateTransactionScreenState extends ConsumerState<CreateTransactionScree
     try {
       final data = {
         'type': _type,
-        'amount': (amount * 100).toInt(), // 转为分
+        'amount': (amount * 100).toInt(),
         'merchant_name': _merchantController.text.isNotEmpty ? _merchantController.text : null,
         'description': _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
         'category_id': _categoryId,
         'payment_account_id': _accountId,
         'transaction_time': _transactionTime.toIso8601String(),
-        'book_id': 1, // TODO: 从用户设置获取
+        'book_id': 1,
       };
 
-      await ref.read(offlineTransactionProvider.notifier).createTransaction(data);
+      if (_isEditMode) {
+        await ref.read(offlineTransactionProvider.notifier).updateTransaction(
+          widget.transaction!.id,
+          data,
+        );
+        ref.read(transactionProvider.notifier).loadTransactions(refresh: true);
+      } else {
+        await ref.read(offlineTransactionProvider.notifier).createTransaction(data);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(networkStatusProvider) == NetworkStatus.online
-                ? '交易已保存并同步'
-                : '交易已保存，将在联网后同步'),
+            content: Text(_isEditMode
+                ? '交易已更新'
+                : (ref.read(networkStatusProvider) == NetworkStatus.online
+                    ? '交易已保存并同步'
+                    : '交易已保存，将在联网后同步')),
             backgroundColor: Colors.green,
           ),
         );

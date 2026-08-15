@@ -116,15 +116,62 @@ class ApiService {
     return response.data;
   }
   
+  Future<Map<String, dynamic>> getAccountById(int id) async {
+    final response = await _dio.get('/accounts/$id');
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> updateAccount(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/accounts/$id', data: data);
+    return response.data;
+  }
+  
+  Future<void> deleteAccount(int id) async {
+    await _dio.delete('/accounts/$id');
+  }
+  
   // 分类
   Future<List<dynamic>> getCategories() async {
     final response = await _dio.get('/categories');
     return response.data;
   }
   
+  Future<Map<String, dynamic>> createCategory(Map<String, dynamic> data) async {
+    final response = await _dio.post('/categories', data: data);
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> updateCategory(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/categories/$id', data: data);
+    return response.data;
+  }
+  
+  Future<void> deleteCategory(int id) async {
+    await _dio.delete('/categories/$id');
+  }
+  
   // 预算
   Future<List<dynamic>> getBudgets() async {
     final response = await _dio.get('/budgets');
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> createBudget(Map<String, dynamic> data) async {
+    final response = await _dio.post('/budgets', data: data);
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> updateBudget(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/budgets/$id', data: data);
+    return response.data;
+  }
+  
+  Future<void> deleteBudget(int id) async {
+    await _dio.delete('/budgets/$id');
+  }
+  
+  Future<Map<String, dynamic>> getBudgetUsage(int id) async {
+    final response = await _dio.get('/budgets/$id/usage');
     return response.data;
   }
   
@@ -151,6 +198,40 @@ class ApiService {
     
     final response = await _dio.get('/stats/by-category', queryParameters: params);
     return response.data;
+  }
+  
+  Future<Map<String, dynamic>> getStatsByDay({
+    String? start,
+    String? end,
+    String? type,
+  }) async {
+    final params = <String, dynamic>{};
+    if (start != null) params['start'] = start;
+    if (end != null) params['end'] = end;
+    if (type != null) params['type'] = type;
+    
+    final response = await _dio.get('/stats/by-day', queryParameters: params);
+    return response.data;
+  }
+  
+  // 标签
+  Future<List<dynamic>> getTags() async {
+    final response = await _dio.get('/tags');
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> createTag(Map<String, dynamic> data) async {
+    final response = await _dio.post('/tags', data: data);
+    return response.data;
+  }
+  
+  Future<Map<String, dynamic>> updateTag(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/tags/$id', data: data);
+    return response.data;
+  }
+  
+  Future<void> deleteTag(int id) async {
+    await _dio.delete('/tags/$id');
   }
   
   // 用户

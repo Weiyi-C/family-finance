@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/models/models.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../../features/transaction/providers/transaction_provider.dart';
 
 class AccountListScreen extends ConsumerWidget {
   const AccountListScreen({super.key});
@@ -17,7 +19,7 @@ class AccountListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              // TODO: 创建账户
+              context.push('/account-create');
             },
           ),
         ],
@@ -97,7 +99,7 @@ class AccountListScreen extends ConsumerWidget {
         ),
       ),
       onTap: () {
-        // TODO: 打开账户详情
+        context.push('/account/${account.id}');
       },
     );
   }
@@ -124,8 +126,3 @@ class AccountListScreen extends ConsumerWidget {
     }
   }
 }
-
-final accountsProvider = FutureProvider<List<Account>>((ref) async {
-  // TODO: 从API获取账户列表
-  return [];
-});
