@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 class ServerConfigScreen extends StatefulWidget {
   const ServerConfigScreen({super.key});
@@ -158,11 +159,27 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     });
 
     try {
-      // TODO: 实现连接测试
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _status = '连接成功！服务器响应正常。';
-      });
+      final url = _urlController.text.trim();
+      if (url.isEmpty) {
+        setState(() {
+          _status = '连接失败：请输入服务器地址';
+        });
+        return;
+      }
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ));
+      final response = await dio.get('$url/health');
+      if (response.statusCode == 200) {
+        setState(() {
+          _status = '连接成功！服务器响应正常。';
+        });
+      } else {
+        setState(() {
+          _status = '连接失败：服务器返回 ${response.statusCode}';
+        });
+      }
     } catch (e) {
       setState(() {
         _status = '连接失败：$e';

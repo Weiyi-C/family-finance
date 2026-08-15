@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/routes.dart';
 import 'core/theme/app_theme.dart';
+import 'data/services/api_service.dart';
 import 'features/settings/providers/theme_provider.dart';
 import 'features/settings/providers/color_theme_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiService().init();
   runApp(
     const ProviderScope(
       child: FamilyFinanceApp(),
