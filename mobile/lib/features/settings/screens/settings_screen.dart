@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/theme_provider.dart';
+import '../providers/color_theme_provider.dart';
+import '../../../core/theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -175,6 +177,92 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildColorThemeSection(BuildContext context, WidgetRef ref) {
+    final colorKey = ref.watch(colorThemeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '主题颜色',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: AppTheme.presetColors.length,
+            itemBuilder: (context, index) {
+              final entry = AppTheme.presetColors.entries.elementAt(index);
+              final isSelected = entry.key == colorKey;
+              return GestureDetector(
+                onTap: () {
+                  ref.read(colorThemeProvider.notifier).setColor(entry.key);
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: entry.value,
+                        shape: BoxShape.circle,
+                        border: isSelected
+                            ? Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface,
+                                width: 3,
+                              )
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: entry.value.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check, color: Colors.white, size: 22)
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _colorName(entry.key),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _colorName(String key) {
+    const names = {
+      'sakura': '樱花粉',
+      'mint': '薄荷绿',
+      'lavender': '薰衣草紫',
+      'sunset': '日落橙',
+      'ocean': '海洋蓝',
+      'forest': '森林绿',
+    };
+    return names[key] ?? key;
+  }
+
   Widget _buildSettingsSection(
     BuildContext context,
     WidgetRef ref,
@@ -200,6 +288,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const Divider(height: 1),
+          _buildColorThemeSection(context, ref),
           ListTile(
             leading: const Icon(Icons.language),
             title: const Text('语言设置'),

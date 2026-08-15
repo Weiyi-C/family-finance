@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 import 'package:family_finance_app/features/transaction/providers/transaction_provider.dart';
+import 'package:family_finance_app/features/budget/providers/budget_provider.dart';
+import 'package:family_finance_app/core/utils/format_utils.dart';
 import 'package:family_finance_app/data/models/models.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -31,6 +34,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final userName = authState.user?.nickname ?? '用户';
 
     final now = DateTime.now();
+    final budgetsAsync = ref.watch(budgetsProvider((year: now.year, month: now.month)));
+    final categoriesAsync = ref.watch(categoriesProvider);
     final monthlyTransactions = transactionState.transactions.where((t) {
       return t.transactionTime.year == now.year &&
           t.transactionTime.month == now.month;
@@ -55,7 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () => context.push('/notifications'),
           ),
         ],
       ),
@@ -68,6 +73,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildOverviewCard(context, monthlyIncome, monthlyExpense, monthlyBalance),
+              const SizedBox(height: 16),
+              _buildBudgetSection(context, budgetsAsync, categoriesAsync),
               const SizedBox(height: 16),
               _buildAccountsCard(context, accountsAsync),
               const SizedBox(height: 16),
@@ -151,6 +158,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBudgetSection(
+    BuildContext context,
+    AsyncValue<List<Budget>> budgetsAsync,
+    AsyncValue<List<Category>> categoriesAsync,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '预算概览',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton(
+                  onPressed: () => context.push('/budgets'),
+                  child: const Text('查看全部'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            budgetsAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text('加载失败: $e', style: const TextStyle(color: Colors.red)),
+                ),
+              ),
+              data: (budgets) {
+                if (budgets.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text('暂无预算', style: TextStyle(color: Colors.grey)),
+                    ),
+                  );
+                }
+                final displayBudgets = budgets.take(4).toList();
+                return categoriesAsync.when(
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (e, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text('加载分类失败: $e', style: const TextStyle(color: Colors.red)),
+                    ),
+                  ),
+                  data: (categories) {
+                    final categoryMap = {for (var c in categories) c.id: c};
+                    return Column(
+                      children: displayBudgets
+                          .map((budget) => _buildBudgetProgressItem(context, budget, categoryMap))
+                          .toList(),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBudgetProgressItem(
+    BuildContext context,
+    Budget budget,
+    Map<int, Category> categoryMap,
+  ) {
+    final category = budget.categoryId != null ? categoryMap[budget.categoryId] : null;
+    final categoryName = category?.name ?? '未分类';
+    final spent = budget.spent ?? 0;
+    final progress = budget.amount > 0 ? (spent / budget.amount).clamp(0.0, 1.0) : 0.0;
+    final ratio = budget.amount > 0 ? spent / budget.amount : 0.0;
+
+    Color progressColor;
+    if (ratio > budget.alertThreshold) {
+      progressColor = Colors.red;
+    } else if (ratio >= 0.8) {
+      progressColor = Colors.orange;
+    } else {
+      progressColor = Colors.green;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(categoryName, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                '${formatMoney(spent)} / ${formatMoney(budget.amount)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ],
+      ),
     );
   }
 

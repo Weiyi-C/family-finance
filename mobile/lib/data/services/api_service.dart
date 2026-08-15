@@ -515,6 +515,18 @@ class ApiService {
     return response.data['count'] ?? 0;
   }
 
+  Future<void> markNotificationRead(int id) async {
+    await _dio.put('/notifications/$id/read');
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _dio.put('/notifications/read-all');
+  }
+
+  Future<void> triggerNotificationCheck() async {
+    await _dio.post('/notifications/check');
+  }
+
   // AI 助手
   Future<Map<String, dynamic>> parseTransactionText(String text) async {
     final response = await _dio.post('/ai/parse', data: {'text': text});
@@ -611,6 +623,31 @@ class ApiService {
 
   Future<Map<String, dynamic>> joinFamily(Map<String, dynamic> data) async {
     final response = await _dio.post('/families/join', data: data);
+    return response.data;
+  }
+
+  // 规则引擎
+  Future<List<dynamic>> getRules() async {
+    final response = await _dio.get('/rules');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> createRule(Map<String, dynamic> data) async {
+    final response = await _dio.post('/rules', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateRule(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/rules/$id', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteRule(int id) async {
+    await _dio.delete('/rules/$id');
+  }
+
+  Future<Map<String, dynamic>> testRule(Map<String, dynamic> data) async {
+    final response = await _dio.post('/rules/test', data: data);
     return response.data;
   }
 }
