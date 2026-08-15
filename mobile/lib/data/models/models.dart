@@ -639,3 +639,96 @@ class ImportRecord {
     );
   }
 }
+
+class AISuggestion {
+  final int id;
+  final int familyId;
+  final String type;
+  final String status;
+  final List<int>? transactionIds;
+  final Map<String, dynamic>? suggestion;
+  final String? reason;
+  final DateTime? createdAt;
+  final DateTime? resolvedAt;
+
+  AISuggestion({
+    required this.id,
+    required this.familyId,
+    required this.type,
+    required this.status,
+    this.transactionIds,
+    this.suggestion,
+    this.reason,
+    this.createdAt,
+    this.resolvedAt,
+  });
+
+  factory AISuggestion.fromJson(Map<String, dynamic> json) {
+    return AISuggestion(
+      id: json['id'],
+      familyId: json['family_id'],
+      type: json['type'],
+      status: json['status'],
+      transactionIds: json['transaction_ids'] != null ? List<int>.from(json['transaction_ids']) : null,
+      suggestion: json['suggestion'],
+      reason: json['reason'],
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      resolvedAt: json['resolved_at'] != null ? DateTime.parse(json['resolved_at']) : null,
+    );
+  }
+}
+
+class Family {
+  final int id;
+  final String name;
+  final String? inviteCode;
+  final int? createdBy;
+  final DateTime? createdAt;
+
+  Family({
+    required this.id,
+    required this.name,
+    this.inviteCode,
+    this.createdBy,
+    this.createdAt,
+  });
+
+  factory Family.fromJson(Map<String, dynamic> json) {
+    return Family(
+      id: json['id'],
+      name: json['name'],
+      inviteCode: json['invite_code'],
+      createdBy: json['created_by'],
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
+}
+
+class FamilyMember {
+  final int id;
+  final String nickname;
+  final String? phone;
+  final String? avatarUrl;
+  final String role;
+  final bool isActive;
+
+  FamilyMember({
+    required this.id,
+    required this.nickname,
+    this.phone,
+    this.avatarUrl,
+    required this.role,
+    this.isActive = true,
+  });
+
+  factory FamilyMember.fromJson(Map<String, dynamic> json) {
+    return FamilyMember(
+      id: json['id'],
+      nickname: json['nickname'],
+      phone: json['phone'],
+      avatarUrl: json['avatar_url'],
+      role: json['role'] ?? 'member',
+      isActive: json['is_active'] ?? true,
+    );
+  }
+}

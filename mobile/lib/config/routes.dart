@@ -27,6 +27,7 @@ import '../features/notification/screens/notification_screen.dart';
 import '../features/family/screens/family_screen.dart';
 import '../features/rule/screens/rule_screen.dart';
 import '../features/ai/screens/ai_assistant_screen.dart';
+import '../features/ai/screens/ai_settings_screen.dart';
 import '../features/backup/screens/backup_screen.dart';
 import '../features/import/screens/import_export_screen.dart';
 import '../features/budget/screens/budget_screen.dart';
@@ -164,6 +165,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/ai-assistant',
       builder: (context, state) => const AIAssistantScreen(),
+    ),
+    GoRoute(
+      path: '/ai-settings',
+      builder: (context, state) => const AISettingsScreen(),
     ),
     GoRoute(
       path: '/backup',

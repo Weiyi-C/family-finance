@@ -514,4 +514,103 @@ class ApiService {
     final response = await _dio.get('/notifications/unread');
     return response.data['count'] ?? 0;
   }
+
+  // AI 助手
+  Future<Map<String, dynamic>> parseTransactionText(String text) async {
+    final response = await _dio.post('/ai/parse', data: {'text': text});
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> suggestCategory(Map<String, dynamic> data) async {
+    final response = await _dio.post('/ai/suggest-category', data: data);
+    return response.data;
+  }
+
+  Future<List<dynamic>> getAISuggestions({String? type, String? status}) async {
+    final params = <String, dynamic>{};
+    if (type != null) params['type'] = type;
+    if (status != null) params['status'] = status;
+
+    final response = await _dio.get('/ai/suggestions', queryParameters: params);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> acceptAISuggestion(int id) async {
+    final response = await _dio.post('/ai/suggestions/$id/accept');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> rejectAISuggestion(int id) async {
+    final response = await _dio.post('/ai/suggestions/$id/reject');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> batchActionAISuggestions(Map<String, dynamic> data) async {
+    final response = await _dio.post('/ai/suggestions/batch-action', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> triggerAIAnalysis() async {
+    final response = await _dio.post('/ai/analyze');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> getAISettings() async {
+    final response = await _dio.get('/ai/settings');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateAISettings(Map<String, dynamic> data) async {
+    final response = await _dio.put('/ai/settings', data: data);
+    return response.data;
+  }
+
+  Future<void> deleteAISettings() async {
+    await _dio.delete('/ai/settings');
+  }
+
+  Future<List<dynamic>> getAIProviders() async {
+    final response = await _dio.get('/ai/providers');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> testAIConnection() async {
+    final response = await _dio.post('/ai/test');
+    return response.data;
+  }
+
+  // 家庭协作
+  Future<Map<String, dynamic>> getCurrentFamily() async {
+    final response = await _dio.get('/families/current');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateFamily(Map<String, dynamic> data) async {
+    final response = await _dio.put('/families/current', data: data);
+    return response.data;
+  }
+
+  Future<List<dynamic>> getFamilyMembers() async {
+    final response = await _dio.get('/families/members');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> addFamilyMember(Map<String, dynamic> data) async {
+    final response = await _dio.post('/families/members', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> updateMemberRole(int id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/families/members/$id', data: data);
+    return response.data;
+  }
+
+  Future<void> removeFamilyMember(int id) async {
+    await _dio.delete('/families/members/$id');
+  }
+
+  Future<Map<String, dynamic>> joinFamily(Map<String, dynamic> data) async {
+    final response = await _dio.post('/families/join', data: data);
+    return response.data;
+  }
 }
