@@ -144,7 +144,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
               data: (categories) {
                 final filtered = categories.where((c) => c.type == _type).toList();
                 return DropdownButtonFormField<int>(
-                  value: _selectedCategoryId,
+                  initialValue: _selectedCategoryId,
                   decoration: const InputDecoration(labelText: '分类', border: OutlineInputBorder()),
                   items: filtered.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                   onChanged: (v) => setState(() => _selectedCategoryId = v),
@@ -157,7 +157,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
               error: (e, _) => Text('加载账户失败: $e'),
               data: (accounts) {
                 return DropdownButtonFormField<int>(
-                  value: _selectedAccountId,
+                  initialValue: _selectedAccountId,
                   decoration: const InputDecoration(labelText: '账户', border: OutlineInputBorder()),
                   items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
                   onChanged: (v) => setState(() => _selectedAccountId = v),
@@ -166,7 +166,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _frequency,
+              initialValue: _frequency,
               decoration: const InputDecoration(labelText: '频率', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('每月')),
@@ -178,7 +178,7 @@ class _RecurringFormScreenState extends ConsumerState<RecurringFormScreen> {
             if (_frequency == 'monthly') ...[
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _dayOfMonth,
+                initialValue: _dayOfMonth,
                 decoration: const InputDecoration(labelText: '每月几号', border: OutlineInputBorder()),
                 items: List.generate(28, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}号'))),
                 onChanged: (v) => setState(() => _dayOfMonth = v!),

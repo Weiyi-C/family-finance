@@ -199,7 +199,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _typeColor(type).withOpacity(0.1),
+                  color: _typeColor(type).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(type, style: TextStyle(fontSize: 11, color: _typeColor(type))),
@@ -283,7 +283,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, -2)),
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, -2)),
         ],
       ),
       child: Row(

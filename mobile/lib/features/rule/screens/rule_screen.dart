@@ -97,7 +97,7 @@ class RuleScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: Colors.blue.withOpacity(0.1),
+            backgroundColor: Colors.blue.withValues(alpha: 0.1),
             child: const Icon(Icons.rule, color: Colors.blue, size: 20),
           ),
           title: Text(

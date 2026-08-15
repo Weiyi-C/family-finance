@@ -20,10 +20,10 @@ class FamilyScreen extends ConsumerWidget {
         actions: [
           familyAsync.when(
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
             data: (family) => membersAsync.when(
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
               data: (members) {
                 if (!_canManage(currentUser, members)) {
                   return const SizedBox.shrink();
@@ -54,7 +54,7 @@ class FamilyScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               membersAsync.when(
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
                 data: (members) {
                   if (!_canManage(currentUser, members)) {
                     return const SizedBox.shrink();
@@ -164,7 +164,7 @@ class FamilyScreen extends ConsumerWidget {
             '家庭成员',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          error: (_, __) => Text(
+          error: (_, _) => Text(
             '家庭成员',
             style: Theme.of(context).textTheme.titleMedium,
           ),
@@ -317,7 +317,7 @@ class FamilyScreen extends ConsumerWidget {
                 height: 48,
                 child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              error: (_, __) => const Text('加载失败'),
+              error: (_, _) => const Text('加载失败'),
               data: (family) {
                 return Column(
                   children: [

@@ -113,7 +113,7 @@ class _BudgetFormScreenState extends ConsumerState<BudgetFormScreen> {
               data: (categories) {
                 final expenseCategories = categories.where((c) => c.type == 'expense').toList();
                 return DropdownButtonFormField<int>(
-                  value: _selectedCategoryId,
+                  initialValue: _selectedCategoryId,
                   decoration: const InputDecoration(labelText: '预算分类', border: OutlineInputBorder()),
                   items: expenseCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                   onChanged: isEditing ? null : (v) => setState(() => _selectedCategoryId = v),
@@ -139,7 +139,7 @@ class _BudgetFormScreenState extends ConsumerState<BudgetFormScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _period,
+              initialValue: _period,
               decoration: const InputDecoration(labelText: '周期', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('月度')),
@@ -154,7 +154,7 @@ class _BudgetFormScreenState extends ConsumerState<BudgetFormScreen> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      value: _year,
+                      initialValue: _year,
                       decoration: const InputDecoration(labelText: '年', border: OutlineInputBorder()),
                       items: List.generate(5, (i) {
                         final y = DateTime.now().year - 2 + i;
@@ -166,7 +166,7 @@ class _BudgetFormScreenState extends ConsumerState<BudgetFormScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: DropdownButtonFormField<int>(
-                      value: _month,
+                      initialValue: _month,
                       decoration: const InputDecoration(labelText: '月', border: OutlineInputBorder()),
                       items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}月'))),
                       onChanged: (v) => setState(() => _month = v!),

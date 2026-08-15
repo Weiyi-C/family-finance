@@ -217,6 +217,7 @@ class BackupScreen extends ConsumerWidget {
 
     // 模拟备份完成
     Future.delayed(const Duration(seconds: 2), () {
+      if (!context.mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

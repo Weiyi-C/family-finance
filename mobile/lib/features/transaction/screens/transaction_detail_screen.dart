@@ -26,7 +26,7 @@ class TransactionDetailScreen extends ConsumerWidget {
           return match.isNotEmpty ? match.first.name : '-';
         },
         loading: () => '-',
-        error: (_, __) => '-',
+        error: (_, _) => '-',
       );
     }
 
@@ -37,7 +37,7 @@ class TransactionDetailScreen extends ConsumerWidget {
           return match.isNotEmpty ? match.first.name : '-';
         },
         loading: () => '-',
-        error: (_, __) => '-',
+        error: (_, _) => '-',
       );
     }
 

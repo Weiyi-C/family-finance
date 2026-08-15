@@ -78,7 +78,7 @@ class _AISettingsScreenState extends ConsumerState<AISettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _selectedProvider,
+                    initialValue: _selectedProvider,
                     decoration: const InputDecoration(
                       labelText: 'AI 提供商',
                       border: OutlineInputBorder(),

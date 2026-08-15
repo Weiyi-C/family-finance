@@ -263,7 +263,7 @@ class _ConflictResolutionScreenState extends ConsumerState<ConflictResolutionScr
   Future<void> _resolveConflict(SyncConflict conflict, ConflictResolution resolution) async {
     await ref.read(conflictProvider.notifier).resolveManually(conflict, resolution);
     
-    if (mounted) {
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('冲突已解决'),
@@ -404,7 +404,7 @@ class _ConflictResolutionScreenState extends ConsumerState<ConflictResolutionScr
         mergedData: mergedData,
       );
       
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('数据已合并'),

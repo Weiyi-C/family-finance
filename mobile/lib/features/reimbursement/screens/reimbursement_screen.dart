@@ -96,7 +96,7 @@ class ReimbursementScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: statusInfo.$2.withOpacity(0.1),
+            backgroundColor: statusInfo.$2.withValues(alpha: 0.1),
             child: Icon(statusInfo.$3, color: statusInfo.$2),
           ),
           title: Text(r.title),
@@ -118,7 +118,7 @@ class ReimbursementScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: statusInfo.$2.withOpacity(0.1),
+                  color: statusInfo.$2.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(

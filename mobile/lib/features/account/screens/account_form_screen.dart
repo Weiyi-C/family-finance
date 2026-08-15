@@ -96,7 +96,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _typeCode,
+                initialValue: _typeCode,
                 decoration: const InputDecoration(
                   labelText: '账户类型',
                   prefixIcon: Icon(Icons.category),
