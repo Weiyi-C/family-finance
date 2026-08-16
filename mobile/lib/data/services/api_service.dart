@@ -24,6 +24,13 @@ class ApiService {
     _dio.options.receiveTimeout = const Duration(seconds: 30);
   }
   
+  Future<void> setBaseUrl(String url) async {
+    _baseUrl = url;
+    _dio.options.baseUrl = '$url/api';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('server_url', url);
+  }
+  
   void setToken(String token) {
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:family_finance_app/data/services/api_service.dart';
 import 'dart:async';
 import 'server_config_helper.dart' if (dart.library.html) 'server_config_helper_web.dart';
 
@@ -235,6 +236,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('server_url', url);
+    await ApiService().setBaseUrl(url);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
