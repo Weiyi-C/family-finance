@@ -16,19 +16,26 @@ class ApiService {
     ));
   }
   
+  String _ensureProtocol(String url) {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return 'http://$url';
+    }
+    return url;
+  }
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _baseUrl = prefs.getString('server_url') ?? 'http://localhost:8080';
+    _baseUrl = _ensureProtocol(prefs.getString('server_url') ?? 'http://192.168.31.9:8080');
     _dio.options.baseUrl = '$_baseUrl/api';
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
   }
   
   Future<void> setBaseUrl(String url) async {
-    _baseUrl = url;
-    _dio.options.baseUrl = '$url/api';
+    _baseUrl = _ensureProtocol(url);
+    _dio.options.baseUrl = '$_baseUrl/api';
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('server_url', url);
+    await prefs.setString('server_url', _baseUrl!);
   }
   
   void setToken(String token) {

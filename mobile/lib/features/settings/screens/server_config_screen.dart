@@ -28,7 +28,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
 
   Future<void> _loadServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    _urlController.text = prefs.getString('server_url') ?? 'http://localhost:8080';
+    _urlController.text = prefs.getString('server_url') ?? 'http://192.168.31.9:8080';
   }
 
   @override
@@ -201,12 +201,15 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     final host = _normalizeUrl(input);
     final urlsToTry = ['http://$host', 'https://$host'];
     String? successUrl;
+    String? lastError;
 
     for (final baseUrl in urlsToTry) {
-      final ok = await PlatformHelper.testConnection(baseUrl);
-      if (ok) {
+      final result = await PlatformHelper.testConnection(baseUrl);
+      if (result.success) {
         successUrl = baseUrl;
         break;
+      } else {
+        lastError = result.error;
       }
     }
 
@@ -218,7 +221,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       });
     } else {
       setState(() {
-        _status = '连接失败：无法访问 $host，请检查地址和网络';
+        _status = '连接失败：$lastError';
       });
     }
 
@@ -290,8 +293,8 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
           final ip = '$segment.$i';
           final url = 'http://$ip:$port';
 
-          final ok = await PlatformHelper.testConnection(url);
-          if (ok && !found.contains('$ip:$port')) {
+          final result = await PlatformHelper.testConnection(url);
+          if (result.success && !found.contains('$ip:$port')) {
             found.add('$ip:$port');
           }
 
