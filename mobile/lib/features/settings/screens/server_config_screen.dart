@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:html' as html;
 import 'dart:async';
-import 'dart:convert';
+import 'server_config_helper.dart' if (dart.library.html) 'server_config_helper_web.dart';
 
 class ServerConfigScreen extends StatefulWidget {
   const ServerConfigScreen({super.key});
@@ -17,6 +16,8 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
   bool _isScanning = false;
   String? _status;
   final List<String> _scanResults = [];
+  int _scanProgress = 0;
+  int _scanTotal = 0;
 
   @override
   void initState() {
@@ -26,7 +27,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
 
   Future<void> _loadServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    _urlController.text = prefs.getString('server_url') ?? 'http://192.168.1.100:8080';
+    _urlController.text = prefs.getString('server_url') ?? 'http://localhost:8080';
   }
 
   @override
@@ -41,7 +42,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       appBar: AppBar(
         title: const Text('服务器配置'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -132,7 +133,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '扫描局域网中的服务器（常见端口 8080/8000）',
+                      '自动扫描当前局域网段（常见端口 8080/8000）',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
@@ -145,7 +146,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.radar),
-                      label: Text(_isScanning ? '扫描中...' : '扫描局域网'),
+                      label: Text(_isScanning ? '扫描中 $_scanProgress/$_scanTotal...' : '扫描局域网'),
                     ),
                     if (_scanResults.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -170,6 +171,17 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     );
   }
 
+  String _normalizeUrl(String input) {
+    String host = input.trim();
+    if (host.startsWith('http://')) {
+      host = host.substring(7);
+    } else if (host.startsWith('https://')) {
+      host = host.substring(8);
+    }
+    host = host.replaceAll(RegExp(r'/+$'), '');
+    return host;
+  }
+
   Future<void> _testConnection() async {
     setState(() {
       _isTesting = true;
@@ -185,63 +197,15 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       return;
     }
 
-    String host = input;
-    if (host.startsWith('http://')) {
-      host = host.substring(7);
-    } else if (host.startsWith('https://')) {
-      host = host.substring(8);
-    }
-    host = host.replaceAll(RegExp(r'/+$'), '');
-
+    final host = _normalizeUrl(input);
     final urlsToTry = ['http://$host', 'https://$host'];
     String? successUrl;
-    String lastError = '无法连接到服务器';
 
     for (final baseUrl in urlsToTry) {
-      try {
-        final completer = Completer<html.HttpRequest>();
-        final request = html.HttpRequest();
-        request.open('GET', '$baseUrl/health');
-        request.timeout = 3000;
-        request.onLoad.listen((_) {
-          if (!completer.isCompleted) completer.complete(request);
-        });
-        request.onError.listen((_) {
-          if (!completer.isCompleted) {
-            completer.completeError('网络错误');
-          }
-        });
-        request.onTimeout.listen((_) {
-          if (!completer.isCompleted) {
-            completer.completeError('连接超时');
-          }
-        });
-        request.send();
-
-        final response = await completer.future.timeout(
-          const Duration(seconds: 4),
-          onTimeout: () => throw TimeoutException('连接超时'),
-        );
-
-        if (response.status == 200) {
-          try {
-            final data = json.decode(response.responseText ?? '');
-            if (data is Map && data['status'] == 'healthy') {
-              successUrl = baseUrl;
-              break;
-            } else {
-              lastError = '服务器响应格式异常';
-            }
-          } catch (_) {
-            lastError = '服务器响应格式异常';
-          }
-        } else {
-          lastError = '服务器返回状态码 ${response.status}';
-        }
-      } on TimeoutException {
-        lastError = '连接超时（4秒）';
-      } catch (e) {
-        lastError = '连接失败：$e';
+      final ok = await PlatformHelper.testConnection(baseUrl);
+      if (ok) {
+        successUrl = baseUrl;
+        break;
       }
     }
 
@@ -253,7 +217,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       });
     } else {
       setState(() {
-        _status = '连接失败：$lastError';
+        _status = '连接失败：无法访问 $host，请检查地址和网络';
       });
     }
 
@@ -280,49 +244,60 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     }
   }
 
+  List<String> _getNetworkSegments() {
+    final segments = <String>{};
+
+    final currentUrl = _urlController.text.trim();
+    if (currentUrl.isNotEmpty) {
+      final host = _normalizeUrl(currentUrl);
+      final ipPart = host.split(':').first;
+      final parts = ipPart.split('.');
+      if (parts.length == 4) {
+        segments.add('${parts[0]}.${parts[1]}.${parts[2]}');
+      }
+    }
+
+    segments.add('192.168.1');
+    segments.add('192.168.0');
+    segments.add('192.168.31');
+    segments.add('10.0.0');
+    segments.add('10.0.1');
+    segments.add('172.16.0');
+
+    return segments.toList();
+  }
+
   Future<void> _scanLAN() async {
     setState(() {
       _isScanning = true;
       _scanResults.clear();
+      _scanProgress = 0;
     });
 
     final commonPorts = [8080, 8000];
+    final segments = _getNetworkSegments();
+    final total = segments.length * 254 * commonPorts.length;
+    setState(() => _scanTotal = total);
+
     final found = <String>[];
+    var progress = 0;
 
-    for (var i = 1; i <= 20; i++) {
-      for (final port in commonPorts) {
-        final ip = '192.168.1.$i';
-        final url = 'http://$ip:$port';
-        try {
-          final completer = Completer<html.HttpRequest>();
-          final request = html.HttpRequest();
-          request.open('GET', '$url/health');
-          request.timeout = 500;
-          request.onLoad.listen((_) {
-            if (!completer.isCompleted) completer.complete(request);
-          });
-          request.onError.listen((_) {
-            if (!completer.isCompleted) completer.completeError('error');
-          });
-          request.onTimeout.listen((_) {
-            if (!completer.isCompleted) completer.completeError('timeout');
-          });
-          request.send();
+    for (final segment in segments) {
+      for (var i = 1; i <= 254; i++) {
+        for (final port in commonPorts) {
+          final ip = '$segment.$i';
+          final url = 'http://$ip:$port';
 
-          final response = await completer.future.timeout(
-            const Duration(milliseconds: 600),
-            onTimeout: () => throw TimeoutException('timeout'),
-          );
-
-          if (response.status == 200) {
-            try {
-              final data = json.decode(response.responseText ?? '');
-              if (data is Map && data['status'] == 'healthy') {
-                found.add('$ip:$port');
-              }
-            } catch (_) {}
+          final ok = await PlatformHelper.testConnection(url);
+          if (ok && !found.contains('$ip:$port')) {
+            found.add('$ip:$port');
           }
-        } catch (_) {}
+
+          progress++;
+          if (progress % 10 == 0) {
+            setState(() => _scanProgress = progress);
+          }
+        }
       }
     }
 
