@@ -1,6 +1,4 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:developer' as dev;
+import 'package:dio/dio.dart';
 
 class ConnectionResult {
   final bool success;
@@ -11,35 +9,34 @@ class ConnectionResult {
 class PlatformHelper {
   static Future<ConnectionResult> testConnection(String url) async {
     final fullUrl = '$url/health';
-    dev.log('testConnection: trying $fullUrl', name: 'PlatformHelper');
     try {
-      final response = await http.get(
-        Uri.parse(fullUrl),
-      ).timeout(const Duration(seconds: 5));
-
-      dev.log('testConnection: status=${response.statusCode}, body=${response.body}', name: 'PlatformHelper');
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+      ));
+      final response = await dio.get(fullUrl);
 
       if (response.statusCode == 200) {
-        try {
-          final data = json.decode(response.body);
-          if (data is Map && data['status'] == 'healthy') {
-            return ConnectionResult(true);
-          }
-          return ConnectionResult(false, '响应格式异常: ${response.body.substring(0, 100)}');
-        } catch (e) {
-          return ConnectionResult(false, 'JSON解析失败: ${response.body.substring(0, 100)}');
+        final data = response.data;
+        if (data is Map && data['status'] == 'healthy') {
+          return ConnectionResult(true);
         }
+        return ConnectionResult(false, '响应格式异常');
       }
       return ConnectionResult(false, 'HTTP ${response.statusCode}');
-    } on http.ClientException catch (e) {
-      dev.log('testConnection: ClientException: ${e.message}', name: 'PlatformHelper');
-      return ConnectionResult(false, '网络错误: ${e.message}');
-    } on FormatException catch (e) {
-      dev.log('testConnection: FormatException: ${e.message}', name: 'PlatformHelper');
-      return ConnectionResult(false, 'URL格式错误: ${e.message}');
+    } on DioException catch (e) {
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return ConnectionResult(false, '连接超时');
+        case DioExceptionType.connectionError:
+          return ConnectionResult(false, '无法连接，请检查地址和网络');
+        default:
+          return ConnectionResult(false, '网络错误: ${e.message}');
+      }
     } catch (e) {
-      dev.log('testConnection: unknown error: $e', name: 'PlatformHelper');
-      return ConnectionResult(false, '未知错误: $e');
+      return ConnectionResult(false, '错误: $e');
     }
   }
 }
