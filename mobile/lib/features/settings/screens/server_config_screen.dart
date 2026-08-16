@@ -54,15 +54,15 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '输入您的家庭服务器地址，例如 http://192.168.1.100:8080',
+                      '输入服务器地址（支持 IP:端口 或域名），自动检测 HTTP/HTTPS',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _urlController,
                       decoration: const InputDecoration(
-                        labelText: '服务器URL',
-                        hintText: 'http://192.168.1.100:8080',
+                        labelText: '服务器地址',
+                        hintText: '例如 192.168.1.100:8080',
                         prefixIcon: Icon(Icons.dns),
                       ),
                     ),
@@ -158,8 +158,8 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       _status = null;
     });
 
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
+    final input = _urlController.text.trim();
+    if (input.isEmpty) {
       setState(() {
         _status = '连接失败：请输入服务器地址';
         _isTesting = false;
@@ -167,54 +167,48 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       return;
     }
 
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      setState(() {
-        _status = '连接失败：地址必须以 http:// 或 https:// 开头';
-        _isTesting = false;
-      });
-      return;
+    String host = input;
+    if (host.startsWith('http://')) {
+      host = host.substring(7);
+    } else if (host.startsWith('https://')) {
+      host = host.substring(8);
+    }
+    host = host.replaceAll(RegExp(r'/+$'), '');
+
+    final urlsToTry = ['http://$host', 'https://$host'];
+    String? successUrl;
+
+    for (final baseUrl in urlsToTry) {
+      try {
+        final dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+        ));
+        final response = await dio.get('$baseUrl/health');
+        if (response.statusCode == 200 &&
+            response.data is Map &&
+            response.data['status'] == 'healthy') {
+          successUrl = baseUrl;
+          break;
+        }
+      } catch (_) {
+        continue;
+      }
     }
 
-    try {
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 5),
-        receiveTimeout: const Duration(seconds: 5),
-        sendTimeout: const Duration(seconds: 5),
-      ));
-      final response = await dio.get('$url/health');
-      if (response.statusCode == 200 && response.data is Map && response.data['status'] == 'healthy') {
-        setState(() {
-          _status = '连接成功！服务器响应正常。';
-        });
-      } else {
-        setState(() {
-          _status = '连接失败：服务器返回异常响应';
-        });
-      }
-    } on DioException catch (e) {
-      String msg;
-      switch (e.type) {
-        case DioExceptionType.connectionTimeout:
-        case DioExceptionType.sendTimeout:
-        case DioExceptionType.receiveTimeout:
-          msg = '连接超时，请检查地址是否正确';
-          break;
-        case DioExceptionType.connectionError:
-          msg = '无法连接到服务器，请检查地址和网络';
-          break;
-        default:
-          msg = '连接失败：${e.message ?? "未知错误"}';
-      }
+    if (successUrl != null) {
+      final protocol = successUrl.startsWith('https') ? 'HTTPS' : 'HTTP';
+      _urlController.text = successUrl;
       setState(() {
-        _status = msg;
+        _status = '连接成功！使用 $protocol 协议';
       });
-    } catch (e) {
+    } else {
       setState(() {
-        _status = '连接失败：$e';
+        _status = '连接失败：无法访问 $host，请检查地址和网络';
       });
-    } finally {
-      setState(() => _isTesting = false);
     }
+
+    setState(() => _isTesting = false);
   }
 
   Future<void> _saveServerUrl() async {
