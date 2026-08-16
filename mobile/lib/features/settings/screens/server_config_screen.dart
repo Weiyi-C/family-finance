@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
+import 'dart:html' as html;
+import 'dart:async';
 import 'dart:convert';
 
 class ServerConfigScreen extends StatefulWidget {
@@ -13,7 +14,9 @@ class ServerConfigScreen extends StatefulWidget {
 class _ServerConfigScreenState extends State<ServerConfigScreen> {
   final _urlController = TextEditingController();
   bool _isTesting = false;
+  bool _isScanning = false;
   String? _status;
+  final List<String> _scanResults = [];
 
   @override
   void initState() {
@@ -129,20 +132,34 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '扫描局域网中的服务器',
+                      '扫描局域网中的服务器（常见端口 8080/8000）',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: 实现局域网扫描
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('功能开发中...')),
-                        );
-                      },
-                      icon: const Icon(Icons.radar),
-                      label: const Text('扫描局域网'),
+                      onPressed: _isScanning ? null : _scanLAN,
+                      icon: _isScanning
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.radar),
+                      label: Text(_isScanning ? '扫描中...' : '扫描局域网'),
                     ),
+                    if (_scanResults.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ...(_scanResults.map((ip) => ListTile(
+                            leading: const Icon(Icons.dns, color: Colors.green),
+                            title: Text(ip),
+                            trailing: TextButton(
+                              onPressed: () {
+                                _urlController.text = ip;
+                              },
+                              child: const Text('使用'),
+                            ),
+                          ))),
+                    ],
                   ],
                 ),
               ),
@@ -178,22 +195,53 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
 
     final urlsToTry = ['http://$host', 'https://$host'];
     String? successUrl;
+    String lastError = '无法连接到服务器';
 
     for (final baseUrl in urlsToTry) {
       try {
-        final response = await http.get(
-          Uri.parse('$baseUrl/health'),
-        ).timeout(const Duration(seconds: 3));
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data is Map && data['status'] == 'healthy') {
-            successUrl = baseUrl;
-            break;
+        final completer = Completer<html.HttpRequest>();
+        final request = html.HttpRequest();
+        request.open('GET', '$baseUrl/health');
+        request.timeout = 3000;
+        request.onLoad.listen((_) {
+          if (!completer.isCompleted) completer.complete(request);
+        });
+        request.onError.listen((_) {
+          if (!completer.isCompleted) {
+            completer.completeError('网络错误');
           }
+        });
+        request.onTimeout.listen((_) {
+          if (!completer.isCompleted) {
+            completer.completeError('连接超时');
+          }
+        });
+        request.send();
+
+        final response = await completer.future.timeout(
+          const Duration(seconds: 4),
+          onTimeout: () => throw TimeoutException('连接超时'),
+        );
+
+        if (response.status == 200) {
+          try {
+            final data = json.decode(response.responseText ?? '');
+            if (data is Map && data['status'] == 'healthy') {
+              successUrl = baseUrl;
+              break;
+            } else {
+              lastError = '服务器响应格式异常';
+            }
+          } catch (_) {
+            lastError = '服务器响应格式异常';
+          }
+        } else {
+          lastError = '服务器返回状态码 ${response.status}';
         }
-      } catch (_) {
-        continue;
+      } on TimeoutException {
+        lastError = '连接超时（4秒）';
+      } catch (e) {
+        lastError = '连接失败：$e';
       }
     }
 
@@ -205,7 +253,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       });
     } else {
       setState(() {
-        _status = '连接失败：无法访问 $host，请检查地址和网络';
+        _status = '连接失败：$lastError';
       });
     }
 
@@ -229,6 +277,65 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
         const SnackBar(content: Text('服务器地址已保存')),
       );
       Navigator.pop(context);
+    }
+  }
+
+  Future<void> _scanLAN() async {
+    setState(() {
+      _isScanning = true;
+      _scanResults.clear();
+    });
+
+    final commonPorts = [8080, 8000];
+    final found = <String>[];
+
+    for (var i = 1; i <= 20; i++) {
+      for (final port in commonPorts) {
+        final ip = '192.168.1.$i';
+        final url = 'http://$ip:$port';
+        try {
+          final completer = Completer<html.HttpRequest>();
+          final request = html.HttpRequest();
+          request.open('GET', '$url/health');
+          request.timeout = 500;
+          request.onLoad.listen((_) {
+            if (!completer.isCompleted) completer.complete(request);
+          });
+          request.onError.listen((_) {
+            if (!completer.isCompleted) completer.completeError('error');
+          });
+          request.onTimeout.listen((_) {
+            if (!completer.isCompleted) completer.completeError('timeout');
+          });
+          request.send();
+
+          final response = await completer.future.timeout(
+            const Duration(milliseconds: 600),
+            onTimeout: () => throw TimeoutException('timeout'),
+          );
+
+          if (response.status == 200) {
+            try {
+              final data = json.decode(response.responseText ?? '');
+              if (data is Map && data['status'] == 'healthy') {
+                found.add('$ip:$port');
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isScanning = false;
+        _scanResults.addAll(found);
+        if (found.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('未发现局域网服务器')),
+          );
+        }
+      });
     }
   }
 }
