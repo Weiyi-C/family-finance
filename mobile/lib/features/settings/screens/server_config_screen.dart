@@ -158,28 +158,56 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       _status = null;
     });
 
+    final url = _urlController.text.trim();
+    if (url.isEmpty) {
+      setState(() {
+        _status = '连接失败：请输入服务器地址';
+        _isTesting = false;
+      });
+      return;
+    }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setState(() {
+        _status = '连接失败：地址必须以 http:// 或 https:// 开头';
+        _isTesting = false;
+      });
+      return;
+    }
+
     try {
-      final url = _urlController.text.trim();
-      if (url.isEmpty) {
-        setState(() {
-          _status = '连接失败：请输入服务器地址';
-        });
-        return;
-      }
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 5),
         receiveTimeout: const Duration(seconds: 5),
+        sendTimeout: const Duration(seconds: 5),
       ));
       final response = await dio.get('$url/health');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data is Map && response.data['status'] == 'healthy') {
         setState(() {
           _status = '连接成功！服务器响应正常。';
         });
       } else {
         setState(() {
-          _status = '连接失败：服务器返回 ${response.statusCode}';
+          _status = '连接失败：服务器返回异常响应';
         });
       }
+    } on DioException catch (e) {
+      String msg;
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          msg = '连接超时，请检查地址是否正确';
+          break;
+        case DioExceptionType.connectionError:
+          msg = '无法连接到服务器，请检查地址和网络';
+          break;
+        default:
+          msg = '连接失败：${e.message ?? "未知错误"}';
+      }
+      setState(() {
+        _status = msg;
+      });
     } catch (e) {
       setState(() {
         _status = '连接失败：$e';
