@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ServerConfigScreen extends StatefulWidget {
   const ServerConfigScreen({super.key});
@@ -180,16 +181,16 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
 
     for (final baseUrl in urlsToTry) {
       try {
-        final dio = Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 3),
-          receiveTimeout: const Duration(seconds: 3),
-        ));
-        final response = await dio.get('$baseUrl/health');
-        if (response.statusCode == 200 &&
-            response.data is Map &&
-            response.data['status'] == 'healthy') {
-          successUrl = baseUrl;
-          break;
+        final response = await http.get(
+          Uri.parse('$baseUrl/health'),
+        ).timeout(const Duration(seconds: 3));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data is Map && data['status'] == 'healthy') {
+            successUrl = baseUrl;
+            break;
+          }
         }
       } catch (_) {
         continue;
