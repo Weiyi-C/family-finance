@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/services.dart';
 
 class ConnectionResult {
   final bool success;
@@ -16,6 +17,8 @@ class DiscoveryResult {
 }
 
 class PlatformHelper {
+  static const _channel = MethodChannel('com.familyfinance/wifi');
+
   static Future<ConnectionResult> testConnection(String url) async {
     final uri = Uri.parse('$url/health');
     try {
@@ -41,26 +44,11 @@ class PlatformHelper {
 
   static Future<List<DiscoveryResult>> discoverServers() async {
     final results = <DiscoveryResult>[];
-    const broadcastPort = 9876;
+    const discoveryPort = 9876;
     const message = 'discover_family_finance';
 
-    final targets = <InternetAddress>[
-      InternetAddress('255.255.255.255'),
-    ];
-
     try {
-      for (final iface in await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLinkLocal: false,
-      )) {
-        for (final addr in iface.addresses) {
-          final parts = addr.address.split('.');
-          if (parts.length == 4) {
-            targets.add(InternetAddress('${parts[0]}.${parts[1]}.${parts[2]}.1'));
-            targets.add(InternetAddress('${parts[0]}.${parts[1]}.${parts[2]}.255'));
-          }
-        }
-      }
+      await _channel.invokeMethod('acquireMulticastLock');
     } catch (_) {}
 
     try {
@@ -71,14 +59,37 @@ class PlatformHelper {
       );
       socket.broadcastEnabled = true;
 
-      for (final target in targets) {
-        try {
-          socket.send(message.codeUnits, target, broadcastPort);
-        } catch (_) {}
+      final targets = <InternetAddress>[];
+
+      try {
+        for (final iface in await NetworkInterface.list(
+          type: InternetAddressType.IPv4,
+          includeLinkLocal: false,
+        )) {
+          for (final addr in iface.addresses) {
+            final parts = addr.address.split('.');
+            if (parts.length == 4) {
+              final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
+              targets.add(InternetAddress('$prefix.255'));
+              targets.add(InternetAddress('$prefix.1'));
+            }
+          }
+        }
+      } catch (_) {}
+
+      targets.add(InternetAddress('255.255.255.255'));
+
+      for (var i = 0; i < 3; i++) {
+        for (final target in targets) {
+          try {
+            socket.send(message.codeUnits, target, discoveryPort);
+          } catch (_) {}
+        }
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       final completer = Completer<void>();
-      final timer = Timer(const Duration(seconds: 2), () {
+      final timer = Timer(const Duration(seconds: 3), () {
         if (!completer.isCompleted) completer.complete();
       });
 
@@ -105,6 +116,10 @@ class PlatformHelper {
       await completer.future;
       timer.cancel();
       socket.close();
+    } catch (_) {}
+
+    try {
+      await _channel.invokeMethod('releaseMulticastLock');
     } catch (_) {}
 
     return results;
