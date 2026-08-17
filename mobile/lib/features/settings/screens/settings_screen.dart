@@ -1,16 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
 import '../providers/color_theme_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/format_utils.dart';
+import '../../../data/models/models.dart' hide Family;
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../features/transaction/providers/transaction_provider.dart';
+import '../../../features/family/providers/family_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  String _serverUrl = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServerUrl();
+  }
+
+  Future<void> _loadServerUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _serverUrl = prefs.getString('server_url') ?? 'http://localhost:8080';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final authState = ref.watch(authProvider);
+    final accountsAsync = ref.watch(accountsProvider);
+    final familyAsync = ref.watch(familyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -18,23 +47,31 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
-          // 用户信息卡片
-          _buildUserCard(context),
+          _buildUserCard(context, authState, familyAsync),
           const SizedBox(height: 16),
-          // 资产总览
-          _buildAssetCard(context),
+          _buildAssetCard(context, accountsAsync),
           const SizedBox(height: 16),
-          // 功能入口
           _buildFunctionGrid(context),
           const SizedBox(height: 16),
-          // 设置选项
           _buildSettingsSection(context, ref, themeMode),
         ],
       ),
     );
   }
 
-  Widget _buildUserCard(BuildContext context) {
+  Widget _buildUserCard(BuildContext context, AuthState authState, AsyncValue familyAsync) {
+    final userName = authState.user?.nickname ?? '未登录';
+    String familyName = '未加入家庭';
+    familyAsync.whenData((f) {
+      if (f is Map && f.containsKey('name')) {
+        familyName = f['name'] ?? familyName;
+      } else {
+        try {
+          familyName = (f as dynamic).name ?? familyName;
+        } catch (_) {}
+      }
+    });
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Padding(
@@ -44,7 +81,10 @@ class SettingsScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.person, size: 30, color: Colors.white),
+              child: Text(
+                userName.isNotEmpty ? userName[0] : '?',
+                style: const TextStyle(fontSize: 24, color: Colors.white),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -52,11 +92,11 @@ class SettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '小明',
+                    userName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Text(
-                    '家庭：温馨小家 · 3人',
+                    '家庭：$familyName',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -64,9 +104,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),
-              onPressed: () {
-                // TODO: 编辑个人信息
-              },
+              onPressed: () => context.push('/family'),
             ),
           ],
         ),
@@ -74,7 +112,10 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAssetCard(BuildContext context) {
+  Widget _buildAssetCard(BuildContext context, AsyncValue<List<Account>> accountsAsync) {
+    final accounts = accountsAsync.whenOrNull(data: (a) => a) ?? [];
+    final totalBalance = accounts.fold<double>(0, (sum, a) => sum + a.balanceYuan);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Padding(
@@ -88,20 +129,24 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '¥125,000.00',
+              formatMoney((totalBalance * 100).toInt()),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildAssetItem(context, '现金', '¥2,000'),
-                _buildAssetItem(context, '银行卡', '¥85,000'),
-                _buildAssetItem(context, '支付宝', '¥18,000'),
-                _buildAssetItem(context, '微信', '¥20,000'),
-              ],
-            ),
+            if (accounts.isEmpty)
+              Text('暂无账户数据', style: Theme.of(context).textTheme.bodySmall)
+            else
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: accounts.take(6).map((a) => _buildAssetItem(
+                  context,
+                  a.name,
+                  formatMoney(a.balance ?? a.initialBalance),
+                )).toList(),
+              ),
           ],
         ),
       ),
@@ -109,12 +154,13 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildAssetItem(BuildContext context, String label, String amount) {
-    return Expanded(
+    return SizedBox(
+      width: 80,
       child: Column(
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          Text(label, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          Text(amount, style: Theme.of(context).textTheme.bodyMedium),
+          Text(amount, style: Theme.of(context).textTheme.bodyMedium, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -302,17 +348,18 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.dns),
             title: const Text('服务器配置'),
-            subtitle: const Text('http://192.168.1.100:8080'),
+            subtitle: Text(_serverUrl),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              context.push('/server-config');
+            onTap: () async {
+              await context.push('/server-config');
+              _loadServerUrl();
             },
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.sync),
             title: const Text('数据同步'),
-            subtitle: const Text('最后同步：2026-08-13 16:30'),
+            subtitle: const Text('查看同步状态'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               context.push('/sync-status');
@@ -333,7 +380,12 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('关于'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: 打开关于页面
+              showAboutDialog(
+                context: context,
+                applicationName: '家庭记账',
+                applicationVersion: '1.0.0',
+                children: const [Text('治愈系萌趣记账APP')],
+              );
             },
           ),
         ],
