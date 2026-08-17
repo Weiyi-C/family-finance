@@ -68,10 +68,13 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app):
     from app.services.scheduler import start_scheduler, stop_scheduler
-    task = asyncio.create_task(start_scheduler())
+    from app.udp_discovery import udp_discovery_server
+    scheduler_task = asyncio.create_task(start_scheduler())
+    udp_task = asyncio.create_task(udp_discovery_server())
     yield
     stop_scheduler()
-    task.cancel()
+    scheduler_task.cancel()
+    udp_task.cancel()
 
 
 app = FastAPI(title="Family Finance API", version="0.1.0", lifespan=lifespan)

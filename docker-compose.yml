@@ -49,6 +49,7 @@ services:
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:8000:8000"
+      - "9876:9876/udp"
     volumes:
       - uploads:/app/uploads
       - backups:/app/backups

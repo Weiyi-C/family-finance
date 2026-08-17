@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'dart:async';
-import 'dart:io' show NetworkInterface, InternetAddressType;
 import 'server_config_helper.dart' if (dart.library.html) 'server_config_helper_web.dart';
 
 class ServerConfigScreen extends StatefulWidget {
@@ -18,8 +17,6 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
   bool _isScanning = false;
   String? _status;
   final List<String> _scanResults = [];
-  int _scanProgress = 0;
-  int _scanTotal = 0;
 
   @override
   void initState() {
@@ -148,7 +145,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.radar),
-                      label: Text(_isScanning ? '扫描中 $_scanProgress/$_scanTotal...' : '扫描局域网'),
+                      label: Text(_isScanning ? '搜索中...' : '扫描局域网'),
                     ),
                     if (_scanResults.isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -250,100 +247,34 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     }
   }
 
-  Future<List<String>> _getLocalSubnets() async {
-    final subnets = <String>{};
-
-    final currentUrl = _urlController.text.trim();
-    if (currentUrl.isNotEmpty) {
-      final host = _normalizeUrl(currentUrl);
-      final ipPart = host.split(':').first;
-      final parts = ipPart.split('.');
-      if (parts.length == 4) {
-        subnets.add('${parts[0]}.${parts[1]}.${parts[2]}');
-      }
-    }
-
-    try {
-      for (final iface in await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLinkLocal: false,
-      )) {
-        for (final addr in iface.addresses) {
-          final parts = addr.address.split('.');
-          if (parts.length == 4) {
-            subnets.add('${parts[0]}.${parts[1]}.${parts[2]}');
-          }
-        }
-      }
-    } catch (_) {}
-
-    if (subnets.isEmpty) {
-      subnets.add('192.168.1');
-      subnets.add('192.168.0');
-      subnets.add('192.168.31');
-    }
-
-    return subnets.toList();
-  }
-
   Future<void> _scanLAN() async {
     setState(() {
       _isScanning = true;
       _scanResults.clear();
-      _scanProgress = 0;
     });
 
-    final commonPorts = [8080, 8000];
-    final subnets = await _getLocalSubnets();
-    final found = <String>[];
-    var scanned = 0;
-    var stopped = false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在搜索局域网服务器...')),
+    );
 
-    for (final subnet in subnets) {
-      if (stopped) break;
-
-      final total = 254 * commonPorts.length;
-      setState(() => _scanTotal = total);
-      scanned = 0;
-
-      for (var batch = 1; batch <= 254; batch += 20) {
-        if (stopped) break;
-
-        final futures = <Future<void>>[];
-        for (var i = batch; i < batch + 20 && i <= 254; i++) {
-          for (final port in commonPorts) {
-            final ip = '$subnet.$i';
-            final url = 'http://$ip:$port';
-            futures.add(
-              PlatformHelper.testConnection(url).then((result) {
-                if (result.success && !found.contains('$ip:$port') && !stopped) {
-                  found.add('$ip:$port');
-                  setState(() {
-                    _scanResults.add('$ip:$port');
-                  });
-                  if (found.length >= 3) stopped = true;
-                }
-              }),
-            );
-          }
-        }
-
-        await Future.wait(futures);
-        scanned += 20 * commonPorts.length;
-        setState(() => _scanProgress = scanned);
-      }
-    }
+    final servers = await PlatformHelper.discoverServers();
 
     if (mounted) {
       setState(() {
         _isScanning = false;
-        if (found.isEmpty) {
+        for (final s in servers) {
+          final addr = '${s.ip}:${s.port}';
+          if (!_scanResults.contains(addr)) {
+            _scanResults.add(addr);
+          }
+        }
+        if (_scanResults.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('未发现局域网服务器')),
+            const SnackBar(content: Text('未发现服务器，请确认服务器已启动')),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('发现 ${found.length} 个服务器')),
+            SnackBar(content: Text('发现 ${_scanResults.length} 个服务器')),
           );
         }
       });

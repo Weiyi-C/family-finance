@@ -8,6 +8,13 @@ class ConnectionResult {
   ConnectionResult(this.success, [this.error]);
 }
 
+class DiscoveryResult {
+  final String ip;
+  final int port;
+  final String name;
+  DiscoveryResult(this.ip, this.port, this.name);
+}
+
 class PlatformHelper {
   static Future<ConnectionResult> testConnection(String url) async {
     final fullUrl = '$url/health';
@@ -21,7 +28,7 @@ class PlatformHelper {
       });
       request.onError.listen((event) {
         if (!completer.isCompleted) {
-          completer.completeError(html.EventException('Network error'));
+          completer.completeError(Exception('Network error'));
         }
       });
       request.onTimeout.listen((_) {
@@ -53,5 +60,9 @@ class PlatformHelper {
     } catch (e) {
       return ConnectionResult(false, '网络错误: $e');
     }
+  }
+
+  static Future<List<DiscoveryResult>> discoverServers() async {
+    return [];
   }
 }
