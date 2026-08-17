@@ -1,0 +1,12 @@
+[Unit]
+Description=Family Finance UDP Discovery
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/weiyi/Projects/family-finance/scripts/udp_discovery.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

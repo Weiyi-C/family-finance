@@ -47,9 +47,9 @@ services:
       UPLOAD_DIR: /app/uploads
       BACKUP_DIR: /app/backups
       TZ: Asia/Shanghai
+      HOST_IP: ${HOST_IP:-192.168.31.9}
     ports:
       - "127.0.0.1:8000:8000"
-      - "9876:9876/udp"
     volumes:
       - uploads:/app/uploads
       - backups:/app/backups
