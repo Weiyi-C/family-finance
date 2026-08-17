@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'dart:async';
+import 'dart:io' show NetworkInterface, InternetAddressType;
 import 'server_config_helper.dart' if (dart.library.html) 'server_config_helper_web.dart';
 
 class ServerConfigScreen extends StatefulWidget {
@@ -249,8 +250,8 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     }
   }
 
-  List<String> _getNetworkSegments() {
-    final segments = <String>{};
+  Future<List<String>> _getLocalSubnets() async {
+    final subnets = <String>{};
 
     final currentUrl = _urlController.text.trim();
     if (currentUrl.isNotEmpty) {
@@ -258,18 +259,31 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       final ipPart = host.split(':').first;
       final parts = ipPart.split('.');
       if (parts.length == 4) {
-        segments.add('${parts[0]}.${parts[1]}.${parts[2]}');
+        subnets.add('${parts[0]}.${parts[1]}.${parts[2]}');
       }
     }
 
-    segments.add('192.168.1');
-    segments.add('192.168.0');
-    segments.add('192.168.31');
-    segments.add('10.0.0');
-    segments.add('10.0.1');
-    segments.add('172.16.0');
+    try {
+      for (final iface in await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLinkLocal: false,
+      )) {
+        for (final addr in iface.addresses) {
+          final parts = addr.address.split('.');
+          if (parts.length == 4) {
+            subnets.add('${parts[0]}.${parts[1]}.${parts[2]}');
+          }
+        }
+      }
+    } catch (_) {}
 
-    return segments.toList();
+    if (subnets.isEmpty) {
+      subnets.add('192.168.1');
+      subnets.add('192.168.0');
+      subnets.add('192.168.31');
+    }
+
+    return subnets.toList();
   }
 
   Future<void> _scanLAN() async {
@@ -280,39 +294,56 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
     });
 
     final commonPorts = [8080, 8000];
-    final segments = _getNetworkSegments();
-    final total = segments.length * 254 * commonPorts.length;
-    setState(() => _scanTotal = total);
-
+    final subnets = await _getLocalSubnets();
     final found = <String>[];
-    var progress = 0;
+    var scanned = 0;
+    var stopped = false;
 
-    for (final segment in segments) {
-      for (var i = 1; i <= 254; i++) {
-        for (final port in commonPorts) {
-          final ip = '$segment.$i';
-          final url = 'http://$ip:$port';
+    for (final subnet in subnets) {
+      if (stopped) break;
 
-          final result = await PlatformHelper.testConnection(url);
-          if (result.success && !found.contains('$ip:$port')) {
-            found.add('$ip:$port');
-          }
+      final total = 254 * commonPorts.length;
+      setState(() => _scanTotal = total);
+      scanned = 0;
 
-          progress++;
-          if (progress % 10 == 0) {
-            setState(() => _scanProgress = progress);
+      for (var batch = 1; batch <= 254; batch += 20) {
+        if (stopped) break;
+
+        final futures = <Future<void>>[];
+        for (var i = batch; i < batch + 20 && i <= 254; i++) {
+          for (final port in commonPorts) {
+            final ip = '$subnet.$i';
+            final url = 'http://$ip:$port';
+            futures.add(
+              PlatformHelper.testConnection(url).then((result) {
+                if (result.success && !found.contains('$ip:$port') && !stopped) {
+                  found.add('$ip:$port');
+                  setState(() {
+                    _scanResults.add('$ip:$port');
+                  });
+                  if (found.length >= 3) stopped = true;
+                }
+              }),
+            );
           }
         }
+
+        await Future.wait(futures);
+        scanned += 20 * commonPorts.length;
+        setState(() => _scanProgress = scanned);
       }
     }
 
     if (mounted) {
       setState(() {
         _isScanning = false;
-        _scanResults.addAll(found);
         if (found.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('未发现局域网服务器')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('发现 ${found.length} 个服务器')),
           );
         }
       });

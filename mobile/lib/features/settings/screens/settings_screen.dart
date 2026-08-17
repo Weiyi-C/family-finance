@@ -29,8 +29,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
+    final url = prefs.getString('server_url') ?? 'http://localhost:8080';
     setState(() {
-      _serverUrl = prefs.getString('server_url') ?? 'http://localhost:8080';
+      _serverUrl = url.startsWith('http') ? url : 'http://$url';
     });
   }
 
