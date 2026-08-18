@@ -124,9 +124,14 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(statsSummaryProvider(_selectedDate));
     final categoryAsync = ref.watch(statsByCategoryProvider(_selectedDate));
+    final categoriesAsync = ref.watch(categoriesProvider);
     final range = _dateRange();
     final dayAsync = ref.watch(
       statsByDayProvider((start: range.start, end: range.end, type: 'expense')),
+    );
+
+    final categoryMap = categoriesAsync.whenData(
+      (cats) => Map<int, dynamic>.from({for (var c in _flattenCategories(cats)) c.id: c}),
     );
 
     return Scaffold(
@@ -142,11 +147,11 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
             const SizedBox(height: 16),
             _buildOverviewCard(summaryAsync),
             const SizedBox(height: 16),
-            _buildCategoryCard(categoryAsync),
+            _buildCategoryCard(categoryAsync, categoryMap),
             const SizedBox(height: 16),
             _buildTrendCard(dayAsync),
             const SizedBox(height: 16),
-            _buildRankingCard(categoryAsync),
+            _buildRankingCard(categoryAsync, categoryMap),
           ],
         ),
       ),
@@ -258,7 +263,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  Widget _buildCategoryCard(AsyncValue<List<dynamic>> categoryAsync) {
+  Widget _buildCategoryCard(AsyncValue<List<dynamic>> categoryAsync, AsyncValue<Map<int, dynamic>> categoryMapAsync) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -280,7 +285,8 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                 child: Center(child: Text('加载失败: $e')),
               ),
               data: (data) {
-                final items = _parseCategoryItems(data);
+                final catMap = categoryMapAsync.valueOrNull ?? {};
+                final items = _parseCategoryItems(data, catMap);
                 if (items.isEmpty) {
                   return const SizedBox(
                     height: 200,
@@ -455,7 +461,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  Widget _buildRankingCard(AsyncValue<List<dynamic>> categoryAsync) {
+  Widget _buildRankingCard(AsyncValue<List<dynamic>> categoryAsync, AsyncValue<Map<int, dynamic>> categoryMapAsync) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -477,7 +483,8 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                 child: Center(child: Text('加载失败: $e')),
               ),
               data: (data) {
-                final items = _parseCategoryItems(data);
+                final catMap = categoryMapAsync.valueOrNull ?? {};
+                final items = _parseCategoryItems(data, catMap);
                 if (items.isEmpty) {
                   return const SizedBox(
                     height: 100,
@@ -523,12 +530,14 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  List<_CategoryItem> _parseCategoryItems(List<dynamic> data) {
+  List<_CategoryItem> _parseCategoryItems(List<dynamic> data, Map<int, dynamic> catMap) {
     return data.map((item) {
       final map = item as Map<String, dynamic>;
+      final catId = map['category_id'] as int?;
+      final cat = catId != null ? catMap[catId] : null;
       return _CategoryItem(
-        name: map['category_name'] as String? ?? map['name'] as String? ?? '未知',
-        amount: (map['amount'] as num?)?.toInt() ?? (map['total'] as num?)?.toInt() ?? 0,
+        name: cat?.name as String? ?? map['category_name'] as String? ?? '未知',
+        amount: (map['total'] as num?)?.toInt() ?? (map['amount'] as num?)?.toInt() ?? 0,
       );
     }).toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
@@ -543,6 +552,16 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
       return (day, amount);
     }).toList()
       ..sort((a, b) => a.$1.compareTo(b.$1));
+  }
+
+  List<dynamic> _flattenCategories(List<dynamic> categories) {
+    final result = <dynamic>[];
+    for (final cat in categories) {
+      result.add(cat);
+      final children = cat.children as List<dynamic>? ?? [];
+      result.addAll(_flattenCategories(children));
+    }
+    return result;
   }
 }
 
