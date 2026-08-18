@@ -196,9 +196,9 @@ class Category {
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       id: json['id'],
-      familyId: json['family_id'],
+      familyId: json['family_id'] ?? 0,
       parentId: json['parent_id'],
-      level: json['level'],
+      level: json['level'] ?? 1,
       name: json['name'],
       icon: json['icon'],
       color: json['color'],

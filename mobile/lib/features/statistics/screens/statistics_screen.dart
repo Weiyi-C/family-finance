@@ -258,7 +258,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  Widget _buildCategoryCard(AsyncValue<Map<String, dynamic>> categoryAsync) {
+  Widget _buildCategoryCard(AsyncValue<List<dynamic>> categoryAsync) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -345,7 +345,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  Widget _buildTrendCard(AsyncValue<Map<String, dynamic>> dayAsync) {
+  Widget _buildTrendCard(AsyncValue<List<dynamic>> dayAsync) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -455,7 +455,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  Widget _buildRankingCard(AsyncValue<Map<String, dynamic>> categoryAsync) {
+  Widget _buildRankingCard(AsyncValue<List<dynamic>> categoryAsync) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -523,22 +523,23 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
-  List<_CategoryItem> _parseCategoryItems(Map<String, dynamic> data) {
-    final list = data['items'] as List? ?? data['categories'] as List? ?? [];
-    return list.map((item) {
+  List<_CategoryItem> _parseCategoryItems(List<dynamic> data) {
+    return data.map((item) {
+      final map = item as Map<String, dynamic>;
       return _CategoryItem(
-        name: item['category_name'] as String? ?? item['name'] as String? ?? '未知',
-        amount: (item['amount'] as num?)?.toInt() ?? 0,
+        name: map['category_name'] as String? ?? map['name'] as String? ?? '未知',
+        amount: (map['amount'] as num?)?.toInt() ?? (map['total'] as num?)?.toInt() ?? 0,
       );
     }).toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
   }
 
-  List<(int, int)> _parseDayPoints(Map<String, dynamic> data) {
-    final list = data['items'] as List? ?? data['days'] as List? ?? [];
-    return list.map((item) {
-      final day = (item['day'] as num?)?.toInt() ?? 0;
-      final amount = (item['amount'] as num?)?.toInt() ?? 0;
+  List<(int, int)> _parseDayPoints(List<dynamic> data) {
+    return data.map((item) {
+      final map = item as Map<String, dynamic>;
+      final dayStr = map['day'] as String? ?? map['date'] as String? ?? '';
+      final day = dayStr.isNotEmpty ? DateTime.parse(dayStr).day : 0;
+      final amount = (map['amount'] as num?)?.toInt() ?? (map['expense'] as num?)?.toInt() ?? 0;
       return (day, amount);
     }).toList()
       ..sort((a, b) => a.$1.compareTo(b.$1));

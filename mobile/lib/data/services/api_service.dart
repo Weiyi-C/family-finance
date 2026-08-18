@@ -202,19 +202,23 @@ class ApiService {
     return response.data;
   }
   
-  Future<Map<String, dynamic>> getStatsByCategory({
+  Future<List<dynamic>> getStatsByCategory({
     int? year,
     int? month,
+    String? type,
+    int? limit,
   }) async {
     final params = <String, dynamic>{};
     if (year != null) params['year'] = year;
     if (month != null) params['month'] = month;
-    
+    if (type != null) params['type'] = type;
+    if (limit != null) params['limit'] = limit;
+
     final response = await _dio.get('/stats/by-category', queryParameters: params);
-    return response.data;
+    return response.data is List ? response.data : [];
   }
   
-  Future<Map<String, dynamic>> getStatsByDay({
+  Future<List<dynamic>> getStatsByDay({
     String? start,
     String? end,
     String? type,
@@ -223,9 +227,9 @@ class ApiService {
     if (start != null) params['start'] = start;
     if (end != null) params['end'] = end;
     if (type != null) params['type'] = type;
-    
+
     final response = await _dio.get('/stats/by-day', queryParameters: params);
-    return response.data;
+    return response.data is List ? response.data : [];
   }
   
   // 标签
@@ -519,9 +523,9 @@ class ApiService {
   }
 
   // 通知
-  Future<Map<String, dynamic>> getNotifications() async {
+  Future<List<dynamic>> getNotifications() async {
     final response = await _dio.get('/notifications');
-    return response.data;
+    return response.data is List ? response.data : [];
   }
   
   Future<int> getUnreadCount() async {

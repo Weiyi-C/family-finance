@@ -117,7 +117,7 @@ final statsSummaryProvider = FutureProvider.family<Map<String, dynamic>, DateTim
   return await api.getStatsSummary(year: date.year, month: date.month);
 });
 
-final statsByCategoryProvider = FutureProvider.family<Map<String, dynamic>, DateTime>((ref, date) async {
+final statsByCategoryProvider = FutureProvider.family<List<dynamic>, DateTime>((ref, date) async {
   final api = ref.read(apiServiceProvider);
   return await api.getStatsByCategory(year: date.year, month: date.month);
 });
