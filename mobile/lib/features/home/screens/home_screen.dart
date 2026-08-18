@@ -159,6 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     DateTime now,
   ) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final darkPrimary = Color.lerp(primaryColor, Colors.black, 0.35)!;
     return SliverToBoxAdapter(
       child: Container(
         decoration: BoxDecoration(
@@ -166,8 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              primaryColor,
-              primaryColor.withValues(alpha: 0.7),
+              darkPrimary,
+              primaryColor.withValues(alpha: 0.85),
             ],
           ),
         ),

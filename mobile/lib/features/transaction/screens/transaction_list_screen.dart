@@ -304,7 +304,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         decoration: isLast ? null : BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
               width: 0.5,
             ),
           ),

@@ -226,6 +226,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildColorThemeSection(BuildContext context, WidgetRef ref) {
     final colorKey = ref.watch(colorThemeProvider);
+    final selectedColor = AppTheme.presetColors[colorKey] ?? AppTheme.defaultPrimaryColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -237,61 +238,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.2,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: selectedColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selectedColor.withValues(alpha: 0.2),
+                width: 1,
+              ),
             ),
-            itemCount: AppTheme.presetColors.length,
-            itemBuilder: (context, index) {
-              final entry = AppTheme.presetColors.entries.elementAt(index);
-              final isSelected = entry.key == colorKey;
-              return GestureDetector(
-                onTap: () {
-                  ref.read(colorThemeProvider.notifier).setColor(entry.key);
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: entry.value,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface,
-                                width: 3,
-                              )
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.2,
+              ),
+              itemCount: AppTheme.presetColors.length,
+              itemBuilder: (context, index) {
+                final entry = AppTheme.presetColors.entries.elementAt(index);
+                final isSelected = entry.key == colorKey;
+                return GestureDetector(
+                  onTap: () {
+                    ref.read(colorThemeProvider.notifier).setColor(entry.key);
+                  },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: entry.value,
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  width: 3,
+                                )
+                              : null,
+                          boxShadow: [
+                            BoxShadow(
+                              color: entry.value.withValues(alpha: 0.4),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white, size: 22)
                             : null,
-                        boxShadow: [
-                          BoxShadow(
-                            color: entry.value.withValues(alpha: 0.4),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: isSelected
-                          ? const Icon(Icons.check, color: Colors.white, size: 22)
-                          : null,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _colorName(entry.key),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              );
-            },
+                      const SizedBox(height: 6),
+                      Text(
+                        _colorName(entry.key),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
