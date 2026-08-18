@@ -275,6 +275,6 @@ class AppTheme {
 
   static Color _getAccentColor(Color primary) {
     final hsl = HSLColor.fromColor(primary);
-    return hsl.withHue((hsl.hue + 180) % 360).toColor();
+    return hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
   }
 }
