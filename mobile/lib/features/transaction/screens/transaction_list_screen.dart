@@ -51,11 +51,11 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {},
+            onPressed: () => _showSearchDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: () {},
+            onPressed: () => _showFilterDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -171,6 +171,89 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       trailing: Text(
         '$prefix¥${transaction.amountYuan.toStringAsFixed(2)}',
         style: TextStyle(color: color, fontWeight: FontWeight.bold),
+      ),
+      onTap: () => context.push('/create-transaction', extra: transaction),
+    );
+  }
+
+  void _showSearchDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('搜索账单'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '输入商户名或备注',
+            prefixIcon: Icon(Icons.search),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              final keyword = controller.text.trim();
+              if (keyword.isNotEmpty) {
+                ref.read(transactionProvider.notifier).loadTransactions(refresh: true, keyword: keyword);
+              }
+            },
+            child: const Text('搜索'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog(BuildContext context) {
+    String? selectedType;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('筛选'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String?>(
+                title: const Text('全部'),
+                value: null,
+                groupValue: selectedType,
+                onChanged: (v) => setState(() => selectedType = v),
+              ),
+              RadioListTile<String?>(
+                title: const Text('支出'),
+                value: 'expense',
+                groupValue: selectedType,
+                onChanged: (v) => setState(() => selectedType = v),
+              ),
+              RadioListTile<String?>(
+                title: const Text('收入'),
+                value: 'income',
+                groupValue: selectedType,
+                onChanged: (v) => setState(() => selectedType = v),
+              ),
+              RadioListTile<String?>(
+                title: const Text('转账'),
+                value: 'transfer',
+                groupValue: selectedType,
+                onChanged: (v) => setState(() => selectedType = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                ref.read(transactionProvider.notifier).loadTransactions(refresh: true, type: selectedType);
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        ),
       ),
     );
   }

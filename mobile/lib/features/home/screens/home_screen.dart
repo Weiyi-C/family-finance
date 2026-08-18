@@ -350,6 +350,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           fontWeight: FontWeight.bold,
         ),
       ),
+      onTap: () => context.push('/account/${account.id}'),
     );
   }
 
@@ -388,7 +389,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () => context.go('/transactions'),
                   child: const Text('查看全部'),
                 ),
               ],

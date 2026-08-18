@@ -13,21 +13,27 @@ class TransactionState {
   final bool hasMore;
   final int currentPage;
   final String? error;
-  
+  final String? keyword;
+  final String? typeFilter;
+
   TransactionState({
     this.transactions = const [],
     this.isLoading = false,
     this.hasMore = true,
     this.currentPage = 1,
     this.error,
+    this.keyword,
+    this.typeFilter,
   });
-  
+
   TransactionState copyWith({
     List<Transaction>? transactions,
     bool? isLoading,
     bool? hasMore,
     int? currentPage,
     String? error,
+    String? keyword,
+    String? typeFilter,
   }) {
     return TransactionState(
       transactions: transactions ?? this.transactions,
@@ -35,6 +41,8 @@ class TransactionState {
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
       error: error,
+      keyword: keyword ?? this.keyword,
+      typeFilter: typeFilter ?? this.typeFilter,
     );
   }
 }
@@ -44,21 +52,23 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
   
   TransactionNotifier(this._api) : super(TransactionState());
   
-  Future<void> loadTransactions({bool refresh = false}) async {
+  Future<void> loadTransactions({bool refresh = false, String? keyword, String? type}) async {
     if (state.isLoading) return;
-    
+
     if (refresh) {
-      state = state.copyWith(currentPage: 1, hasMore: true);
+      state = state.copyWith(currentPage: 1, hasMore: true, keyword: keyword, typeFilter: type);
     }
-    
+
     if (!state.hasMore && !refresh) return;
-    
+
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final data = await _api.getTransactions(
         page: state.currentPage,
         pageSize: 20,
+        type: state.typeFilter,
+        keyword: state.keyword,
       );
       
       final items = (data['items'] as List)

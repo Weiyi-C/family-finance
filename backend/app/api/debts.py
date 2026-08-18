@@ -167,6 +167,25 @@ async def update_debt(
     return DebtResponse.model_validate(debt)
 
 
+@router.get("/{debt_id}/repayments", response_model=list[RepaymentResponse])
+async def list_repayments(
+    debt_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Debt).where(Debt.id == debt_id, Debt.family_id == current_user.family_id)
+    )
+    debt = result.scalar_one_or_none()
+    if not debt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="借贷不存在")
+
+    result = await db.execute(
+        select(DebtRepayment).where(DebtRepayment.debt_id == debt_id).order_by(DebtRepayment.repayment_date.desc())
+    )
+    return [RepaymentResponse.model_validate(r) for r in result.scalars()]
+
+
 @router.post("/{debt_id}/repayments", response_model=RepaymentResponse, status_code=status.HTTP_201_CREATED)
 async def add_repayment(
     debt_id: int,
