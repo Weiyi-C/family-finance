@@ -83,7 +83,7 @@ python3 scripts/udp_discovery.py
 
 - **Backend entrypoint**: `backend/app/main.py` — FastAPI app with lifespan (scheduler + UDP discovery)
 - **DB init**: `db/init/01-*.sql` through `06-*.sql` — loaded in order by `docker-entrypoint-initdb.d` on first container start
-- **Nginx routing** (port 8080): `/api/` → api:8000, `/` → web:5173 (dev)
+- **Nginx routing** (port 8080): `/api/` → api:8000, `/health` → api:8000/health, `/` → web:5173 (dev)
 - **Nginx mobile web** (port 8090): Flutter web build served via ff-flutter-web container
 - **API routers**: 38+ routers in `backend/app/api/`, all registered in `main.py`
 - **ORM models**: registered via `import app.models` in main.py (side-effect import)
