@@ -599,6 +599,15 @@ class ApiService {
     await _dio.delete('/ai/settings');
   }
 
+  Future<List<dynamic>> parseBillImage(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    final response = await _dio.post('/ai/parse-image', data: formData);
+    final data = response.data;
+    return data is List ? data : (data['transactions'] ?? []);
+  }
+
   Future<List<dynamic>> getAIProviders() async {
     final response = await _dio.get('/ai/providers');
     return response.data;

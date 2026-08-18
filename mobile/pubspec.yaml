@@ -22,6 +22,9 @@ dependencies:
   sqflite: ^2.4.1
   path_provider: ^2.1.5
   shared_preferences: ^2.3.4
+
+  # 拍照/相册
+  image_picker: ^1.1.2
   
   # 路由
   go_router: ^14.6.2

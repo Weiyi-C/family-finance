@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 import 'package:family_finance_app/features/transaction/providers/transaction_provider.dart';
 import 'package:family_finance_app/features/budget/providers/budget_provider.dart';
@@ -24,6 +25,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _onRefresh() async {
     ref.read(transactionProvider.notifier).loadTransactions(refresh: true);
     ref.invalidate(accountsProvider);
+  }
+
+  Future<void> _pickAndParseImage(BuildContext context) async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('拍照'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('从相册选择'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !context.mounted) return;
+
+    final image = await picker.pickImage(source: source, imageQuality: 85);
+    if (image == null || !context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在识别账单...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      final transactions = await api.parseBillImage(image.path);
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      if (transactions.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未识别到账单信息'), backgroundColor: Colors.orange),
+        );
+        return;
+      }
+
+      final first = transactions.first;
+      context.push('/create-transaction', extra: Transaction.fromJson(first));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('识别到 ${transactions.length} 条账单'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('识别失败: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
@@ -250,8 +319,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       ('记账', Icons.add_circle_outline, () => context.push('/create-transaction')),
-      ('扫一扫', Icons.qr_code_scanner, () {}),
-      ('转账', Icons.swap_horiz, () => context.push('/create-transaction')),
+      ('拍照记账', Icons.camera_alt_outlined, () => _pickAndParseImage(context)),
       ('更多', Icons.grid_view, () => context.go('/settings')),
     ];
 
