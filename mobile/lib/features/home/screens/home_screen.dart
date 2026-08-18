@@ -55,81 +55,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final recentTransactions = transactionState.transactions.take(5).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('$userName 的账本'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push('/notifications'),
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _onRefresh,
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildOverviewCard(context, monthlyIncome, monthlyExpense, monthlyBalance),
-              const SizedBox(height: 16),
-              _buildBudgetSection(context, budgetsAsync, categoriesAsync),
-              const SizedBox(height: 16),
-              _buildAccountsCard(context, accountsAsync),
-              const SizedBox(height: 16),
-              _buildRecentTransactions(context, recentTransactions, transactionState.isLoading),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverviewCard(
-    BuildContext context,
-    int income,
-    int expense,
-    int balance,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '本月收支',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAmountItem(
-                    context,
-                    '收入',
-                    '¥${(income / 100).toStringAsFixed(2)}',
-                    Colors.green,
-                  ),
-                ),
-                Expanded(
-                  child: _buildAmountItem(
-                    context,
-                    '支出',
-                    '¥${(expense / 100).toStringAsFixed(2)}',
-                    Colors.red,
-                  ),
-                ),
-                Expanded(
-                  child: _buildAmountItem(
-                    context,
-                    '结余',
-                    '¥${(balance / 100).toStringAsFixed(2)}',
-                    Colors.blue,
-                  ),
-                ),
-              ],
+          slivers: [
+            _buildGradientHeader(context, userName, monthlyIncome, monthlyExpense, monthlyBalance, now),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildQuickActions(context),
+                  const SizedBox(height: 16),
+                  _buildBudgetSection(context, budgetsAsync, categoriesAsync),
+                  const SizedBox(height: 16),
+                  _buildAccountsCard(context, accountsAsync),
+                  const SizedBox(height: 16),
+                  _buildRecentTransactions(context, recentTransactions, transactionState.isLoading),
+                ]),
+              ),
             ),
           ],
         ),
@@ -137,27 +81,225 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildAmountItem(
+  Widget _buildGradientHeader(
     BuildContext context,
-    String label,
-    String amount,
-    Color color,
+    String userName,
+    int income,
+    int expense,
+    int balance,
+    DateTime now,
   ) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    return SliverToBoxAdapter(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              primaryColor,
+              primaryColor.withValues(alpha: 0.7),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$userName 的账本',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${now.year}年${now.month}月',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                      onPressed: () => context.push('/notifications'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '本月结余',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${now.month}月',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '¥${(balance / 100).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildHeaderAmountItem('收入', income, true),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 32,
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                          Expanded(
+                            child: _buildHeaderAmountItem('支出', expense, false),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderAmountItem(String label, int amount, bool isIncome) {
     return Column(
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+              color: Colors.white70,
+              size: 14,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Text(
-          amount,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
+          '¥${(amount / 100).toStringAsFixed(2)}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      ('记账', Icons.add_circle_outline, () => context.push('/create-transaction')),
+      ('扫一扫', Icons.qr_code_scanner, () {}),
+      ('转账', Icons.swap_horiz, () => context.push('/create-transaction')),
+      ('更多', Icons.grid_view, () => context.go('/settings')),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: actions.map((action) {
+          return GestureDetector(
+            onTap: action.$3,
+            child: Column(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    action.$2,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  action.$1,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -166,75 +308,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     AsyncValue<List<Budget>> budgetsAsync,
     AsyncValue<List<Category>> categoriesAsync,
   ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '预算概览',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                TextButton(
-                  onPressed: () => context.push('/budgets'),
-                  child: const Text('查看全部'),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '预算概览',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.push('/budgets'),
+                child: const Text('查看全部'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          budgetsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
-            const SizedBox(height: 8),
-            budgetsAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(),
-                ),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text('加载失败', style: TextStyle(color: Colors.grey[500])),
               ),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text('加载失败: $e', style: const TextStyle(color: Colors.red)),
-                ),
-              ),
-              data: (budgets) {
-                if (budgets.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('暂无预算', style: TextStyle(color: Colors.grey)),
-                    ),
-                  );
-                }
-                final displayBudgets = budgets.take(4).toList();
-                return categoriesAsync.when(
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: CircularProgressIndicator(),
+            ),
+            data: (budgets) {
+              if (budgets.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Column(
+                      children: [
+                        Icon(Icons.savings_outlined, size: 40, color: Colors.grey[300]),
+                        const SizedBox(height: 8),
+                        Text('暂无预算', style: TextStyle(color: Colors.grey[500])),
+                      ],
                     ),
                   ),
-                  error: (e, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Text('加载分类失败: $e', style: const TextStyle(color: Colors.red)),
-                    ),
-                  ),
-                  data: (categories) {
-                    final categoryMap = {for (var c in categories) c.id: c};
-                    return Column(
-                      children: displayBudgets
-                          .map((budget) => _buildBudgetProgressItem(context, budget, categoryMap))
-                          .toList(),
-                    );
-                  },
                 );
-              },
-            ),
-          ],
-        ),
+              }
+              final displayBudgets = budgets.take(3).toList();
+              return categoriesAsync.when(
+                loading: () => const SizedBox(),
+                error: (e, _) => const SizedBox(),
+                data: (categories) {
+                  final categoryMap = {for (var c in categories) c.id: c};
+                  return Column(
+                    children: displayBudgets
+                        .map((budget) => _buildBudgetProgressItem(context, budget, categoryMap))
+                        .toList(),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -252,35 +414,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     Color progressColor;
     if (ratio > budget.alertThreshold) {
-      progressColor = Colors.red;
+      progressColor = const Color(0xFFFF6B6B);
     } else if (ratio >= 0.8) {
-      progressColor = Colors.orange;
+      progressColor = const Color(0xFFFFB347);
     } else {
-      progressColor = Colors.green;
+      progressColor = const Color(0xFF4ECDC4);
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(categoryName, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                categoryName,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               Text(
                 '${formatMoney(spent)} / ${formatMoney(budget.amount)}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[100],
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              minHeight: 8,
+            ),
           ),
         ],
       ),
@@ -288,85 +459,165 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildAccountsCard(BuildContext context, AsyncValue<List<Account>> accountsAsync) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '我的账户',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            accountsAsync.when(
-              data: (accounts) {
-                if (accounts.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('暂无账户', style: TextStyle(color: Colors.grey)),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '我的账户',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          accountsAsync.when(
+            data: (accounts) {
+              if (accounts.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Column(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined, size: 40, color: Colors.grey[300]),
+                        const SizedBox(height: 8),
+                        Text('暂无账户', style: TextStyle(color: Colors.grey[500])),
+                      ],
                     ),
-                  );
-                }
-                return Column(
-                  children: accounts.map((account) => _buildAccountItem(context, account)).toList(),
+                  ),
                 );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text('加载失败: $e', style: const TextStyle(color: Colors.red)),
-                ),
+              }
+              return Column(
+                children: accounts.take(3).map((account) => _buildAccountItem(context, account)).toList(),
+              );
+            },
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
-          ],
-        ),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text('加载失败', style: TextStyle(color: Colors.grey[500])),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildAccountItem(BuildContext context, Account account) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        child: Icon(
-          _getAccountIcon(account.typeCode),
-          color: Theme.of(context).colorScheme.primary,
-          size: 20,
-        ),
+    final icon = _getAccountIcon(account.typeCode);
+    final iconColor = _getAccountColor(account.typeCode);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
       ),
-      title: Text(account.name),
-      subtitle: account.bankName != null ? Text(account.bankName!) : null,
-      trailing: Text(
-        '¥${account.balanceYuan.toStringAsFixed(2)}',
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (account.bankName != null)
+                  Text(
+                    account.bankName!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[500],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            '¥${account.balanceYuan.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
-      onTap: () => context.push('/account/${account.id}'),
     );
   }
 
   IconData _getAccountIcon(String typeCode) {
     switch (typeCode) {
       case 'cash':
-        return Icons.money;
+        return Icons.payments_outlined;
       case 'debit_card':
+        return Icons.credit_card_outlined;
       case 'credit_card':
         return Icons.credit_card;
       case 'alipay':
-        return Icons.account_balance_wallet;
+        return Icons.account_balance_wallet_outlined;
       case 'wechat':
-        return Icons.chat;
+        return Icons.chat_bubble_outline;
       default:
-        return Icons.account_balance;
+        return Icons.account_balance_outlined;
+    }
+  }
+
+  Color _getAccountColor(String typeCode) {
+    switch (typeCode) {
+      case 'cash':
+        return const Color(0xFF4ECDC4);
+      case 'debit_card':
+        return const Color(0xFF6C5CE7);
+      case 'credit_card':
+        return const Color(0xFFFF6B6B);
+      case 'alipay':
+        return const Color(0xFF00B894);
+      case 'wechat':
+        return const Color(0xFF00B894);
+      default:
+        return const Color(0xFF6C5CE7);
     }
   }
 
@@ -375,72 +626,144 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     List<Transaction> transactions,
     bool isLoading,
   ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '最近账单',
-                  style: Theme.of(context).textTheme.titleMedium,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '最近账单',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.go('/transactions'),
+                child: const Text('查看全部'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (isLoading && transactions.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else if (transactions.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_outlined, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text('暂无交易记录', style: TextStyle(color: Colors.grey[500])),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => context.go('/transactions'),
-                  child: const Text('查看全部'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (isLoading && transactions.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (transactions.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('暂无交易记录', style: TextStyle(color: Colors.grey)),
-                ),
-              )
-            else
-              ...transactions.map((t) => _buildTransactionItem(context, t)),
-          ],
-        ),
+              ),
+            )
+          else
+            ...transactions.map((t) => _buildTransactionItem(context, t)),
+        ],
       ),
     );
   }
 
   Widget _buildTransactionItem(BuildContext context, Transaction transaction) {
     final isIncome = transaction.type == 'income';
-    final sign = isIncome ? '+' : '-';
-    final amount = '$sign¥${transaction.amountYuan.toStringAsFixed(2)}';
+    final isTransfer = transaction.type == 'transfer';
     final title = transaction.description ?? transaction.merchantName ?? transaction.typeDisplay;
     final subtitle = transaction.merchantName ?? '';
 
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: isIncome ? Colors.green[50] : Colors.red[50],
-        child: Icon(
-          isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-          color: isIncome ? Colors.green : Colors.red,
-          size: 20,
-        ),
-      ),
-      title: Text(title),
-      subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-      trailing: Text(
-        amount,
-        style: TextStyle(
-          color: isIncome ? Colors.green : Colors.red,
-          fontWeight: FontWeight.bold,
-        ),
+    Color iconColor;
+    IconData iconData;
+    if (isTransfer) {
+      iconColor = const Color(0xFF6C5CE7);
+      iconData = Icons.swap_horiz;
+    } else if (isIncome) {
+      iconColor = const Color(0xFF00B894);
+      iconData = Icons.arrow_downward_rounded;
+    } else {
+      iconColor = const Color(0xFFFF6B6B);
+      iconData = Icons.arrow_upward_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(iconData, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[500],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            '${isIncome ? '+' : '-'}¥${transaction.amountYuan.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: iconColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
