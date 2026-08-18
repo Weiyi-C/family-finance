@@ -37,7 +37,7 @@ class _BudgetFormScreenState extends ConsumerState<BudgetFormScreen> {
       _amountController.text = (b.amount / 100).toStringAsFixed(2);
       _period = b.period;
       _year = b.year;
-      _month = b.month;
+      _month = b.month ?? DateTime.now().month;
       _alertThreshold = b.alertThreshold;
       _rollover = b.rollover;
     }

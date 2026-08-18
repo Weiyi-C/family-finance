@@ -52,8 +52,8 @@ class Transaction {
       id: json['id'],
       familyId: json['family_id'],
       bookId: json['book_id'],
-      entryId: json['entry_id'],
-      entrySide: json['entry_side'],
+      entryId: json['entry_id'] ?? 0,
+      entrySide: json['entry_side'] ?? '',
       type: json['type'],
       amount: json['amount'],
       currency: json['currency'] ?? 'CNY',
@@ -65,7 +65,7 @@ class Transaction {
       merchantName: json['merchant_name'],
       description: json['description'],
       transactionTime: DateTime.parse(json['transaction_time']),
-      recordedAt: DateTime.parse(json['recorded_at']),
+      recordedAt: json['recorded_at'] != null ? DateTime.parse(json['recorded_at']) : DateTime.parse(json['transaction_time']),
       recordedBy: json['recorded_by'],
       paidBy: json['paid_by'],
       isQuickEntry: json['is_quick_entry'] ?? false,
@@ -248,7 +248,7 @@ class Budget {
   final int? categoryId;
   final String period;
   final int year;
-  final int month;
+  final int? month;
   final int amount;
   final String currency;
   final bool rollover;
@@ -263,7 +263,7 @@ class Budget {
     this.categoryId,
     required this.period,
     required this.year,
-    required this.month,
+    this.month,
     required this.amount,
     this.currency = 'CNY',
     this.rollover = false,
@@ -280,7 +280,7 @@ class Budget {
       categoryId: json['category_id'],
       period: json['period'],
       year: json['year'],
-      month: json['month'],
+      month: json['month'] ?? 0,
       amount: json['amount'],
       currency: json['currency'] ?? 'CNY',
       rollover: json['rollover'] ?? false,
@@ -417,7 +417,7 @@ class Debt {
       id: json['id'],
       familyId: json['family_id'],
       type: json['type'],
-      personName: json['person_name'],
+      personName: json['counterparty'] ?? json['person_name'] ?? '',
       amount: json['amount'],
       description: json['description'],
       dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
