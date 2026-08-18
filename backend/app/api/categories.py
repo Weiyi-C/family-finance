@@ -167,7 +167,7 @@ async def delete_category(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="分类不存在")
 
     has_children = await db.execute(
-        select(Category).where(Category.parent_id == category_id).limit(1)
+        select(Category).where(Category.parent_id == category_id, Category.is_active == True).limit(1)
     )
     if has_children.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="存在子分类，无法删除")

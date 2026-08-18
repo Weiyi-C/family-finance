@@ -3,20 +3,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/network/network_status.dart';
 
-class MainLayout extends ConsumerWidget {
+class MainLayout extends ConsumerStatefulWidget {
   final Widget child;
-  
+
   const MainLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainLayout> createState() => _MainLayoutState();
+}
+
+class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProviderStateMixin {
+  late final AnimationController _fabController;
+  late final Animation<double> _fabScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _fabScale = CurvedAnimation(parent: _fabController, curve: Curves.easeOutBack);
+    _fabController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final networkStatus = ref.watch(networkStatusProvider);
     final isOffline = networkStatus == NetworkStatus.offline;
 
     return Scaffold(
       body: Column(
         children: [
-          // 离线状态栏
           if (isOffline)
             Container(
               width: double.infinity,
@@ -36,7 +60,7 @@ class MainLayout extends ConsumerWidget {
                 ],
               ),
             ),
-          Expanded(child: child),
+          Expanded(child: widget.child),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -70,11 +94,14 @@ class MainLayout extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/create-transaction');
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: ScaleTransition(
+        scale: _fabScale,
+        child: FloatingActionButton(
+          onPressed: () {
+            context.push('/create-transaction');
+          },
+          child: const Icon(Icons.add),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );

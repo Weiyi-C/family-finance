@@ -664,4 +664,33 @@ class ApiService {
     final response = await _dio.post('/rules/test', data: data);
     return response.data;
   }
+
+  // 备份恢复
+  Future<List<dynamic>> getBackupConfigs() async {
+    final response = await _dio.get('/backup/configs');
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> createBackupConfig(Map<String, dynamic> data) async {
+    final response = await _dio.post('/backup/configs', data: data);
+    return response.data;
+  }
+
+  Future<Map<String, dynamic>> triggerBackup() async {
+    final response = await _dio.post('/backup/trigger');
+    return response.data;
+  }
+
+  Future<List<dynamic>> getBackupLogs() async {
+    final response = await _dio.get('/backup/logs');
+    return response.data;
+  }
+
+  Future<void> deleteBackupLog(int id) async {
+    await _dio.delete('/backup/logs/$id');
+  }
+
+  String getBackupDownloadUrl(int logId) {
+    return '$_baseUrl/api/backup/download/$logId';
+  }
 }
