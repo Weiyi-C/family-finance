@@ -78,11 +78,11 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
       } else {
         await _loadFromServer(refresh);
       }
-    } catch (e) {
-      if (_isNetworkError(e)) {
+    } catch (_) {
+      try {
         await _loadFromLocal(refresh);
-      } else {
-        state = state.copyWith(isLoading: false, error: e.toString());
+      } catch (e2) {
+        state = state.copyWith(isLoading: false, error: e2.toString());
       }
     }
   }
