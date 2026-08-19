@@ -21,7 +21,7 @@ class LocalDatabase {
     
     return await openDatabase(
       dbPath2,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -96,6 +96,28 @@ class LocalDatabase {
         type TEXT DEFAULT 'expense',
         sort_order INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
+        is_synced INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // 预算表
+    await db.execute('''
+      CREATE TABLE budgets (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        book_id INTEGER,
+        category_id INTEGER,
+        amount INTEGER NOT NULL,
+        currency TEXT DEFAULT 'CNY',
+        period TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER,
+        week_start_date TEXT,
+        rollover INTEGER DEFAULT 0,
+        rollover_amount INTEGER DEFAULT 0,
+        alert_threshold REAL DEFAULT 0.8,
         is_synced INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -262,7 +284,23 @@ class LocalDatabase {
     final db = await database;
     return await db.query('categories', where: 'is_active = 1');
   }
-  
+
+  // 预算操作
+  Future<void> cacheBudgets(List<dynamic> budgets) async {
+    final db = await database;
+    await db.delete('budgets');
+    for (final budget in budgets) {
+      final map = Map<String, dynamic>.from(budget as Map);
+      map['is_synced'] = 1;
+      await db.insert('budgets', map);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedBudgets() async {
+    final db = await database;
+    return await db.query('budgets');
+  }
+
   // 设置操作
   Future<void> setSetting(String key, String value) async {
     final db = await database;
@@ -316,6 +354,28 @@ class LocalDatabase {
           retry_count INTEGER DEFAULT 0,
           error_message TEXT,
           created_at INTEGER NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE budgets (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          book_id INTEGER,
+          category_id INTEGER,
+          amount INTEGER NOT NULL,
+          currency TEXT DEFAULT 'CNY',
+          period TEXT NOT NULL,
+          year INTEGER NOT NULL,
+          month INTEGER,
+          week_start_date TEXT,
+          rollover INTEGER DEFAULT 0,
+          rollover_amount INTEGER DEFAULT 0,
+          alert_threshold REAL DEFAULT 0.8,
+          is_synced INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
       ''');
     }

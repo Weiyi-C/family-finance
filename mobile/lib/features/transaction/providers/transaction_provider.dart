@@ -99,6 +99,10 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
         .map((json) => Transaction.fromJson(json))
         .toList();
 
+    if (refresh) {
+      await _cacheToLocal(data['items'] as List);
+    }
+
     final total = data['total'] as int;
     final hasMore = state.transactions.length + items.length < total;
 
@@ -125,6 +129,16 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
       hasMore: items.length >= 20,
       currentPage: state.currentPage + 1,
     );
+  }
+
+  Future<void> _cacheToLocal(List<dynamic> serverItems) async {
+    for (final item in serverItems) {
+      final map = Map<String, dynamic>.from(item as Map);
+      map['is_synced'] = 1;
+      map['created_at'] = map['created_at'] ?? DateTime.now().toIso8601String();
+      map['updated_at'] = DateTime.now().toIso8601String();
+      await _db.insertTransaction(map);
+    }
   }
 
   bool _isNetworkError(Object e) {
