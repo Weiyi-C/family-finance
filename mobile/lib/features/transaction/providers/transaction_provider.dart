@@ -232,8 +232,12 @@ final accountsProvider = FutureProvider<List<Account>>((ref) async {
     await db.cacheAccounts(data);
     return accounts;
   } catch (_) {
-    final cached = await db.getCachedAccounts();
-    return cached.map((json) => Account.fromJson(json)).toList();
+    try {
+      final cached = await db.getCachedAccounts();
+      return cached.map((json) => Account.fromJson(json)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 });
 
@@ -248,8 +252,12 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
     await db.cacheCategories(data);
     return cats;
   } catch (_) {
-    final cached = await db.getCachedCategories();
-    return cached.map((json) => Category.fromJson(json)).toList();
+    try {
+      final cached = await db.getCachedCategories();
+      return cached.map((json) => Category.fromJson(json)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 });
 

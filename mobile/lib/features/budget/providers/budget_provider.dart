@@ -14,8 +14,12 @@ final budgetsProvider = FutureProvider.family<List<Budget>, ({int? year, int? mo
     await db.cacheBudgets(data);
     return data.map((json) => Budget.fromJson(json)).toList();
   } catch (_) {
-    final cached = await db.getCachedBudgets();
-    return cached.map((json) => Budget.fromJson(json)).toList();
+    try {
+      final cached = await db.getCachedBudgets();
+      return cached.map((json) => Budget.fromJson(json)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 });
 

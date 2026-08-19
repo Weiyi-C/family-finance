@@ -14,8 +14,10 @@ final familyProvider = FutureProvider<Family>((ref) async {
     await db.cacheFamily(data);
     return Family.fromJson(data);
   } catch (_) {
-    final cached = await db.getCachedFamily();
-    if (cached != null) return Family.fromJson(cached);
+    try {
+      final cached = await db.getCachedFamily();
+      if (cached != null) return Family.fromJson(cached);
+    } catch (_) {}
     return Family(id: 0, name: '我的家庭');
   }
 });
@@ -30,7 +32,11 @@ final familyMembersProvider = FutureProvider<List<FamilyMember>>((ref) async {
     await db.cacheFamilyMembers(data);
     return data.map((json) => FamilyMember.fromJson(json)).toList();
   } catch (_) {
-    final cached = await db.getCachedFamilyMembers();
-    return cached.map((json) => FamilyMember.fromJson(json)).toList();
+    try {
+      final cached = await db.getCachedFamilyMembers();
+      return cached.map((json) => FamilyMember.fromJson(json)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 });

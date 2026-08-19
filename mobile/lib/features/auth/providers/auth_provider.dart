@@ -65,8 +65,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('access_token', data['access_token']);
       await prefs.setString('refresh_token', data['refresh_token']);
       _api.setToken(data['access_token']);
-      await fetchUser();
-      await _saveLocalUser(phone, password);
+      try {
+        await fetchUser();
+      } catch (_) {}
+      try {
+        await _saveLocalUser(phone, password);
+      } catch (_) {}
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _friendlyError(e));
     }
