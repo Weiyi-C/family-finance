@@ -127,7 +127,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      final msg = e.toString();
+      if (msg.contains('401') || msg.contains('403')) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('access_token');
+        await prefs.remove('refresh_token');
+        _api.clearToken();
+      }
+      state = state.copyWith(isLoading: false);
     }
   }
   

@@ -29,6 +29,11 @@ class ApiService {
     _dio.options.baseUrl = '$_baseUrl/api';
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
+
+    final savedToken = prefs.getString('access_token');
+    if (savedToken != null) {
+      _dio.options.headers['Authorization'] = 'Bearer $savedToken';
+    }
   }
   
   Future<void> setBaseUrl(String url) async {
