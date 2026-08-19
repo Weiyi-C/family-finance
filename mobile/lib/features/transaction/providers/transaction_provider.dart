@@ -141,6 +141,14 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
       data['is_synced'] = 0;
       data['created_at'] = DateTime.now().toIso8601String();
       data['updated_at'] = DateTime.now().toIso8601String();
+      data['family_id'] = data['family_id'] ?? 0;
+      data['book_id'] = data['book_id'] ?? 0;
+      data['entry_id'] = data['entry_id'] ?? 0;
+      data['entry_side'] = data['entry_side'] ?? '';
+      data['recorded_by'] = data['recorded_by'] ?? 0;
+      data['recorded_at'] = data['recorded_at'] ?? data['transaction_time'] ?? DateTime.now().toIso8601String();
+      data['currency'] = data['currency'] ?? 'CNY';
+      data['completion_status'] = data['completion_status'] ?? 'complete';
       await _db.insertTransaction(data);
       await _db.addSyncLog('transactions', data['id'] ?? 0, 'create', data.toString());
 
@@ -178,14 +186,34 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
 
 final accountsProvider = FutureProvider<List<Account>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final data = await api.getAccounts();
-  return data.map((json) => Account.fromJson(json)).toList();
+  final networkStatus = ref.read(networkStatusProvider);
+  final db = LocalDatabase();
+  try {
+    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
+    final data = await api.getAccounts();
+    final accounts = data.map((json) => Account.fromJson(json)).toList();
+    await db.cacheAccounts(data);
+    return accounts;
+  } catch (_) {
+    final cached = await db.getCachedAccounts();
+    return cached.map((json) => Account.fromJson(json)).toList();
+  }
 });
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final data = await api.getCategories();
-  return data.map((json) => Category.fromJson(json)).toList();
+  final networkStatus = ref.read(networkStatusProvider);
+  final db = LocalDatabase();
+  try {
+    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
+    final data = await api.getCategories();
+    final cats = data.map((json) => Category.fromJson(json)).toList();
+    await db.cacheCategories(data);
+    return cats;
+  } catch (_) {
+    final cached = await db.getCachedCategories();
+    return cached.map((json) => Category.fromJson(json)).toList();
+  }
 });
 
 final statsSummaryProvider = FutureProvider.family<Map<String, dynamic>, DateTime>((ref, date) async {

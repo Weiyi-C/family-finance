@@ -216,19 +216,49 @@ class LocalDatabase {
     final db = await database;
     return await db.insert('accounts', account);
   }
-  
+
   Future<List<Map<String, dynamic>>> getAccounts() async {
     final db = await database;
     return await db.query('accounts', where: 'is_active = 1');
   }
-  
+
+  Future<void> cacheAccounts(List<dynamic> accounts) async {
+    final db = await database;
+    await db.delete('accounts');
+    for (final acc in accounts) {
+      final map = Map<String, dynamic>.from(acc as Map);
+      map['is_synced'] = 1;
+      await db.insert('accounts', map);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedAccounts() async {
+    final db = await database;
+    return await db.query('accounts', where: 'is_active = 1');
+  }
+
   // 分类操作
   Future<int> insertCategory(Map<String, dynamic> category) async {
     final db = await database;
     return await db.insert('categories', category);
   }
-  
+
   Future<List<Map<String, dynamic>>> getCategories() async {
+    final db = await database;
+    return await db.query('categories', where: 'is_active = 1');
+  }
+
+  Future<void> cacheCategories(List<dynamic> categories) async {
+    final db = await database;
+    await db.delete('categories');
+    for (final cat in categories) {
+      final map = Map<String, dynamic>.from(cat as Map);
+      map['is_synced'] = 1;
+      await db.insert('categories', map);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedCategories() async {
     final db = await database;
     return await db.query('categories', where: 'is_active = 1');
   }

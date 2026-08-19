@@ -61,6 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen<OfflineAuthState>(offlineAuthProvider, (prev, next) {
       if (next.status == OfflineAuthStatus.offlineSuccess) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         context.go('/');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -69,8 +70,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         );
       } else if (next.status == OfflineAuthStatus.onlineSuccess) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         context.go('/');
       } else if (next.status == OfflineAuthStatus.error && next.error != null) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
