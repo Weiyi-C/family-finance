@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'package:family_finance_app/data/models/models.dart';
+import 'package:family_finance_app/data/database/local_database.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService();
@@ -63,6 +66,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('refresh_token', data['refresh_token']);
       _api.setToken(data['access_token']);
       await fetchUser();
+      await _saveLocalUser(phone, password);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _friendlyError(e));
     }
@@ -77,9 +81,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('refresh_token', data['refresh_token']);
       _api.setToken(data['access_token']);
       await fetchUser();
+      await _saveLocalUser(phone, password);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _friendlyError(e));
     }
+  }
+
+  Future<void> _saveLocalUser(String phone, String password) async {
+    try {
+      final db = LocalDatabase();
+      final passwordHash = sha256.convert(utf8.encode(password)).toString();
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      final existing = await db.database.then(
+        (d) => d.query('users_local', where: 'phone = ?', whereArgs: [phone], limit: 1),
+      );
+
+      if (existing.isEmpty) {
+        await db.insertLocalUser({
+          'local_id': 'server_${state.user?.id ?? 0}',
+          'phone': phone,
+          'nickname': state.user?.nickname ?? '用户',
+          'password_hash': passwordHash,
+          'registration_status': 'SYNCED',
+          'server_id': '${state.user?.id ?? 0}',
+          'family_id': '${state.user?.familyId ?? 0}',
+          'created_at': now,
+          'updated_at': now,
+        });
+      } else {
+        final localId = existing.first['local_id'] as String;
+        await db.updateLocalUserStatus(localId, 'SYNCED',
+          serverId: '${state.user?.id ?? 0}',
+          familyId: '${state.user?.familyId ?? 0}',
+        );
+      }
+    } catch (_) {}
   }
   
   Future<void> fetchUser() async {
