@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
+import 'package:family_finance_app/features/auth/providers/offline_auth_provider.dart';
+import 'package:family_finance_app/core/network/network_status.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -24,26 +26,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
-    ref.read(authProvider.notifier).login(
-          _phoneController.text.trim(),
-          _passwordController.text,
-        );
+    final isOffline = ref.read(networkStatusProvider) == NetworkStatus.offline;
+    if (isOffline) {
+      ref.read(offlineAuthProvider.notifier).login(
+            _phoneController.text.trim(),
+            _passwordController.text,
+          );
+    } else {
+      ref.read(authProvider.notifier).login(
+            _phoneController.text.trim(),
+            _passwordController.text,
+          );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final offlineAuthState = ref.watch(offlineAuthProvider);
+    final isOffline = ref.watch(networkStatusProvider) == NetworkStatus.offline;
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null) {
         context.go('/');
       } else if (next.error != null) {
-        final isNetwork = next.error!.contains('无法连接') || next.error!.contains('超时');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
             backgroundColor: Theme.of(context).colorScheme.error,
-            action: isNetwork ? SnackBarAction(
+          ),
+        );
+      }
+    });
+
+    ref.listen<OfflineAuthState>(offlineAuthProvider, (prev, next) {
+      if (next.status == OfflineAuthStatus.offlineSuccess) {
+        context.go('/');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('离线模式已登录，联网后数据将自动同步'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else if (next.status == OfflineAuthStatus.onlineSuccess) {
+        context.go('/');
+      } else if (next.status == OfflineAuthStatus.error && next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            action: next.error!.contains('离线模式') ? SnackBarAction(
               label: '去设置',
               textColor: Colors.white,
               onPressed: () => context.push('/server-config'),
@@ -115,15 +147,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: authState.isLoading ? null : _handleLogin,
-                  child: authState.isLoading
+                  onPressed: (authState.isLoading || offlineAuthState.status == OfflineAuthStatus.loading) ? null : _handleLogin,
+                  child: (authState.isLoading || offlineAuthState.status == OfflineAuthStatus.loading)
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('登录'),
+                      : Text(isOffline ? '离线登录' : '登录'),
                 ),
+                if (isOffline) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '当前无网络，将使用本地账户登录',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => context.go('/register'),

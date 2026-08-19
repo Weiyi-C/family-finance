@@ -62,6 +62,92 @@ class OfflineAuthNotifier extends StateNotifier<OfflineAuthState> {
   OfflineAuthNotifier(this._api, this._db, this._ref)
       : super(OfflineAuthState());
 
+  Future<void> login(String phone, String password) async {
+    state = OfflineAuthState(status: OfflineAuthStatus.loading);
+
+    final networkStatus = _ref.read(networkStatusProvider);
+    if (networkStatus == NetworkStatus.online) {
+      await _loginOnline(phone, password);
+    } else {
+      await _loginOffline(phone, password);
+    }
+  }
+
+  Future<void> _loginOnline(String phone, String password) async {
+    try {
+      final data = await _api.login(phone, password);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('access_token', data['access_token']);
+      await prefs.setString('refresh_token', data['refresh_token']);
+      _api.setToken(data['access_token']);
+
+      state = OfflineAuthState(status: OfflineAuthStatus.onlineSuccess);
+    } catch (e) {
+      final msg = e.toString();
+      if (_isNetworkError(msg)) {
+        await _loginOffline(phone, password);
+      } else {
+        state = OfflineAuthState(
+          status: OfflineAuthStatus.error,
+          error: msg.contains('401') ? '手机号或密码错误' : '登录失败: $msg',
+        );
+      }
+    }
+  }
+
+  Future<void> _loginOffline(String phone, String password) async {
+    try {
+      final passwordHash = sha256.convert(utf8.encode(password)).toString();
+
+      final db = await _db.database;
+      final results = await db.query(
+        'users_local',
+        where: 'phone = ?',
+        whereArgs: [phone],
+        limit: 1,
+      );
+
+      if (results.isEmpty) {
+        state = OfflineAuthState(
+          status: OfflineAuthStatus.error,
+          error: '离线模式下未找到该账户，请联网后登录',
+        );
+        return;
+      }
+
+      final user = results.first;
+      if (user['password_hash'] != passwordHash) {
+        state = OfflineAuthState(
+          status: OfflineAuthStatus.error,
+          error: '手机号或密码错误',
+        );
+        return;
+      }
+
+      final localId = user['local_id'] as String;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_user_id', localId);
+      await prefs.setBool('is_offline_user', true);
+      await prefs.setString('offline_nickname', (user['nickname'] as String?) ?? '用户');
+      await prefs.setString('offline_phone', phone);
+
+      state = OfflineAuthState(status: OfflineAuthStatus.offlineSuccess);
+    } catch (e) {
+      state = OfflineAuthState(
+        status: OfflineAuthStatus.error,
+        error: '离线登录失败: $e',
+      );
+    }
+  }
+
+  bool _isNetworkError(String msg) {
+    return msg.contains('SocketException') ||
+        msg.contains('Connection refused') ||
+        msg.contains('Connection reset') ||
+        msg.contains('timeout') ||
+        msg.contains('Timeout');
+  }
+
   Future<void> register(String phone, String password, String nickname) async {
     state = OfflineAuthState(status: OfflineAuthStatus.loading);
 
