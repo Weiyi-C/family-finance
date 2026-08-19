@@ -67,10 +67,6 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
 
-    if (state.error != null && state.transactions.isEmpty) {
-      return _buildErrorState(context, state.error!);
-    }
-
     if (state.transactions.isEmpty) {
       return _buildEmptyState(context);
     }
