@@ -21,7 +21,7 @@ class LocalDatabase {
     
     return await openDatabase(
       dbPath2,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -123,7 +123,30 @@ class LocalDatabase {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
-    
+
+    // 家庭表
+    await db.execute('''
+      CREATE TABLE families (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        invite_code TEXT,
+        created_at TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 家庭成员表
+    await db.execute('''
+      CREATE TABLE family_members (
+        id INTEGER PRIMARY KEY,
+        nickname TEXT,
+        phone TEXT,
+        avatar_url TEXT,
+        role TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
     // 同步日志表
     await db.execute('''
       CREATE TABLE sync_log (
@@ -249,8 +272,26 @@ class LocalDatabase {
     await db.delete('accounts');
     for (final acc in accounts) {
       final map = Map<String, dynamic>.from(acc as Map);
-      map['is_synced'] = 1;
-      await db.insert('accounts', map);
+      final cached = {
+        'id': map['id'],
+        'family_id': map['family_id'] ?? 0,
+        'user_id': map['user_id'] ?? 0,
+        'name': map['name'],
+        'type_code': map['type_code'],
+        'icon': map['icon'],
+        'color': map['color'],
+        'bank_name': map['bank_name'],
+        'card_tail': map['card_tail'],
+        'card_type': map['card_type'],
+        'initial_balance': map['initial_balance'] ?? 0,
+        'credit_limit': map['credit_limit'],
+        'parent_id': map['parent_id'],
+        'channel_id': map['channel_id'],
+        'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
+        'balance': map['balance'],
+        'is_synced': 1,
+      };
+      await db.insert('accounts', cached);
     }
   }
 
@@ -275,8 +316,20 @@ class LocalDatabase {
     await db.delete('categories');
     for (final cat in categories) {
       final map = Map<String, dynamic>.from(cat as Map);
-      map['is_synced'] = 1;
-      await db.insert('categories', map);
+      final cached = {
+        'id': map['id'],
+        'family_id': map['family_id'],
+        'parent_id': map['parent_id'],
+        'level': map['level'] ?? 1,
+        'name': map['name'],
+        'icon': map['icon'],
+        'color': map['color'],
+        'type': map['type'] ?? 'expense',
+        'sort_order': map['sort_order'] ?? 0,
+        'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
+        'is_synced': 1,
+      };
+      await db.insert('categories', cached);
     }
   }
 
@@ -291,14 +344,69 @@ class LocalDatabase {
     await db.delete('budgets');
     for (final budget in budgets) {
       final map = Map<String, dynamic>.from(budget as Map);
-      map['is_synced'] = 1;
-      await db.insert('budgets', map);
+      final cached = {
+        'id': map['id'],
+        'family_id': map['family_id'],
+        'book_id': map['book_id'],
+        'category_id': map['category_id'],
+        'amount': map['amount'],
+        'currency': map['currency'] ?? 'CNY',
+        'period': map['period'],
+        'year': map['year'],
+        'month': map['month'],
+        'week_start_date': map['week_start_date']?.toString(),
+        'rollover': (map['rollover'] == true || map['rollover'] == 1) ? 1 : 0,
+        'rollover_amount': map['rollover_amount'] ?? 0,
+        'alert_threshold': (map['alert_threshold'] ?? 0.8).toDouble(),
+        'is_synced': 1,
+      };
+      await db.insert('budgets', cached);
     }
   }
 
   Future<List<Map<String, dynamic>>> getCachedBudgets() async {
     final db = await database;
     return await db.query('budgets');
+  }
+
+  // 家庭操作
+  Future<void> cacheFamily(Map<String, dynamic> family) async {
+    final db = await database;
+    await db.delete('families');
+    await db.insert('families', {
+      'id': family['id'],
+      'name': family['name'] ?? '我的家庭',
+      'invite_code': family['invite_code'],
+      'created_at': family['created_at']?.toString(),
+      'is_synced': 1,
+    });
+  }
+
+  Future<Map<String, dynamic>?> getCachedFamily() async {
+    final db = await database;
+    final results = await db.query('families', limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<void> cacheFamilyMembers(List<dynamic> members) async {
+    final db = await database;
+    await db.delete('family_members');
+    for (final member in members) {
+      final map = Map<String, dynamic>.from(member as Map);
+      await db.insert('family_members', {
+        'id': map['id'],
+        'nickname': map['nickname'],
+        'phone': map['phone'],
+        'avatar_url': map['avatar_url'],
+        'role': map['role'],
+        'is_synced': 1,
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedFamilyMembers() async {
+    final db = await database;
+    return await db.query('family_members');
   }
 
   // 设置操作
@@ -376,6 +484,27 @@ class LocalDatabase {
           is_synced INTEGER DEFAULT 0,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE families (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          invite_code TEXT,
+          created_at TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE family_members (
+          id INTEGER PRIMARY KEY,
+          nickname TEXT,
+          phone TEXT,
+          avatar_url TEXT,
+          role TEXT,
+          is_synced INTEGER DEFAULT 0
         )
       ''');
     }

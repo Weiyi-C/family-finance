@@ -1,15 +1,36 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import 'package:family_finance_app/data/models/models.dart';
+import 'package:family_finance_app/data/database/local_database.dart';
+import 'package:family_finance_app/core/network/network_status.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 
 final familyProvider = FutureProvider<Family>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final data = await api.getCurrentFamily();
-  return Family.fromJson(data);
+  final networkStatus = ref.read(networkStatusProvider);
+  final db = LocalDatabase();
+  try {
+    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
+    final data = await api.getCurrentFamily();
+    await db.cacheFamily(data);
+    return Family.fromJson(data);
+  } catch (_) {
+    final cached = await db.getCachedFamily();
+    if (cached != null) return Family.fromJson(cached);
+    return Family(id: 0, name: '我的家庭');
+  }
 });
 
 final familyMembersProvider = FutureProvider<List<FamilyMember>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final data = await api.getFamilyMembers();
-  return data.map((json) => FamilyMember.fromJson(json)).toList();
+  final networkStatus = ref.read(networkStatusProvider);
+  final db = LocalDatabase();
+  try {
+    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
+    final data = await api.getFamilyMembers();
+    await db.cacheFamilyMembers(data);
+    return data.map((json) => FamilyMember.fromJson(json)).toList();
+  } catch (_) {
+    final cached = await db.getCachedFamilyMembers();
+    return cached.map((json) => FamilyMember.fromJson(json)).toList();
+  }
 });
