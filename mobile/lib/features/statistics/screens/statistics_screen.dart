@@ -185,11 +185,27 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: _periodLabels.entries.map((entry) {
             final selected = _selectedPeriod == entry.key;
+            final primary = Theme.of(context).colorScheme.primary;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ChoiceChip(
-                label: Text(entry.value),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
+                      color: selected ? Colors.white : const Color(0xFF333333),
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
                 selected: selected,
+                selectedColor: primary,
+                backgroundColor: Colors.white,
+                side: BorderSide(
+                  color: selected ? primary : const Color(0xFFDDDDDD),
+                ),
                 onSelected: (_) {
                   setState(() => _selectedPeriod = entry.key);
                 },
