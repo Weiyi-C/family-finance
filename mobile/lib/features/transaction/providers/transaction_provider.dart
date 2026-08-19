@@ -1,10 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'package:family_finance_app/data/models/models.dart';
+import 'package:family_finance_app/data/database/local_database.dart';
+import 'package:family_finance_app/core/network/network_status.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 
 final transactionProvider = StateNotifierProvider<TransactionNotifier, TransactionState>((ref) {
-  return TransactionNotifier(ref.read(apiServiceProvider));
+  return TransactionNotifier(
+    ref.read(apiServiceProvider),
+    ref.read(networkStatusProvider),
+  );
 });
 
 class TransactionState {
@@ -49,9 +54,13 @@ class TransactionState {
 
 class TransactionNotifier extends StateNotifier<TransactionState> {
   final ApiService _api;
-  
-  TransactionNotifier(this._api) : super(TransactionState());
-  
+  final NetworkStatus _networkStatus;
+  final LocalDatabase _db = LocalDatabase();
+
+  TransactionNotifier(this._api, this._networkStatus) : super(TransactionState());
+
+  bool get _isOffline => _networkStatus == NetworkStatus.offline;
+
   Future<void> loadTransactions({bool refresh = false, String? keyword, String? type}) async {
     if (state.isLoading) return;
 
@@ -64,43 +73,100 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      final data = await _api.getTransactions(
-        page: state.currentPage,
-        pageSize: 20,
-        type: state.typeFilter,
-        keyword: state.keyword,
-      );
-      
-      final items = (data['items'] as List)
-          .map((json) => Transaction.fromJson(json))
-          .toList();
-      
-      final total = data['total'] as int;
-      final hasMore = state.transactions.length + items.length < total;
-      
-      state = state.copyWith(
-        transactions: refresh ? items : [...state.transactions, ...items],
-        isLoading: false,
-        hasMore: hasMore,
-        currentPage: state.currentPage + 1,
-      );
+      if (_isOffline) {
+        await _loadFromLocal(refresh);
+      } else {
+        await _loadFromServer(refresh);
+      }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (_isNetworkError(e)) {
+        await _loadFromLocal(refresh);
+      } else {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
     }
   }
-  
+
+  Future<void> _loadFromServer(bool refresh) async {
+    final data = await _api.getTransactions(
+      page: state.currentPage,
+      pageSize: 20,
+      type: state.typeFilter,
+      keyword: state.keyword,
+    );
+
+    final items = (data['items'] as List)
+        .map((json) => Transaction.fromJson(json))
+        .toList();
+
+    final total = data['total'] as int;
+    final hasMore = state.transactions.length + items.length < total;
+
+    state = state.copyWith(
+      transactions: refresh ? items : [...state.transactions, ...items],
+      isLoading: false,
+      hasMore: hasMore,
+      currentPage: state.currentPage + 1,
+    );
+  }
+
+  Future<void> _loadFromLocal(bool refresh) async {
+    final localData = await _db.getTransactions(
+      limit: 20,
+      offset: refresh ? 0 : state.transactions.length,
+      type: state.typeFilter,
+    );
+
+    final items = localData.map((json) => Transaction.fromJson(json)).toList();
+
+    state = state.copyWith(
+      transactions: refresh ? items : [...state.transactions, ...items],
+      isLoading: false,
+      hasMore: items.length >= 20,
+      currentPage: state.currentPage + 1,
+    );
+  }
+
+  bool _isNetworkError(Object e) {
+    final msg = e.toString();
+    return msg.contains('SocketException') ||
+        msg.contains('Connection refused') ||
+        msg.contains('Connection reset') ||
+        msg.contains('timeout') ||
+        msg.contains('Timeout');
+  }
+
   Future<void> createTransaction(Map<String, dynamic> data) async {
     try {
-      await _api.createTransaction(data);
+      data['is_synced'] = 0;
+      data['created_at'] = DateTime.now().toIso8601String();
+      data['updated_at'] = DateTime.now().toIso8601String();
+      await _db.insertTransaction(data);
+      await _db.addSyncLog('transactions', data['id'] ?? 0, 'create', data.toString());
+
+      if (!_isOffline) {
+        try {
+          await _api.createTransaction(data);
+        } catch (_) {}
+      }
+
       await loadTransactions(refresh: true);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
   }
-  
+
   Future<void> deleteTransaction(int id) async {
     try {
-      await _api.deleteTransaction(id);
+      await _db.deleteTransaction(id);
+      await _db.addSyncLog('transactions', id, 'delete', null);
+
+      if (!_isOffline) {
+        try {
+          await _api.deleteTransaction(id);
+        } catch (_) {}
+      }
+
       state = state.copyWith(
         transactions: state.transactions.where((t) => t.id != id).toList(),
       );
