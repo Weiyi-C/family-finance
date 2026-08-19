@@ -134,10 +134,33 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
   Future<void> _cacheToLocal(List<dynamic> serverItems) async {
     for (final item in serverItems) {
       final map = Map<String, dynamic>.from(item as Map);
-      map['is_synced'] = 1;
-      map['created_at'] = map['created_at'] ?? DateTime.now().toIso8601String();
-      map['updated_at'] = DateTime.now().toIso8601String();
-      await _db.insertTransaction(map);
+      final cached = {
+        'id': map['id'],
+        'family_id': map['family_id'] ?? 0,
+        'book_id': map['book_id'] ?? 0,
+        'entry_id': map['entry_id'] ?? 0,
+        'entry_side': map['entry_side'] ?? '',
+        'type': map['type'],
+        'amount': map['amount'],
+        'currency': map['currency'] ?? 'CNY',
+        'category_id': map['category_id'],
+        'sub_category_id': map['sub_category_id'],
+        'payment_account_id': map['payment_account_id'],
+        'payment_channel_id': map['payment_channel_id'],
+        'platform_id': map['platform_id'],
+        'merchant_name': map['merchant_name'],
+        'description': map['description'],
+        'transaction_time': map['transaction_time'],
+        'recorded_at': map['recorded_at'] ?? map['transaction_time'],
+        'recorded_by': map['recorded_by'] ?? 0,
+        'paid_by': map['paid_by'],
+        'is_quick_entry': (map['is_quick_entry'] == true || map['is_quick_entry'] == 1) ? 1 : 0,
+        'completion_status': map['completion_status'] ?? 'complete',
+        'is_synced': 1,
+        'created_at': map['created_at'] ?? DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      await _db.insertTransaction(cached);
     }
   }
 
