@@ -43,6 +43,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
   
+  String _friendlyError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('SocketException') || msg.contains('Connection refused') || msg.contains('Connection reset')) {
+      return '无法连接服务器，请检查网络或服务器地址设置';
+    }
+    if (msg.contains('timeout') || msg.contains('Timeout')) {
+      return '连接超时，请检查网络';
+    }
+    return msg;
+  }
+
   Future<void> login(String phone, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -53,10 +64,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _api.setToken(data['access_token']);
       await fetchUser();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _friendlyError(e));
     }
   }
-  
+
   Future<void> register(String phone, String password, String nickname) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -67,7 +78,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _api.setToken(data['access_token']);
       await fetchUser();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _friendlyError(e));
     }
   }
   

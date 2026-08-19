@@ -38,11 +38,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (next.user != null) {
         context.go('/');
       } else if (next.error != null) {
-        final is401 = next.error!.contains('401');
+        final isNetwork = next.error!.contains('无法连接') || next.error!.contains('超时');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(is401 ? '手机号或密码错误' : next.error!),
+            content: Text(next.error!),
             backgroundColor: Theme.of(context).colorScheme.error,
+            action: isNetwork ? SnackBarAction(
+              label: '去设置',
+              textColor: Colors.white,
+              onPressed: () => context.push('/server-config'),
+            ) : null,
           ),
         );
       }
