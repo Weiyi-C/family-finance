@@ -68,7 +68,7 @@ class Transaction {
       recordedAt: json['recorded_at'] != null ? DateTime.parse(json['recorded_at']) : DateTime.parse(json['transaction_time']),
       recordedBy: json['recorded_by'],
       paidBy: json['paid_by'],
-      isQuickEntry: json['is_quick_entry'] ?? false,
+      isQuickEntry: (json['is_quick_entry'] == true || json['is_quick_entry'] == 1),
       completionStatus: json['completion_status'] ?? 'complete',
       tagIds: json['tag_ids'] != null ? List<int>.from(json['tag_ids']) : null,
     );

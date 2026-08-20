@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'package:family_finance_app/data/models/models.dart';
 import 'package:family_finance_app/data/database/local_database.dart';
@@ -122,6 +123,7 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
 
   Future<bool> _cacheToLocal(List<dynamic> serverItems) async {
     try {
+      final db = await _db.database;
       for (final item in serverItems) {
         final map = Map<String, dynamic>.from(item as Map);
         final cached = {
@@ -150,11 +152,12 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
         'created_at': map['created_at'] ?? DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
-      await _db.insertTransaction(cached);
+      await db.insert('transactions', cached, conflictAlgorithm: sqflite.ConflictAlgorithm.replace);
     }
     return true;
-    } catch (e) {
-      foundation.debugPrint('⚠ 缓存到本地失败: $e');
+    } catch (e, stackTrace) {
+      print('CACHE_ERROR: $e');
+      print('CACHE_STACK: $stackTrace');
       return false;
     }
   }
