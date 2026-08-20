@@ -1,15 +1,12 @@
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:family_finance_app/data/services/api_service.dart';
 import 'package:family_finance_app/data/models/models.dart';
 import 'package:family_finance_app/data/database/local_database.dart';
-import 'package:family_finance_app/core/network/network_status.dart';
 import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 
 final transactionProvider = StateNotifierProvider<TransactionNotifier, TransactionState>((ref) {
-  return TransactionNotifier(
-    ref.read(apiServiceProvider),
-    ref.read(networkStatusProvider),
-  );
+  return TransactionNotifier(ref.read(apiServiceProvider));
 });
 
 class TransactionState {
@@ -54,12 +51,9 @@ class TransactionState {
 
 class TransactionNotifier extends StateNotifier<TransactionState> {
   final ApiService _api;
-  final NetworkStatus _networkStatus;
   final LocalDatabase _db = LocalDatabase();
 
-  TransactionNotifier(this._api, this._networkStatus) : super(TransactionState());
-
-  bool get _isOffline => _networkStatus == NetworkStatus.offline;
+  TransactionNotifier(this._api) : super(TransactionState());
 
   Future<void> loadTransactions({bool refresh = false, String? keyword, String? type}) async {
     if (state.isLoading) return;
@@ -73,17 +67,9 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      if (_isOffline) {
-        await _loadFromLocal(refresh);
-      } else {
-        await _loadFromServer(refresh);
-      }
+      await _loadFromServer(refresh);
     } catch (_) {
-      try {
-        await _loadFromLocal(refresh);
-      } catch (e2) {
-        state = state.copyWith(isLoading: false, error: e2.toString());
-      }
+      await _loadFromLocal(refresh);
     }
   }
 
@@ -100,9 +86,10 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
         .toList();
 
     if (refresh) {
-      try {
-        await _cacheToLocal(data['items'] as List);
-      } catch (_) {}
+      final cacheResult = await _cacheToLocal(data['items'] as List);
+      if (!cacheResult) {
+        foundation.debugPrint('⚠ 缓存失败，但继续展示API数据');
+      }
     }
 
     final total = data['total'] as int;
@@ -133,36 +120,42 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
     );
   }
 
-  Future<void> _cacheToLocal(List<dynamic> serverItems) async {
-    for (final item in serverItems) {
-      final map = Map<String, dynamic>.from(item as Map);
-      final cached = {
-        'id': map['id'],
-        'family_id': map['family_id'] ?? 0,
-        'book_id': map['book_id'] ?? 0,
-        'entry_id': map['entry_id'] ?? 0,
-        'entry_side': map['entry_side'] ?? '',
-        'type': map['type'],
-        'amount': map['amount'],
-        'currency': map['currency'] ?? 'CNY',
-        'category_id': map['category_id'],
-        'sub_category_id': map['sub_category_id'],
-        'payment_account_id': map['payment_account_id'],
-        'payment_channel_id': map['payment_channel_id'],
-        'platform_id': map['platform_id'],
-        'merchant_name': map['merchant_name'],
-        'description': map['description'],
-        'transaction_time': map['transaction_time'],
-        'recorded_at': map['recorded_at'] ?? map['transaction_time'],
-        'recorded_by': map['recorded_by'] ?? 0,
-        'paid_by': map['paid_by'],
-        'is_quick_entry': (map['is_quick_entry'] == true || map['is_quick_entry'] == 1) ? 1 : 0,
-        'completion_status': map['completion_status'] ?? 'complete',
-        'is_synced': 1,
+  Future<bool> _cacheToLocal(List<dynamic> serverItems) async {
+    try {
+      for (final item in serverItems) {
+        final map = Map<String, dynamic>.from(item as Map);
+        final cached = {
+          'id': map['id'],
+          'family_id': map['family_id'] ?? 0,
+          'book_id': map['book_id'] ?? 0,
+          'entry_id': map['entry_id'] ?? 0,
+          'entry_side': map['entry_side'] ?? '',
+          'type': map['type'],
+          'amount': map['amount'],
+          'currency': map['currency'] ?? 'CNY',
+          'category_id': map['category_id'],
+          'sub_category_id': map['sub_category_id'],
+          'payment_account_id': map['payment_account_id'],
+          'payment_channel_id': map['payment_channel_id'],
+          'platform_id': map['platform_id'],
+          'merchant_name': map['merchant_name'],
+          'description': map['description'],
+          'transaction_time': map['transaction_time'],
+          'recorded_at': map['recorded_at'] ?? map['transaction_time'],
+          'recorded_by': map['recorded_by'] ?? 0,
+          'paid_by': map['paid_by'],
+          'is_quick_entry': (map['is_quick_entry'] == true || map['is_quick_entry'] == 1) ? 1 : 0,
+          'completion_status': map['completion_status'] ?? 'complete',
+          'is_synced': 1,
         'created_at': map['created_at'] ?? DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
       await _db.insertTransaction(cached);
+    }
+    return true;
+    } catch (e) {
+      foundation.debugPrint('⚠ 缓存到本地失败: $e');
+      return false;
     }
   }
 
@@ -191,11 +184,9 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
       await _db.insertTransaction(data);
       await _db.addSyncLog('transactions', data['id'] ?? 0, 'create', data.toString());
 
-      if (!_isOffline) {
-        try {
-          await _api.createTransaction(data);
-        } catch (_) {}
-      }
+      try {
+        await _api.createTransaction(data);
+      } catch (_) {}
 
       await loadTransactions(refresh: true);
     } catch (e) {
@@ -208,11 +199,9 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
       await _db.deleteTransaction(id);
       await _db.addSyncLog('transactions', id, 'delete', null);
 
-      if (!_isOffline) {
-        try {
-          await _api.deleteTransaction(id);
-        } catch (_) {}
-      }
+      try {
+        await _api.deleteTransaction(id);
+      } catch (_) {}
 
       state = state.copyWith(
         transactions: state.transactions.where((t) => t.id != id).toList(),
@@ -225,10 +214,8 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
 
 final accountsProvider = FutureProvider<List<Account>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final networkStatus = ref.read(networkStatusProvider);
   final db = LocalDatabase();
   try {
-    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
     final data = await api.getAccounts();
     final accounts = data.map((json) => Account.fromJson(json)).toList();
     await db.cacheAccounts(data);
@@ -245,10 +232,8 @@ final accountsProvider = FutureProvider<List<Account>>((ref) async {
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final networkStatus = ref.read(networkStatusProvider);
   final db = LocalDatabase();
   try {
-    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
     final data = await api.getCategories();
     final cats = data.map((json) => Category.fromJson(json)).toList();
     await db.cacheCategories(data);

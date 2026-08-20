@@ -6,10 +6,8 @@ import 'package:family_finance_app/features/auth/providers/auth_provider.dart';
 
 final familyProvider = FutureProvider<Family>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final networkStatus = ref.read(networkStatusProvider);
   final db = LocalDatabase();
   try {
-    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
     final data = await api.getCurrentFamily();
     await db.cacheFamily(data);
     return Family.fromJson(data);
@@ -24,10 +22,8 @@ final familyProvider = FutureProvider<Family>((ref) async {
 
 final familyMembersProvider = FutureProvider<List<FamilyMember>>((ref) async {
   final api = ref.read(apiServiceProvider);
-  final networkStatus = ref.read(networkStatusProvider);
   final db = LocalDatabase();
   try {
-    if (networkStatus == NetworkStatus.offline) throw Exception('offline');
     final data = await api.getFamilyMembers();
     await db.cacheFamilyMembers(data);
     return data.map((json) => FamilyMember.fromJson(json)).toList();
