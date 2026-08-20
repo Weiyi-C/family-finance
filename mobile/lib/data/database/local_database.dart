@@ -268,30 +268,34 @@ class LocalDatabase {
   }
 
   Future<void> cacheAccounts(List<dynamic> accounts) async {
-    final db = await database;
-    await db.delete('accounts');
-    for (final acc in accounts) {
-      final map = Map<String, dynamic>.from(acc as Map);
-      final cached = {
-        'id': map['id'],
-        'family_id': map['family_id'] ?? 0,
-        'user_id': map['user_id'] ?? 0,
-        'name': map['name'],
-        'type_code': map['type_code'],
-        'icon': map['icon'],
-        'color': map['color'],
-        'bank_name': map['bank_name'],
-        'card_tail': map['card_tail'],
-        'card_type': map['card_type'],
-        'initial_balance': map['initial_balance'] ?? 0,
-        'credit_limit': map['credit_limit'],
-        'parent_id': map['parent_id'],
-        'channel_id': map['channel_id'],
+    try {
+      final db = await database;
+      await db.delete('accounts');
+      for (final acc in accounts) {
+        final map = Map<String, dynamic>.from(acc as Map);
+        final cached = {
+          'id': map['id'],
+          'family_id': map['family_id'] ?? 0,
+          'user_id': map['user_id'] ?? 0,
+          'name': map['name'],
+          'type_code': map['type_code'],
+          'icon': map['icon'],
+          'color': map['color'],
+          'bank_name': map['bank_name'],
+          'card_tail': map['card_tail'],
+          'card_type': map['card_type'],
+          'initial_balance': map['initial_balance'] ?? 0,
+          'credit_limit': map['credit_limit'],
+          'parent_id': map['parent_id'],
+          'channel_id': map['channel_id'],
         'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
         'balance': map['balance'],
         'is_synced': 1,
       };
       await db.insert('accounts', cached);
+    }
+    } catch (e) {
+      print('CACHE_ACCOUNTS_ERROR: $e');
     }
   }
 
@@ -312,24 +316,28 @@ class LocalDatabase {
   }
 
   Future<void> cacheCategories(List<dynamic> categories) async {
-    final db = await database;
-    await db.delete('categories');
-    for (final cat in categories) {
-      final map = Map<String, dynamic>.from(cat as Map);
-      final cached = {
-        'id': map['id'],
-        'family_id': map['family_id'],
-        'parent_id': map['parent_id'],
-        'level': map['level'] ?? 1,
-        'name': map['name'],
-        'icon': map['icon'],
-        'color': map['color'],
-        'type': map['type'] ?? 'expense',
-        'sort_order': map['sort_order'] ?? 0,
-        'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
-        'is_synced': 1,
-      };
-      await db.insert('categories', cached);
+    try {
+      final db = await database;
+      await db.delete('categories');
+      for (final cat in categories) {
+        final map = Map<String, dynamic>.from(cat as Map);
+        final cached = {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'parent_id': map['parent_id'],
+          'level': map['level'] ?? 1,
+          'name': map['name'],
+          'icon': map['icon'],
+          'color': map['color'],
+          'type': map['type'] ?? 'expense',
+          'sort_order': map['sort_order'] ?? 0,
+          'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
+          'is_synced': 1,
+        };
+        await db.insert('categories', cached);
+      }
+    } catch (e) {
+      print('CACHE_CATEGORIES_ERROR: $e');
     }
   }
 
@@ -340,27 +348,31 @@ class LocalDatabase {
 
   // 预算操作
   Future<void> cacheBudgets(List<dynamic> budgets) async {
-    final db = await database;
-    await db.delete('budgets');
-    for (final budget in budgets) {
-      final map = Map<String, dynamic>.from(budget as Map);
-      final cached = {
-        'id': map['id'],
-        'family_id': map['family_id'],
-        'book_id': map['book_id'],
-        'category_id': map['category_id'],
-        'amount': map['amount'],
-        'currency': map['currency'] ?? 'CNY',
-        'period': map['period'],
-        'year': map['year'],
-        'month': map['month'],
-        'week_start_date': map['week_start_date']?.toString(),
-        'rollover': (map['rollover'] == true || map['rollover'] == 1) ? 1 : 0,
-        'rollover_amount': map['rollover_amount'] ?? 0,
-        'alert_threshold': (map['alert_threshold'] ?? 0.8).toDouble(),
-        'is_synced': 1,
-      };
-      await db.insert('budgets', cached);
+    try {
+      final db = await database;
+      await db.delete('budgets');
+      for (final budget in budgets) {
+        final map = Map<String, dynamic>.from(budget as Map);
+        final cached = {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'book_id': map['book_id'],
+          'category_id': map['category_id'],
+          'amount': map['amount'],
+          'currency': map['currency'] ?? 'CNY',
+          'period': map['period'],
+          'year': map['year'],
+          'month': map['month'],
+          'week_start_date': map['week_start_date']?.toString(),
+          'rollover': (map['rollover'] == true || map['rollover'] == 1) ? 1 : 0,
+          'rollover_amount': map['rollover_amount'] ?? 0,
+          'alert_threshold': (map['alert_threshold'] ?? 0.8).toDouble(),
+          'is_synced': 1,
+        };
+        await db.insert('budgets', cached);
+      }
+    } catch (e) {
+      print('CACHE_BUDGETS_ERROR: $e');
     }
   }
 
@@ -371,15 +383,19 @@ class LocalDatabase {
 
   // 家庭操作
   Future<void> cacheFamily(Map<String, dynamic> family) async {
-    final db = await database;
-    await db.delete('families');
-    await db.insert('families', {
-      'id': family['id'],
-      'name': family['name'] ?? '我的家庭',
-      'invite_code': family['invite_code'],
-      'created_at': family['created_at']?.toString(),
-      'is_synced': 1,
-    });
+    try {
+      final db = await database;
+      await db.delete('families');
+      await db.insert('families', {
+        'id': family['id'],
+        'name': family['name'] ?? '我的家庭',
+        'invite_code': family['invite_code'],
+        'created_at': family['created_at']?.toString(),
+        'is_synced': 1,
+      });
+    } catch (e) {
+      print('CACHE_FAMILY_ERROR: $e');
+    }
   }
 
   Future<Map<String, dynamic>?> getCachedFamily() async {
@@ -389,18 +405,22 @@ class LocalDatabase {
   }
 
   Future<void> cacheFamilyMembers(List<dynamic> members) async {
-    final db = await database;
-    await db.delete('family_members');
-    for (final member in members) {
-      final map = Map<String, dynamic>.from(member as Map);
-      await db.insert('family_members', {
-        'id': map['id'],
-        'nickname': map['nickname'],
-        'phone': map['phone'],
-        'avatar_url': map['avatar_url'],
-        'role': map['role'],
-        'is_synced': 1,
-      });
+    try {
+      final db = await database;
+      await db.delete('family_members');
+      for (final member in members) {
+        final map = Map<String, dynamic>.from(member as Map);
+        await db.insert('family_members', {
+          'id': map['id'],
+          'nickname': map['nickname'],
+          'phone': map['phone'],
+          'avatar_url': map['avatar_url'],
+          'role': map['role'],
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_MEMBERS_ERROR: $e');
     }
   }
 
