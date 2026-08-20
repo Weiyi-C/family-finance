@@ -100,7 +100,9 @@ class TransactionNotifier extends StateNotifier<TransactionState> {
         .toList();
 
     if (refresh) {
-      await _cacheToLocal(data['items'] as List);
+      try {
+        await _cacheToLocal(data['items'] as List);
+      } catch (_) {}
     }
 
     final total = data['total'] as int;
