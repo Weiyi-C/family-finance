@@ -21,7 +21,7 @@ class LocalDatabase {
     
     return await openDatabase(
       dbPath2,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -143,6 +143,145 @@ class LocalDatabase {
         phone TEXT,
         avatar_url TEXT,
         role TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 借贷表
+    await db.execute('''
+      CREATE TABLE debts (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        type TEXT,
+        counterparty TEXT,
+        amount INTEGER,
+        currency TEXT DEFAULT 'CNY',
+        payment_account_id INTEGER,
+        debt_date TEXT,
+        due_date TEXT,
+        status TEXT DEFAULT 'pending',
+        repaid_amount INTEGER DEFAULT 0,
+        description TEXT,
+        created_by INTEGER,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 借贷还款表
+    await db.execute('''
+      CREATE TABLE debt_repayments (
+        id INTEGER PRIMARY KEY,
+        debt_id INTEGER,
+        amount INTEGER,
+        repayment_date TEXT,
+        payment_account_id INTEGER,
+        description TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 储蓄目标表
+    await db.execute('''
+      CREATE TABLE savings_goals (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        name TEXT,
+        icon TEXT,
+        color TEXT,
+        target_amount INTEGER,
+        current_amount INTEGER DEFAULT 0,
+        account_id INTEGER,
+        start_date TEXT,
+        target_date TEXT,
+        status TEXT DEFAULT 'active',
+        progress REAL DEFAULT 0,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 周期交易表
+    await db.execute('''
+      CREATE TABLE recurring_transactions (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        book_id INTEGER,
+        type TEXT,
+        amount INTEGER,
+        currency TEXT DEFAULT 'CNY',
+        category_id INTEGER,
+        sub_category_id INTEGER,
+        payment_account_id INTEGER,
+        merchant_name TEXT,
+        description TEXT,
+        frequency TEXT,
+        day_of_month INTEGER,
+        day_of_week INTEGER,
+        interval_value INTEGER DEFAULT 1,
+        start_date TEXT,
+        end_date TEXT,
+        is_active INTEGER DEFAULT 1,
+        next_run_date TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 报销表
+    await db.execute('''
+      CREATE TABLE reimbursements (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        title TEXT,
+        total_amount INTEGER,
+        status TEXT DEFAULT 'draft',
+        description TEXT,
+        submitted_at TEXT,
+        approved_at TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 规则表
+    await db.execute('''
+      CREATE TABLE rules (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        name TEXT,
+        conditions TEXT,
+        actions TEXT,
+        priority INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 信用账单表
+    await db.execute('''
+      CREATE TABLE credit_bills (
+        id INTEGER PRIMARY KEY,
+        family_id INTEGER,
+        account_id INTEGER,
+        account_name TEXT,
+        year INTEGER,
+        month INTEGER,
+        total_amount INTEGER,
+        paid_amount INTEGER,
+        due_date TEXT,
+        status TEXT,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+
+    // 通知表
+    await db.execute('''
+      CREATE TABLE notifications (
+        id INTEGER PRIMARY KEY,
+        title TEXT,
+        content TEXT,
+        type TEXT,
+        is_read INTEGER DEFAULT 0,
+        related_type TEXT,
+        related_id INTEGER,
+        created_at TEXT,
         is_synced INTEGER DEFAULT 0
       )
     ''');
@@ -429,6 +568,256 @@ class LocalDatabase {
     return await db.query('family_members');
   }
 
+  // 借贷操作
+  Future<void> cacheDebts(List<dynamic> debts) async {
+    try {
+      final db = await database;
+      await db.delete('debts');
+      for (final debt in debts) {
+        final map = Map<String, dynamic>.from(debt as Map);
+        await db.insert('debts', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'type': map['type'],
+          'counterparty': map['counterparty'],
+          'amount': map['amount'],
+          'currency': map['currency'] ?? 'CNY',
+          'payment_account_id': map['payment_account_id'],
+          'debt_date': map['debt_date']?.toString(),
+          'due_date': map['due_date']?.toString(),
+          'status': map['status'] ?? 'pending',
+          'repaid_amount': map['repaid_amount'] ?? 0,
+          'description': map['description'],
+          'created_by': map['created_by'],
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_DEBTS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedDebts() async {
+    final db = await database;
+    return await db.query('debts', orderBy: 'debt_date DESC');
+  }
+
+  Future<void> cacheDebtRepayments(int debtId, List<dynamic> repayments) async {
+    try {
+      final db = await database;
+      await db.delete('debt_repayments', where: 'debt_id = ?', whereArgs: [debtId]);
+      for (final r in repayments) {
+        final map = Map<String, dynamic>.from(r as Map);
+        await db.insert('debt_repayments', {
+          'id': map['id'],
+          'debt_id': map['debt_id'] ?? debtId,
+          'amount': map['amount'],
+          'repayment_date': map['repayment_date']?.toString(),
+          'payment_account_id': map['payment_account_id'],
+          'description': map['description'],
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_REPAYMENTS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedDebtRepayments(int debtId) async {
+    final db = await database;
+    return await db.query('debt_repayments', where: 'debt_id = ?', whereArgs: [debtId], orderBy: 'repayment_date DESC');
+  }
+
+  // 储蓄目标操作
+  Future<void> cacheSavingsGoals(List<dynamic> goals) async {
+    try {
+      final db = await database;
+      await db.delete('savings_goals');
+      for (final goal in goals) {
+        final map = Map<String, dynamic>.from(goal as Map);
+        await db.insert('savings_goals', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'name': map['name'],
+          'icon': map['icon'],
+          'color': map['color'],
+          'target_amount': map['target_amount'],
+          'current_amount': map['current_amount'] ?? 0,
+          'account_id': map['account_id'],
+          'start_date': map['start_date']?.toString(),
+          'target_date': map['target_date']?.toString(),
+          'status': map['status'] ?? 'active',
+          'progress': (map['progress'] ?? 0).toDouble(),
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_SAVINGS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedSavingsGoals() async {
+    final db = await database;
+    return await db.query('savings_goals', orderBy: 'start_date DESC');
+  }
+
+  // 周期交易操作
+  Future<void> cacheRecurring(List<dynamic> items) async {
+    try {
+      final db = await database;
+      await db.delete('recurring_transactions');
+      for (final item in items) {
+        final map = Map<String, dynamic>.from(item as Map);
+        await db.insert('recurring_transactions', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'book_id': map['book_id'],
+          'type': map['type'],
+          'amount': map['amount'],
+          'currency': map['currency'] ?? 'CNY',
+          'category_id': map['category_id'],
+          'sub_category_id': map['sub_category_id'],
+          'payment_account_id': map['payment_account_id'],
+          'merchant_name': map['merchant_name'],
+          'description': map['description'],
+          'frequency': map['frequency'],
+          'day_of_month': map['day_of_month'],
+          'day_of_week': map['day_of_week'],
+          'interval_value': map['interval_value'] ?? 1,
+          'start_date': map['start_date']?.toString(),
+          'end_date': map['end_date']?.toString(),
+          'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
+          'next_run_date': map['next_run_date']?.toString(),
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_RECURRING_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedRecurring() async {
+    final db = await database;
+    return await db.query('recurring_transactions', orderBy: 'start_date DESC');
+  }
+
+  // 报销操作
+  Future<void> cacheReimbursements(List<dynamic> items) async {
+    try {
+      final db = await database;
+      await db.delete('reimbursements');
+      for (final item in items) {
+        final map = Map<String, dynamic>.from(item as Map);
+        await db.insert('reimbursements', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'title': map['title'],
+          'total_amount': map['total_amount'],
+          'status': map['status'] ?? 'draft',
+          'description': map['description'],
+          'submitted_at': map['submitted_at']?.toString(),
+          'approved_at': map['approved_at']?.toString(),
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_REIMBURSEMENTS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedReimbursements() async {
+    final db = await database;
+    return await db.query('reimbursements', orderBy: 'id DESC');
+  }
+
+  // 规则操作
+  Future<void> cacheRules(List<dynamic> items) async {
+    try {
+      final db = await database;
+      await db.delete('rules');
+      for (final item in items) {
+        final map = Map<String, dynamic>.from(item as Map);
+        await db.insert('rules', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'name': map['name'],
+          'conditions': map['conditions']?.toString(),
+          'actions': map['actions']?.toString(),
+          'priority': map['priority'] ?? 0,
+          'is_active': (map['is_active'] == true || map['is_active'] == 1) ? 1 : 0,
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_RULES_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedRules() async {
+    final db = await database;
+    return await db.query('rules', orderBy: 'priority DESC');
+  }
+
+  // 信用账单操作
+  Future<void> cacheCreditBills(List<dynamic> bills) async {
+    try {
+      final db = await database;
+      await db.delete('credit_bills');
+      for (final bill in bills) {
+        final map = Map<String, dynamic>.from(bill as Map);
+        await db.insert('credit_bills', {
+          'id': map['id'],
+          'family_id': map['family_id'],
+          'account_id': map['account_id'],
+          'account_name': map['account_name'],
+          'year': map['year'],
+          'month': map['month'],
+          'total_amount': map['total_amount'],
+          'paid_amount': map['paid_amount'],
+          'due_date': map['due_date']?.toString(),
+          'status': map['status'],
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_CREDIT_BILLS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedCreditBills() async {
+    final db = await database;
+    return await db.query('credit_bills', orderBy: 'year DESC, month DESC');
+  }
+
+  // 通知操作
+  Future<void> cacheNotifications(List<dynamic> items) async {
+    try {
+      final db = await database;
+      await db.delete('notifications');
+      for (final item in items) {
+        final map = Map<String, dynamic>.from(item as Map);
+        await db.insert('notifications', {
+          'id': map['id'],
+          'title': map['title'],
+          'content': map['content'],
+          'type': map['type'],
+          'is_read': (map['is_read'] == true || map['is_read'] == 1) ? 1 : 0,
+          'related_type': map['related_type'],
+          'related_id': map['related_id'],
+          'created_at': map['created_at']?.toString(),
+          'is_synced': 1,
+        });
+      }
+    } catch (e) {
+      print('CACHE_NOTIFICATIONS_ERROR: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCachedNotifications() async {
+    final db = await database;
+    return await db.query('notifications', orderBy: 'created_at DESC');
+  }
+
   // 设置操作
   Future<void> setSetting(String key, String value) async {
     final db = await database;
@@ -524,6 +913,131 @@ class LocalDatabase {
           phone TEXT,
           avatar_url TEXT,
           role TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE debts (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          type TEXT,
+          counterparty TEXT,
+          amount INTEGER,
+          currency TEXT DEFAULT 'CNY',
+          payment_account_id INTEGER,
+          debt_date TEXT,
+          due_date TEXT,
+          status TEXT DEFAULT 'pending',
+          repaid_amount INTEGER DEFAULT 0,
+          description TEXT,
+          created_by INTEGER,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE debt_repayments (
+          id INTEGER PRIMARY KEY,
+          debt_id INTEGER,
+          amount INTEGER,
+          repayment_date TEXT,
+          payment_account_id INTEGER,
+          description TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE savings_goals (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          name TEXT,
+          icon TEXT,
+          color TEXT,
+          target_amount INTEGER,
+          current_amount INTEGER DEFAULT 0,
+          account_id INTEGER,
+          start_date TEXT,
+          target_date TEXT,
+          status TEXT DEFAULT 'active',
+          progress REAL DEFAULT 0,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE recurring_transactions (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          book_id INTEGER,
+          type TEXT,
+          amount INTEGER,
+          currency TEXT DEFAULT 'CNY',
+          category_id INTEGER,
+          sub_category_id INTEGER,
+          payment_account_id INTEGER,
+          merchant_name TEXT,
+          description TEXT,
+          frequency TEXT,
+          day_of_month INTEGER,
+          day_of_week INTEGER,
+          interval_value INTEGER DEFAULT 1,
+          start_date TEXT,
+          end_date TEXT,
+          is_active INTEGER DEFAULT 1,
+          next_run_date TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE reimbursements (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          title TEXT,
+          total_amount INTEGER,
+          status TEXT DEFAULT 'draft',
+          description TEXT,
+          submitted_at TEXT,
+          approved_at TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE rules (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          name TEXT,
+          conditions TEXT,
+          actions TEXT,
+          priority INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE credit_bills (
+          id INTEGER PRIMARY KEY,
+          family_id INTEGER,
+          account_id INTEGER,
+          account_name TEXT,
+          year INTEGER,
+          month INTEGER,
+          total_amount INTEGER,
+          paid_amount INTEGER,
+          due_date TEXT,
+          status TEXT,
+          is_synced INTEGER DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE notifications (
+          id INTEGER PRIMARY KEY,
+          title TEXT,
+          content TEXT,
+          type TEXT,
+          is_read INTEGER DEFAULT 0,
+          related_type TEXT,
+          related_id INTEGER,
+          created_at TEXT,
           is_synced INTEGER DEFAULT 0
         )
       ''');
